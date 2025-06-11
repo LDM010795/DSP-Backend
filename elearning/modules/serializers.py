@@ -16,13 +16,13 @@ class ContentSerializer(serializers.ModelSerializer):
 
 class TaskSerializer(serializers.ModelSerializer):
     # Feld, das angibt, ob der aktuelle Benutzer die Aufgabe gelöst hat
-    is_completed = serializers.SerializerMethodField()
+    completed = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
-        fields = ['id', 'title', 'description', 'difficulty', 'hint', 'order', 'is_completed']
+        fields = ['id', 'title', 'description', 'difficulty', 'hint', 'order', 'completed']
 
-    def get_is_completed(self, obj):
+    def get_completed(self, obj):
         # Hole den User aus dem Request-Kontext
         user = self.context.get('request').user
         if user and user.is_authenticated:
