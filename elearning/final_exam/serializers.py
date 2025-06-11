@@ -7,7 +7,7 @@ User = get_user_model()
 
 # Import Module model from the other app
 try:
-    from modules.models import Module
+    from ..modules.models import Module
 except ImportError:
     Module = None # Fallback if module app is not available
 

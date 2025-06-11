@@ -20,7 +20,7 @@ class ModuleDetailViewPublic(generics.RetrieveAPIView):
 # --- User-Specific Views (mit User-Kontext) ---
 
 class UserModuleListView(generics.ListAPIView):
-    serializer_class = ModuleListSerializer
+    serializer_class = ModuleDetailSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
