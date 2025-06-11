@@ -6,7 +6,7 @@ from django.utils import timezone
 
 # Angepasste Importe
 from ..models import Exam, ExamAttempt
-from ..serializer import ExamListSerializer, ActiveExamSerializer, CompletedExamSerializer
+from ..serializers import ExamListSerializer, ActiveExamSerializer, CompletedExamSerializer
 
 class AvailableExamsView(generics.ListAPIView):
     serializer_class = ExamListSerializer

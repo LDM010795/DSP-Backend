@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 
 # Angepasste Importe
 from ..models import ExamAttempt, ExamCriterion, CriterionScore
-from ..serializer import TeacherSubmissionSerializer, GradeSubmissionSerializer
+from ..serializers import TeacherSubmissionSerializer, GradeSubmissionSerializer
 
 class TeacherSubmissionsListView(generics.ListAPIView):
     serializer_class = TeacherSubmissionSerializer
@@ -44,7 +44,7 @@ class TeacherGradeAttemptView(APIView):
 
 class AllExamsListView(generics.ListAPIView):
     from ..models import Exam
-    from ..serializer import ExamListSerializer
+    from ..serializers import ExamListSerializer
     
     queryset = Exam.objects.all()
     serializer_class = ExamListSerializer

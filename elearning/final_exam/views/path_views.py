@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions
 # Angepasste Importe
 from ..models import CertificationPath
-from ..serializer import CertificationPathSerializer
+from ..serializers import CertificationPathSerializer
 
 class CertificationPathViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = CertificationPath.objects.all().order_by('order')
