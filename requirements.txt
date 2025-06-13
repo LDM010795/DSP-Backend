@@ -13,3 +13,10 @@ django-cors-headers
 
 # Admin Theme
 django-jazzmin
+
+# Production Dependencies für Render.com
+gunicorn==21.2.0
+psycopg2-binary==2.9.9
+whitenoise==6.6.0
+dj-database-url==2.1.0
+python-decouple==3.8
