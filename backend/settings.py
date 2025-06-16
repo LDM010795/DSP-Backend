@@ -37,6 +37,7 @@ INSTALLED_APPS = [
 
     # Local Apps
     'elearning.apps.ElearningConfig',
+    'microsoft_services.apps.MicrosoftServicesConfig',
 ]
 
 MIDDLEWARE = [
