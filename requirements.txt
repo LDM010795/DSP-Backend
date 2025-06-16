@@ -14,6 +14,9 @@ django-cors-headers
 # Admin Theme
 django-jazzmin
 
+# Microsoft Graph Integration
+requests==2.31.0                    # HTTP Calls zu Graph API
+
 # Production Dependencies für Render.com
 gunicorn==21.2.0
 psycopg2-binary==2.9.9
