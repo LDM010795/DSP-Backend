@@ -1,5 +1,5 @@
 """
-Einfache Test API für Microsoft Graph User.Read.All Permission
+Einfache Test API für Microsoft Graph Application Permissions
 """
 
 from rest_framework.views import APIView
@@ -13,21 +13,21 @@ logger = logging.getLogger(__name__)
 
 class UserReadTestView(APIView):
     """
-    Test View für User.Read.All Permission
+    Test View für Microsoft Graph Application Permissions
     
     Endpoints:
-    GET /api/microsoft/graph/test/ - Testet User.Read.All Permission
+    GET /api/microsoft/graph/test/ - Testet Graph API Zugriff
     """
     
     def get(self, request):
         """
-        Testet ob User.Read.All Permission korrekt konfiguriert ist
+        Testet ob Microsoft Graph API Zugriff funktioniert
         
         Returns:
             Response mit Test-Ergebnis
         """
         try:
-            logger.info("Testing User.Read.All permission")
+            logger.info("Testing Microsoft Graph API access")
             
             # 1. Token holen
             try:
@@ -54,59 +54,68 @@ class UserReadTestView(APIView):
                     ]
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # 2. User.Read.All Test mit /me endpoint
+            # 2. Graph API Test mit /organization endpoint (funktioniert mit App Permissions)
             try:
                 mixin = GraphAPIBaseMixin()
-                me_info = mixin.call_graph_api('me')
+                org_info = mixin.call_graph_api('organization')
                 
-                user_read_success = True
-                user_read_message = "User.Read.All permission working"
-                user_display_name = me_info.get('displayName', 'Unknown')
-                user_email = me_info.get('mail') or me_info.get('userPrincipalName', 'No email')
+                graph_success = True
+                graph_message = "Microsoft Graph API access working"
+                
+                # Organization Info extrahieren
+                orgs = org_info.get('value', [])
+                if orgs:
+                    org = orgs[0]
+                    org_name = org.get('displayName', 'Unknown Organization')
+                    org_domain = org.get('verifiedDomains', [{}])[0].get('name', 'Unknown Domain')
+                else:
+                    org_name = 'No organization data'
+                    org_domain = 'No domain data'
                 
             except Exception as e:
-                user_read_success = False
-                user_read_message = f"User.Read.All failed: {str(e)}"
-                user_display_name = None
-                user_email = None
-                logger.error(f"User.Read.All error: {str(e)}")
+                graph_success = False
+                graph_message = f"Graph API failed: {str(e)}"
+                org_name = None
+                org_domain = None
+                logger.error(f"Graph API error: {str(e)}")
             
             # 3. Ergebnis
-            overall_success = token_success and user_read_success
+            overall_success = token_success and graph_success
             
             response_data = {
                 'success': overall_success,
-                'message': 'User.Read.All permission test completed',
+                'message': 'Microsoft Graph API test completed',
                 'tests': {
                     'token_test': {
                         'success': token_success,
                         'message': token_message
                     },
-                    'user_read_test': {
-                        'success': user_read_success,
-                        'message': user_read_message
+                    'graph_api_test': {
+                        'success': graph_success,
+                        'message': graph_message
                     }
                 }
             }
             
-            # Wenn erfolgreich, User-Info hinzufügen
+            # Wenn erfolgreich, Organization-Info hinzufügen
             if overall_success:
-                response_data['user_info'] = {
-                    'display_name': user_display_name,
-                    'email': user_email
+                response_data['organization_info'] = {
+                    'name': org_name,
+                    'domain': org_domain
                 }
-                response_data['next_steps'] = [
-                    'User.Read.All permission is working!',
-                    'You can now add more permissions like Directory.Read.All',
-                    'Try endpoint: GET /api/microsoft/graph/me'
+                response_data['available_endpoints'] = [
+                    'GET /api/microsoft/graph/organization',
+                    'GET /api/microsoft/graph/users (with User.Read.All permission)',
+                    'Add more permissions in Azure Portal for more endpoints'
                 ]
             else:
                 response_data['troubleshooting'] = [
                     'Go to Azure Portal → App registrations → Your App',
                     'Navigate to API permissions',
                     'Add permission → Microsoft Graph → Application permissions',
-                    'Select User.Read.All',
-                    'Click "Grant admin consent for [your organization]"'
+                    'Select Directory.Read.All (for organization endpoint)',
+                    'Click "Grant admin consent for [your organization]"',
+                    'Redeploy your application'
                 ]
             
             return Response(
@@ -115,7 +124,7 @@ class UserReadTestView(APIView):
             )
             
         except Exception as e:
-            logger.error(f"User.Read.All test failed: {str(e)}")
+            logger.error(f"Graph API test failed: {str(e)}")
             return Response({
                 'success': False,
                 'message': f'Test failed with unexpected error: {str(e)}',
