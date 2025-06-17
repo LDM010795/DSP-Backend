@@ -3,7 +3,11 @@ from rest_framework.routers import DefaultRouter
 
 # Importiere die View-Module aus unseren sauberen Unterordnern
 from .authentications import views as auth_views
-from .authentications.views import authentication_organisation_user
+from .authentications.views.authentication_organisation_user import (
+    MicrosoftOrganizationLoginView,
+    MicrosoftOrganizationCallbackView,
+    OrganizationUserStatusView
+)
 from .graph_apis import views as graph_views
 
 app_name = 'microsoft_services'
@@ -13,9 +17,9 @@ app_name = 'microsoft_services'
 # Alle URLs, die mit /authentications/... beginnen
 authentications_urlpatterns = [
     # Microsoft Organization Authentication
-    path('login/', authentication_organisation_user.MicrosoftOrganizationLoginView.as_view(), name='organization-login'),
-    path('callback/', authentication_organisation_user.MicrosoftOrganizationCallbackView.as_view(), name='organization-callback'),
-    path('user-status/', authentication_organisation_user.OrganizationUserStatusView.as_view(), name='user-status'),
+    path('login/', MicrosoftOrganizationLoginView.as_view(), name='organization-login'),
+    path('callback/', MicrosoftOrganizationCallbackView.as_view(), name='organization-callback'),
+    path('user-status/', OrganizationUserStatusView.as_view(), name='user-status'),
 ]
 
 # Alle URLs, die mit /graph/... beginnen
