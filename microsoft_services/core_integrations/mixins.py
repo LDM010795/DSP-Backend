@@ -27,11 +27,7 @@ class GraphAPIBaseMixin:
     
     GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
     
-    def call_graph_api(
-        self, 
-        endpoint: str, 
-        params: Optional[Dict] = None
-    ) -> Dict[str, Any]:
+    def call_graph_api(self, endpoint: str, params: Optional[Dict] = None) -> Dict[str, Any]:
         """
         Führt READ-ONLY Microsoft Graph API Call aus
         
@@ -99,10 +95,7 @@ class GraphAPIBaseMixin:
             params = request.GET.dict() if hasattr(request, 'GET') else None
             
             # Graph API Call (nur GET)
-            result = self.call_graph_api(
-                endpoint=graph_path,
-                params=params
-            )
+            result = self.call_graph_api(endpoint=graph_path,params=params)
             
             return Response(result, status=status.HTTP_200_OK)
             

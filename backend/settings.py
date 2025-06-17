@@ -181,6 +181,17 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@e-learning-ds
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
 PASSWORD_RESET_TIMEOUT = int(os.environ.get('PASSWORD_RESET_TIMEOUT', '3600'))
 
+# Microsoft Azure AD Settings für Organization Authentication
+AZURE_TENANT_ID = os.environ.get('AZURE_TENANT_ID')
+AZURE_CLIENT_ID = os.environ.get('AZURE_CLIENT_ID') 
+AZURE_CLIENT_SECRET = os.environ.get('AZURE_CLIENT_SECRET')
+
+# Optional: Erlaubte Email-Domains für zusätzliche Sicherheit
+DSP_ALLOWED_DOMAINS = [
+    # Füge hier eure Organisation-Domains hinzu
+    "datasmartpoint.com"
+]
+
 # Jazzmin Settings (bleiben unverändert)
 JAZZMIN_SETTINGS = {
     # Titel der Seite (Angepasst für das neue Projekt)
