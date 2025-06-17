@@ -94,8 +94,70 @@ class MicrosoftOrganizationCallbackView(APIView):
     """
     Verarbeitet Microsoft OAuth2 Callback und validiert Organization User
     
-    POST /api/microsoft/auth/callback/
+    GET /api/microsoft/auth/callback/ (OAuth2 Callback von Microsoft)
+    POST /api/microsoft/auth/callback/ (Alternative für Frontend)
     """
+    
+    def get(self, request):
+        """
+        Behandelt OAuth2 Callback von Microsoft (GET mit Query-Parametern)
+        Verarbeitet die Authentifizierung und leitet zum Frontend weiter
+        """
+        from django.http import HttpResponseRedirect
+        
+        code = request.GET.get('code')
+        state = request.GET.get('state')
+        error = request.GET.get('error')
+        
+        # Frontend URL (aus Settings oder Fallback)
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'https://dsp-e-learning.onrender.com')
+        
+        if error:
+            # Microsoft hat einen Fehler gesendet
+            error_url = f"{frontend_url}/?error={error}&error_description={request.GET.get('error_description', 'Authentication failed')}"
+            return HttpResponseRedirect(error_url)
+        
+        if not code or not state:
+            error_url = f"{frontend_url}/?error=missing_parameters&error_description=Missing code or state parameter"
+            return HttpResponseRedirect(error_url)
+        
+        try:
+            # 1. Authorization Code gegen Access Token tauschen
+            token_data = self._exchange_code_for_token(code, request)
+            if not token_data:
+                error_url = f"{frontend_url}/?error=token_exchange_failed&error_description=Failed to exchange authorization code"
+                return HttpResponseRedirect(error_url)
+            
+            # 2. User Info von Microsoft Graph API holen
+            user_info = self._get_microsoft_user_info(token_data['access_token'])
+            if not user_info:
+                error_url = f"{frontend_url}/?error=user_info_failed&error_description=Failed to get user information"
+                return HttpResponseRedirect(error_url)
+            
+            # 3. Organization Validierung
+            org_validation = self._validate_organization_user(user_info)
+            if not org_validation['valid']:
+                error_url = f"{frontend_url}/?error=organization_access_denied&error_description={org_validation['error']}"
+                return HttpResponseRedirect(error_url)
+            
+            # 4. Django User erstellen/updaten
+            user = self._create_or_update_user(user_info, org_validation['org_data'])
+            
+            # 5. JWT Tokens erstellen
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
+            
+            logger.info(f"Microsoft organization login successful for user: {user.email}")
+            
+            # 6. Weiterleitung zum Frontend mit Tokens als URL Parameter
+            success_url = f"{frontend_url}/?microsoft_auth=success&access_token={access_token}&refresh_token={refresh_token}&user_id={user.id}"
+            return HttpResponseRedirect(success_url)
+            
+        except Exception as e:
+            logger.error(f"Microsoft organization callback failed: {str(e)}")
+            error_url = f"{frontend_url}/?error=authentication_failed&error_description=Authentication failed: {str(e)}"
+            return HttpResponseRedirect(error_url)
     
     def post(self, request):
         """
