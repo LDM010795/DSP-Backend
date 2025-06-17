@@ -113,17 +113,18 @@ class MicrosoftOrganizationCallbackView(APIView):
         state = request.GET.get('state')
         error = request.GET.get('error')
         
-        # Frontend URL (aus Settings oder Fallback)
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'https://dsp-e-learning.onrender.com')
+        # Frontend URL (aus Settings)
+        frontend_url = settings.FRONTEND_URL
         
         if error:
             logger.warning(f"Microsoft OAuth error: {error}")
-            # Microsoft hat einen Fehler gesendet
+            # Microsoft hat einen Fehler gesendet - leite zur Startseite mit Fehler weiter
             error_url = f"{frontend_url}/?error={error}&error_description={request.GET.get('error_description', 'Authentication failed')}"
             return HttpResponseRedirect(error_url)
         
         if not code or not state:
             logger.warning("Missing OAuth parameters in callback")
+            # Fehlende Parameter - leite zur Startseite mit Fehler weiter
             error_url = f"{frontend_url}/?error=missing_parameters&error_description=Missing code or state parameter"
             return HttpResponseRedirect(error_url)
         
@@ -186,8 +187,9 @@ class MicrosoftOrganizationCallbackView(APIView):
             logger.info(f"🎉 Microsoft organization login successful for {user.email}")
             logger.info(f"⚡ PERFORMANCE: Total={total_time:.2f}s (Token={token_time:.2f}s, User={user_time:.2f}s, Org={org_time:.2f}s, DB={user_create_time:.2f}s, JWT={jwt_time:.2f}s)")
             
-            # 6. Weiterleitung zum Frontend mit Tokens als URL Parameter
-            success_url = f"{frontend_url}/?microsoft_auth=success&access_token={access_token}&refresh_token={refresh_token}&user_id={user.id}"
+            # 6. Weiterleitung zum Frontend Dashboard mit Tokens als URL Parameter
+            success_url = f"{frontend_url}/dashboard?microsoft_auth=success&access_token={access_token}&refresh_token={refresh_token}&user_id={user.id}"
+            logger.info(f"🚀 Redirecting user to dashboard: {frontend_url}/dashboard")
             return HttpResponseRedirect(success_url)
             
         except Exception as e:
