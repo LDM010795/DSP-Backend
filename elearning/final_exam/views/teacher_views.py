@@ -48,4 +48,4 @@ class AllExamsListView(generics.ListAPIView):
     
     queryset = Exam.objects.all()
     serializer_class = ExamListSerializer
-    permission_classes = [permissions.IsAdminUser] 
+    permission_classes = [permissions.IsAuthenticated]  # Alle authentifizierten User können Exams sehen 
