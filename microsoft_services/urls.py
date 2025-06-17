@@ -1,20 +1,18 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
 
-# Importiere die View-Module aus unseren sauberen Unterordnern
-from .authentications import views as auth_views
+# Direkte Imports der Views
 from .authentications.views.authentication_organisation_user import (
     MicrosoftOrganizationLoginView,
     MicrosoftOrganizationCallbackView,
     OrganizationUserStatusView
 )
-from .graph_apis import views as graph_views
+from .graph_apis.views import UserReadTestView
 
 app_name = 'microsoft_services'
 
 # --- URL-Patterns für die jeweiligen Untermodule ---
 
-# Alle URLs, die mit /authentications/... beginnen
+# Alle URLs, die mit /auth/... beginnen
 authentications_urlpatterns = [
     # Microsoft Organization Authentication
     path('login/', MicrosoftOrganizationLoginView.as_view(), name='organization-login'),
@@ -24,8 +22,8 @@ authentications_urlpatterns = [
 
 # Alle URLs, die mit /graph/... beginnen
 graph_urlpatterns = [
-    # Nur User.Read.All Test
-    path('test/', graph_views.UserReadTestView.as_view(), name='user-read-test'),
+    # Microsoft Graph API Test
+    path('test/', UserReadTestView.as_view(), name='user-read-test'),
 ]
 
 # --- Haupt-URL-Liste für die gesamte 'microsoft_services' App ---
