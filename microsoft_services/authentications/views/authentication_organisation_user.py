@@ -17,11 +17,14 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model, login
 from django.conf import settings
+from django.core.cache import cache
 from microsoft_services.core_integrations.mixins import GraphAPIBaseMixin
 from microsoft_services.core_integrations.token_manager import azure_token_manager
+from microsoft_services.core_integrations.role_authentication import RoleAuthenticator
 import requests
 import secrets
 import logging
+import json
 from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
@@ -95,13 +98,13 @@ class MicrosoftOrganizationCallbackView(APIView):
     Verarbeitet Microsoft OAuth2 Callback und validiert Organization User
     
     GET /api/microsoft/auth/callback/ (OAuth2 Callback von Microsoft)
-    POST /api/microsoft/auth/callback/ (Alternative für Frontend)
+    POST /api/microsoft/auth/tokens/ (Sichere Token-Übertragung per JSON)
     """
     
     def get(self, request):
         """
         Behandelt OAuth2 Callback von Microsoft (GET mit Query-Parametern)
-        Verarbeitet die Authentifizierung und leitet zum Frontend weiter
+        Erstellt temporären Auth-Code und leitet sicher zum Frontend weiter
         """
         from django.http import HttpResponseRedirect
         
@@ -114,30 +117,30 @@ class MicrosoftOrganizationCallbackView(APIView):
         
         if error:
             # Microsoft hat einen Fehler gesendet
-            error_url = f"{frontend_url}/?error={error}&error_description={request.GET.get('error_description', 'Authentication failed')}"
+            error_url = f"{frontend_url}/login?error={error}&error_description={request.GET.get('error_description', 'Authentication failed')}"
             return HttpResponseRedirect(error_url)
         
         if not code or not state:
-            error_url = f"{frontend_url}/?error=missing_parameters&error_description=Missing code or state parameter"
+            error_url = f"{frontend_url}/login?error=missing_parameters&error_description=Missing code or state parameter"
             return HttpResponseRedirect(error_url)
         
         try:
             # 1. Authorization Code gegen Access Token tauschen
             token_data = self._exchange_code_for_token(code, request)
             if not token_data:
-                error_url = f"{frontend_url}/?error=token_exchange_failed&error_description=Failed to exchange authorization code"
+                error_url = f"{frontend_url}/login?error=token_exchange_failed&error_description=Failed to exchange authorization code"
                 return HttpResponseRedirect(error_url)
             
             # 2. User Info von Microsoft Graph API holen
             user_info = self._get_microsoft_user_info(token_data['access_token'])
             if not user_info:
-                error_url = f"{frontend_url}/?error=user_info_failed&error_description=Failed to get user information"
+                error_url = f"{frontend_url}/login?error=user_info_failed&error_description=Failed to get user information"
                 return HttpResponseRedirect(error_url)
             
             # 3. Organization Validierung
             org_validation = self._validate_organization_user(user_info)
             if not org_validation['valid']:
-                error_url = f"{frontend_url}/?error=organization_access_denied&error_description={org_validation['error']}"
+                error_url = f"{frontend_url}/login?error=organization_access_denied&error_description={org_validation['error']}"
                 return HttpResponseRedirect(error_url)
             
             # 4. Django User erstellen/updaten
@@ -148,94 +151,13 @@ class MicrosoftOrganizationCallbackView(APIView):
             access_token = str(refresh.access_token)
             refresh_token = str(refresh)
             
-            logger.info(f"Microsoft organization login successful for user: {user.email}")
-            
-            # 6. Weiterleitung zum Frontend mit Tokens als URL Parameter
-            success_url = f"{frontend_url}/?microsoft_auth=success&access_token={access_token}&refresh_token={refresh_token}&user_id={user.id}"
-            return HttpResponseRedirect(success_url)
-            
-        except Exception as e:
-            logger.error(f"Microsoft organization callback failed: {str(e)}")
-            error_url = f"{frontend_url}/?error=authentication_failed&error_description=Authentication failed: {str(e)}"
-            return HttpResponseRedirect(error_url)
-    
-    def post(self, request):
-        """
-        Verarbeitet Microsoft OAuth2 Callback
-        
-        Expected POST data:
-        {
-            "code": "OAuth2 authorization code",
-            "state": "Security state parameter"
-        }
-        
-        Returns:
-            - success: Boolean
-            - user: User data
-            - tokens: JWT access + refresh tokens
-            - organization_info: Microsoft organization data
-        """
-        try:
-            # 1. Input validieren
-            auth_code = request.data.get('code')
-            state = request.data.get('state')
-            
-            if not auth_code:
-                return Response({
-                    'success': False,
-                    'error': 'Authorization code missing'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # 2. State validieren (Security)
-            session_state = request.session.get('oauth_state')
-            if not session_state or session_state != state:
-                logger.warning("OAuth state mismatch - possible CSRF attack")
-                return Response({
-                    'success': False,
-                    'error': 'Invalid state parameter'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # 3. Authorization Code gegen Access Token tauschen
-            token_data = self._exchange_code_for_token(auth_code, request)
-            if not token_data:
-                return Response({
-                    'success': False,
-                    'error': 'Failed to exchange authorization code'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # 4. User Info von Microsoft Graph API holen
-            user_info = self._get_microsoft_user_info(token_data['access_token'])
-            if not user_info:
-                return Response({
-                    'success': False,
-                    'error': 'Failed to get user information'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # 5. Organization Validierung
-            org_validation = self._validate_organization_user(user_info)
-            if not org_validation['valid']:
-                return Response({
-                    'success': False,
-                    'error': org_validation['error'],
-                    'error_code': 'ORGANIZATION_ACCESS_DENIED'
-                }, status=status.HTTP_403_FORBIDDEN)
-            
-            # 6. Django User erstellen/updaten
-            user = self._create_or_update_user(user_info, org_validation['org_data'])
-            
-            # 7. JWT Tokens erstellen
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
-            
-            # 8. Session cleanup
-            request.session.pop('oauth_state', None)
-            
-            logger.info(f"Microsoft organization login successful for user: {user.email}")
-            
-            return Response({
-                'success': True,
-                'message': 'Microsoft organization login successful',
-                'user': {
+            # 6. SICHER: Authentifizierungsdaten temporär speichern (nicht in URL!)
+            temp_auth_code = secrets.token_urlsafe(32)
+            auth_data = {
+                'user_id': user.id,
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'user_data': {
                     'id': user.id,
                     'username': user.username,
                     'email': user.email,
@@ -244,6 +166,17 @@ class MicrosoftOrganizationCallbackView(APIView):
                     'is_staff': user.is_staff,
                     'is_superuser': user.is_superuser,
                 },
+                'role_info': {
+                    'role_name': user.role_info.get('role_name', 'Student'),
+                    'groups': user.role_info.get('groups', []),
+                    'is_staff': user.is_staff,
+                    'is_superuser': user.is_superuser,
+                    'permissions': {
+                        'can_access_admin': user.is_staff or user.is_superuser,
+                        'can_manage_users': user.is_superuser,
+                        'can_grade_exams': user.is_staff or user.is_superuser,
+                    }
+                },
                 'organization_info': {
                     'display_name': org_validation['org_data'].get('displayName'),
                     'job_title': org_validation['org_data'].get('jobTitle'),
@@ -251,18 +184,82 @@ class MicrosoftOrganizationCallbackView(APIView):
                     'office_location': org_validation['org_data'].get('officeLocation'),
                     'account_enabled': org_validation['org_data'].get('accountEnabled'),
                 },
-                'tokens': {
-                    'access': str(access_token),
-                    'refresh': str(refresh),
-                },
-                'expires_in': access_token.lifetime.total_seconds()
-            })
+                'expires_in': refresh.access_token.lifetime.total_seconds()
+            }
+            
+            # Temporär in Cache speichern (5 Minuten)
+            cache.set(f'microsoft_auth_{temp_auth_code}', auth_data, timeout=300)
+            
+            logger.info(f"Microsoft organization login successful for user: {user.email}")
+            
+            # 7. Sicherer Redirect nur mit temporärem Code
+            success_url = f"{frontend_url}/login?microsoft_auth=success&auth_code={temp_auth_code}"
+            return HttpResponseRedirect(success_url)
             
         except Exception as e:
             logger.error(f"Microsoft organization callback failed: {str(e)}")
+            error_url = f"{frontend_url}/login?error=authentication_failed&error_description=Authentication failed"
+            return HttpResponseRedirect(error_url)
+    
+    def post(self, request):
+        """
+        SICHER: Holt Authentifizierungsdaten per JSON mit temporärem Code
+        
+        POST /api/microsoft/auth/tokens/
+        {
+            "auth_code": "temporärer Code aus URL"
+        }
+        
+        Returns JSON:
+        {
+            "success": true,
+            "user": {...},
+            "tokens": {...},
+            "organization_info": {...}
+        }
+        """
+        try:
+            auth_code = request.data.get('auth_code')
+            
+            if not auth_code:
+                return Response({
+                    'success': False,
+                    'error': 'Auth code missing'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Authentifizierungsdaten aus Cache holen
+            cache_key = f'microsoft_auth_{auth_code}'
+            auth_data = cache.get(cache_key)
+            
+            if not auth_data:
+                return Response({
+                    'success': False,
+                    'error': 'Invalid or expired auth code'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Auth Code nach Verwendung löschen (One-Time-Use)
+            cache.delete(cache_key)
+            
+            logger.info(f"Microsoft tokens delivered securely via JSON for user: {auth_data['user_data']['email']}")
+            
+            return Response({
+                'success': True,
+                'message': 'Microsoft organization login successful',
+                'user': auth_data['user_data'],
+                'role_info': auth_data['role_info'],
+                'organization_info': auth_data['organization_info'],
+                'tokens': {
+                    'access': auth_data['access_token'],
+                    'refresh': auth_data['refresh_token'],
+                },
+                'expires_in': auth_data['expires_in']
+            })
+            
+        except Exception as e:
+            logger.error(f"Microsoft token delivery failed: {str(e)}")
             return Response({
                 'success': False,
-                'error': f'Authentication failed: {str(e)}'
+                'error': f'Token delivery failed: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def _exchange_code_for_token(self, auth_code, request):
@@ -388,11 +385,15 @@ class MicrosoftOrganizationCallbackView(APIView):
     
     def _create_or_update_user(self, user_info, org_data):
         """
-        Erstellt oder aktualisiert Django User basierend auf Microsoft Daten
+        Erstellt oder aktualisiert Django User basierend auf Microsoft Daten und Gruppenmitgliedschaften
         """
         email = user_info.get('mail') or user_info.get('userPrincipalName')
         
-        # User suchen oder erstellen
+        # 1. Rollen aus Microsoft-Gruppenmitgliedschaften ermitteln
+        role_authenticator = RoleAuthenticator()
+        role_info = role_authenticator.get_user_role_from_microsoft(email)
+        
+        # 2. User suchen oder erstellen
         user, created = User.objects.get_or_create(
             email=email,
             defaults={
@@ -400,35 +401,33 @@ class MicrosoftOrganizationCallbackView(APIView):
                 'first_name': user_info.get('givenName', ''),
                 'last_name': user_info.get('surname', ''),
                 'is_active': True,
+                'is_staff': role_info.get('is_staff', False),
+                'is_superuser': role_info.get('is_superuser', False),
             }
         )
         
-        # User Daten aktualisieren
+        # 3. User Daten aktualisieren
         user.first_name = user_info.get('givenName', user.first_name)
         user.last_name = user_info.get('surname', user.last_name)
         user.is_active = org_data.get('accountEnabled', True)
         
-        # Berechtigungen basierend auf Job Title setzen
-        job_title = org_data.get('jobTitle', '').lower()
-        department = org_data.get('department', '').lower()
-        
-        # Admin-Rechte für bestimmte Rollen
-        admin_keywords = ['ceo', 'cto', 'geschäftsführer', 'leiter', 'director', 'admin']
-        is_admin = any(keyword in job_title for keyword in admin_keywords)
-        
-        # Staff-Rechte für bestimmte Departments
-        staff_departments = ['it', 'management', 'verwaltung', 'hr']
-        is_staff = any(dept in department for dept in staff_departments) or is_admin
-        
-        user.is_staff = is_staff
-        user.is_superuser = is_admin
+        # 4. NEUE ROLLENLOGIK: Rollen aus Microsoft-Gruppen setzen
+        user.is_staff = role_info.get('is_staff', False)
+        user.is_superuser = role_info.get('is_superuser', False)
         
         user.save()
         
+        # 5. Logging mit Rollen-Informationen
+        role_name = role_info.get('role_name', 'Unknown')
+        groups = role_info.get('groups', [])
+        
         if created:
-            logger.info(f"Created new user from Microsoft organization: {email}")
+            logger.info(f"Created new user from Microsoft: {email} | Role: {role_name} | Groups: {groups}")
         else:
-            logger.info(f"Updated existing user from Microsoft organization: {email}")
+            logger.info(f"Updated existing user from Microsoft: {email} | Role: {role_name} | Groups: {groups}")
+        
+        # 6. Rolle-Informationen an User-Objekt anhängen (für Response)
+        user.role_info = role_info
         
         return user
 

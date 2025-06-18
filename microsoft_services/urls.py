@@ -17,6 +17,7 @@ authentications_urlpatterns = [
     # Microsoft Organization Authentication
     path('login/', MicrosoftOrganizationLoginView.as_view(), name='organization-login'),
     path('callback/', MicrosoftOrganizationCallbackView.as_view(), name='organization-callback'),
+    path('tokens/', MicrosoftOrganizationCallbackView.as_view(), name='organization-tokens'),
     path('user-status/', OrganizationUserStatusView.as_view(), name='user-status'),
 ]
 
