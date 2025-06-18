@@ -212,8 +212,9 @@ class MicrosoftOrganizationCallbackView(APIView):
             logger.info(f"⚡ PERFORMANCE: Total={total_time:.2f}s (Token={token_time:.2f}s, User={user_time:.2f}s, Org={org_time:.2f}s, DB={user_create_time:.2f}s, JWT={jwt_time:.2f}s)")
             
             # 7. SICHERE Weiterleitung zum Frontend (OHNE Tokens in URL!)
-            success_url = f"{frontend_url}/dashboard?microsoft_auth=success"
-            logger.info(f"🚀 Redirecting user to dashboard (tokens in session): {frontend_url}/dashboard")
+            # SPA-kompatibel: Leite zur Root-URL weiter, React Router übernimmt dann
+            success_url = f"{frontend_url}/?microsoft_auth=success&redirect_to=dashboard"
+            logger.info(f"🚀 Redirecting user to frontend root (tokens in session): {frontend_url}")
             return HttpResponseRedirect(success_url)
             
         except Exception as e:
