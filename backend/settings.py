@@ -117,6 +117,13 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# Session Settings für Cross-Domain Microsoft Auth
+SESSION_COOKIE_SAMESITE = 'None'  # Erlaubt Cross-Domain Session Cookies
+SESSION_COOKIE_SECURE = True       # HTTPS erforderlich für SameSite=None
+SESSION_COOKIE_HTTPONLY = True     # XSS Schutz
+SESSION_COOKIE_AGE = 3600          # 1 Stunde Session-Dauer
+SESSION_SAVE_EVERY_REQUEST = False # Performance Optimierung
+
 # Security Settings für Production
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
@@ -125,7 +132,7 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_REDIRECT_EXEMPT = []
     SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
+    # SESSION_COOKIE_SECURE bereits oben gesetzt
     CSRF_COOKIE_SECURE = True
 
 # Default primary key field type
