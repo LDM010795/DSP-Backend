@@ -1,19 +1,27 @@
 """
-Zentrale Model-Datei für die 'elearning' App.
+E-Learning Application Models Registry
 
-Diese Datei dient als Haupt-Einstiegspunkt für Django, um alle Modelle
-der E-Learning-Funktionalität zu erkennen.
+This module serves as the central models registry for the E-Learning application.
+It imports and exposes all models from the logical submodules (users, modules, final_exam)
+to ensure they are properly registered with Django's ORM system.
 
-Sie importiert die Modelle aus den jeweiligen logischen Untermodulen
-(users, modules, final_exam), sodass sie alle unter dem Namespace
-der 'elearning'-App registriert werden.
+The modular structure promotes separation of concerns while maintaining a unified
+Django app namespace for the E-Learning functionality.
+
+Architecture:
+- users/: User management and authentication models
+- modules/: Learning content and module management models  
+- final_exam/: Examination system and certification models
+
+Author: DSP Development Team
+Version: 1.0.0
 """
 
-# Importiere alle Modelle aus dem 'users'-Modul
+# Import all user-related models for registration with Django ORM
 from .users.models import *
 
-# Importiere alle Modelle aus dem 'modules'-Modul
+# Import all module-related models for registration with Django ORM
 from .modules.models import *
 
-# Importiere alle Modelle aus dem 'final_exam'-Modul
+# Import all final exam-related models for registration with Django ORM
 from .final_exam.models import *

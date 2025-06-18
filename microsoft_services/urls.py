@@ -14,10 +14,9 @@ app_name = 'microsoft_services'
 
 # Alle URLs, die mit /auth/... beginnen
 authentications_urlpatterns = [
-    # Microsoft Organization Authentication
+    # Microsoft Organization Authentication - GENERISCHE API
     path('login/', MicrosoftOrganizationLoginView.as_view(), name='organization-login'),
     path('callback/', MicrosoftOrganizationCallbackView.as_view(), name='organization-callback'),
-    path('tokens/', MicrosoftOrganizationCallbackView.as_view(), name='organization-tokens'),
     path('user-status/', OrganizationUserStatusView.as_view(), name='user-status'),
 ]
 
