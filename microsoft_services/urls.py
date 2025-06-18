@@ -4,6 +4,7 @@ from django.urls import path, include
 from .authentications.views.authentication_organisation_user import (
     MicrosoftOrganizationLoginView,
     MicrosoftOrganizationCallbackView,
+    MicrosoftAuthTokensView,
     OrganizationUserStatusView
 )
 from .graph_apis.views import UserReadTestView
@@ -17,6 +18,7 @@ authentications_urlpatterns = [
     # Microsoft Organization Authentication
     path('login/', MicrosoftOrganizationLoginView.as_view(), name='organization-login'),
     path('callback/', MicrosoftOrganizationCallbackView.as_view(), name='organization-callback'),
+    path('tokens/', MicrosoftAuthTokensView.as_view(), name='auth-tokens'),
     path('user-status/', OrganizationUserStatusView.as_view(), name='user-status'),
 ]
 

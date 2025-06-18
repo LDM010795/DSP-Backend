@@ -182,14 +182,38 @@ class MicrosoftOrganizationCallbackView(APIView):
             refresh_token = str(refresh)
             jwt_time = time.time() - jwt_start
             
+            # 6. Tokens SICHER in Session speichern (nicht in URL!)
+            request.session['microsoft_auth_tokens'] = {
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'user_id': user.id,
+                'expires_in': refresh.access_token.lifetime.total_seconds(),
+                'user_info': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'is_staff': user.is_staff,
+                    'is_superuser': user.is_superuser,
+                },
+                'organization_info': {
+                    'display_name': org_validation['org_data'].get('displayName'),
+                    'job_title': org_validation['org_data'].get('jobTitle'),
+                    'department': org_validation['org_data'].get('department'),
+                    'office_location': org_validation['org_data'].get('officeLocation'),
+                    'account_enabled': org_validation['org_data'].get('accountEnabled'),
+                }
+            }
+            
             total_time = time.time() - start_time
             
             logger.info(f"🎉 Microsoft organization login successful for {user.email}")
             logger.info(f"⚡ PERFORMANCE: Total={total_time:.2f}s (Token={token_time:.2f}s, User={user_time:.2f}s, Org={org_time:.2f}s, DB={user_create_time:.2f}s, JWT={jwt_time:.2f}s)")
             
-            # 6. Weiterleitung zum Frontend Dashboard mit Tokens als URL Parameter
-            success_url = f"{frontend_url}/dashboard?microsoft_auth=success&access_token={access_token}&refresh_token={refresh_token}&user_id={user.id}"
-            logger.info(f"🚀 Redirecting user to dashboard: {frontend_url}/dashboard")
+            # 7. SICHERE Weiterleitung zum Frontend (OHNE Tokens in URL!)
+            success_url = f"{frontend_url}/dashboard?microsoft_auth=success"
+            logger.info(f"🚀 Redirecting user to dashboard (tokens in session): {frontend_url}/dashboard")
             return HttpResponseRedirect(success_url)
             
         except Exception as e:
@@ -520,6 +544,59 @@ class MicrosoftOrganizationCallbackView(APIView):
             logger.info(f"Updated existing user from Microsoft organization: {email}")
         
         return user
+
+
+class MicrosoftAuthTokensView(APIView):
+    """
+    Holt Microsoft Auth Tokens sicher aus der Session (nach OAuth2 Callback)
+    
+    GET /api/microsoft/auth/tokens/
+    """
+    
+    def get(self, request):
+        """
+        Holt die Microsoft Auth Tokens aus der Session und löscht sie danach
+        
+        Returns:
+            - success: Boolean
+            - tokens: JWT access + refresh tokens
+            - user: User data
+            - organization_info: Microsoft organization data
+        """
+        try:
+            # Tokens aus Session holen
+            auth_data = request.session.get('microsoft_auth_tokens')
+            
+            if not auth_data:
+                return Response({
+                    'success': False,
+                    'error': 'No authentication data found in session',
+                    'error_code': 'NO_AUTH_DATA'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Session cleanup - Tokens nur einmal verwendbar
+            del request.session['microsoft_auth_tokens']
+            
+            logger.info(f"Microsoft auth tokens retrieved from session for user: {auth_data['user_info']['email']}")
+            
+            return Response({
+                'success': True,
+                'message': 'Microsoft authentication tokens retrieved successfully',
+                'tokens': {
+                    'access': auth_data['access_token'],
+                    'refresh': auth_data['refresh_token'],
+                },
+                'expires_in': auth_data['expires_in'],
+                'user': auth_data['user_info'],
+                'organization_info': auth_data['organization_info']
+            })
+            
+        except Exception as e:
+            logger.error(f"Failed to retrieve Microsoft auth tokens: {str(e)}")
+            return Response({
+                'success': False,
+                'error': f'Failed to retrieve tokens: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class OrganizationUserStatusView(APIView):
