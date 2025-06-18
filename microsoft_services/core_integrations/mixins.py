@@ -27,14 +27,13 @@ class GraphAPIBaseMixin:
     
     GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
     
-    def call_graph_api(self, endpoint: str, params: Optional[Dict] = None, timeout: int = 5) -> Dict[str, Any]:
+    def call_graph_api(self, endpoint: str, params: Optional[Dict] = None) -> Dict[str, Any]:
         """
-        Führt READ-ONLY Microsoft Graph API Call aus (mit Timeout)
+        Führt READ-ONLY Microsoft Graph API Call aus
         
         Args:
             endpoint: Graph API Endpunkt (z.B. 'me', 'users')
             params: URL Query Parameter
-            timeout: Request Timeout in Sekunden (default: 5)
             
         Returns:
             Dict mit Graph API Response
@@ -42,7 +41,6 @@ class GraphAPIBaseMixin:
         Raises:
             AzureAuthException: Bei Token-Fehlern
             MicrosoftGraphException: Bei Graph API Fehlern
-            requests.Timeout: Bei Timeout
         """
         try:
             # 1. Token vom TokenManager holen
@@ -56,18 +54,15 @@ class GraphAPIBaseMixin:
                 'Accept': 'application/json'
             }
             
-            # 3. Nur GET Request ausführen (READ-ONLY mit Timeout)
-            logger.info(f"Graph API Call: GET {endpoint} (timeout: {timeout}s)")
-            response = requests.get(url, headers=headers, params=params, timeout=timeout)
+            # 3. Nur GET Request ausführen (READ-ONLY)
+            logger.info(f"Graph API Call: GET {endpoint}")
+            response = requests.get(url, headers=headers, params=params)
             
             # 4. Response verarbeiten
             return self._handle_graph_response(response)
             
         except AzureAuthException:
             # Auth-Fehler weiterleiten
-            raise
-        except requests.exceptions.Timeout:
-            logger.warning(f"Graph API timeout after {timeout}s for endpoint: {endpoint}")
             raise
         except requests.exceptions.RequestException as e:
             logger.error(f"Graph API Request failed: {str(e)}")
