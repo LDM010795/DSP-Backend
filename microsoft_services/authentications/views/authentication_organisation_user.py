@@ -89,7 +89,7 @@ class MicrosoftAuthenticationMixin:
             Complete redirect URI for OAuth callback
         """
         return request.build_absolute_uri('/api/microsoft/auth/callback/')
-    
+            
     def _create_oauth_state(self, request) -> str:
         """
         Create and store OAuth state parameter for CSRF protection.

@@ -128,10 +128,10 @@ class GraphAPIBaseMixin:
             params: URL query parameters for the request
             timeout: Request timeout in seconds (uses default if None)
             custom_headers: Additional headers to include in the request
-        
+            
         Returns:
             Parsed JSON response from Microsoft Graph API
-        
+            
         Raises:
             AzureAuthException: Authentication or token-related errors
             MicrosoftGraphException: Graph API-specific errors
@@ -230,7 +230,7 @@ class GraphAPIBaseMixin:
         Args:
             request: Django HTTP request object
             graph_path: Graph API path extracted from the URL
-        
+            
         Returns:
             Django Response object with Graph API data or error information
         
@@ -415,10 +415,10 @@ class GraphAPIBaseMixin:
         Args:
             response: HTTP response from Graph API
             endpoint: Original endpoint for context
-        
+            
         Returns:
             Parsed JSON response data
-        
+            
         Raises:
             Appropriate Microsoft Graph exceptions based on response
         """
