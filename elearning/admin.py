@@ -114,12 +114,12 @@ class ContentInline(admin.TabularInline):
     ordering = ('order',)
 
 
-class SupplementaryContentInline(admin.TabularInline):
-    """Inline admin for supplementary content management."""
-    model = SupplementaryContent
-    extra = 0
-    fields = ('title', 'content_type', 'order')
-    ordering = ('order',)
+# class SupplementaryContentInline(admin.TabularInline):
+#     """Inline admin for supplementary content management."""
+#     model = SupplementaryContent
+#     extra = 0
+#     fields = ('title', 'content_type', 'order')
+#     ordering = ('order',)
 
 
 class TaskInline(admin.TabularInline):
@@ -138,11 +138,11 @@ class ModuleAdmin(admin.ModelAdmin):
     Provides comprehensive module management including content and task editing,
     access control, and categorization features.
     """
-    list_display = ('title', 'category', 'is_public', 'created_at')
-    list_filter = ('category', 'is_public', 'created_at')
+    list_display = ('title', 'category', 'is_public')
+    list_filter = ('category', 'is_public')
     search_fields = ('title', 'description')
     prepopulated_fields = {'slug': ('title',)} if hasattr(Module, 'slug') else {}
-    inlines = [ContentInline, SupplementaryContentInline, TaskInline]
+    inlines = [ContentInline, TaskInline]
     
     fieldsets = (
         (_('Basic Information'), {
@@ -152,13 +152,7 @@ class ModuleAdmin(admin.ModelAdmin):
             'fields': ('is_public',),
             'description': _('Configure who can access this module')
         }),
-        (_('Metadata'), {
-            'fields': ('created_at', 'updated_at') if hasattr(Module, 'updated_at') else ('created_at',),
-            'classes': ('collapse',)
-        }),
     )
-    
-    readonly_fields = ('created_at', 'updated_at') if hasattr(Module, 'updated_at') else ('created_at',)
     
     def get_queryset(self, request: HttpRequest) -> QuerySet:
         """Optimize queryset for better performance."""
@@ -168,7 +162,7 @@ class ModuleAdmin(admin.ModelAdmin):
 @admin.register(ModuleAccess)
 class ModuleAccessAdmin(admin.ModelAdmin):
     """Administration interface for module access permissions."""
-    list_display = ('user', 'module', 'granted_at', 'granted_by')
+    list_display = ('user', 'module', 'granted_at')
     list_filter = ('module', 'granted_at')
     search_fields = ('user__username', 'user__email', 'module__title')
     autocomplete_fields = ('user', 'module')
@@ -204,7 +198,7 @@ class TaskAdmin(admin.ModelAdmin):
 @admin.register(UserTaskProgress)
 class UserTaskProgressAdmin(admin.ModelAdmin):
     """Administration interface for tracking user task progress."""
-    list_display = ('user', 'task', 'completed', 'completed_at', 'score')
+    list_display = ('user', 'task', 'completed', 'completed_at')
     list_filter = ('completed', 'task__module', 'completed_at')
     search_fields = ('user__username', 'task__title')
     autocomplete_fields = ('user', 'task')
@@ -221,8 +215,7 @@ class ExamCriterionInline(admin.TabularInline):
     """Inline admin for exam criteria management."""
     model = ExamCriterion
     extra = 1
-    fields = ('title', 'description', 'max_points', 'order')
-    ordering = ('order',)
+    fields = ('title', 'description', 'max_points')
 
 
 @admin.register(Exam)
@@ -338,11 +331,10 @@ class ExamAttemptAdmin(admin.ModelAdmin):
 @admin.register(ExamCriterion)
 class ExamCriterionAdmin(admin.ModelAdmin):
     """Administration interface for exam criteria management."""
-    list_display = ('title', 'exam', 'max_points', 'order')
+    list_display = ('title', 'exam', 'max_points')
     list_filter = ('exam',)
     search_fields = ('title', 'exam__title')
     autocomplete_fields = ('exam',)
-    ordering = ('exam', 'order')
     
     fieldsets = (
         (_('Criterion Information'), {

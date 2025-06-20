@@ -1,25 +1,22 @@
-# Django Core
 asgiref==3.8.1
-Django==5.1.7
-sqlparse==0.5.3
-tzdata==2025.1
-
-# DRF & Auth
-djangorestframework
-djangorestframework-simplejwt
-
-# Utilities
-django-cors-headers
-
-# Admin Theme
-django-jazzmin
-
-# Microsoft Graph Integration
-requests==2.31.0                    # HTTP Calls zu Graph API
-
-# Production Dependencies für Render.com
-gunicorn==21.2.0
-psycopg2-binary==2.9.9
-whitenoise==6.6.0
+certifi==2025.6.15
+charset-normalizer==3.4.2
 dj-database-url==2.1.0
+Django==5.1.7
+django-cors-headers==4.7.0
+django-jazzmin==3.0.1
+djangorestframework==3.16.0
+djangorestframework-simplejwt==5.5.0
+gunicorn==21.2.0
+idna==3.10
+packaging==25.0
+psycopg2-binary==2.9.9
+PyJWT==2.9.0
 python-decouple==3.8
+python-dotenv==1.1.0
+requests==2.31.0
+sqlparse==0.5.3
+typing_extensions==4.14.0
+tzdata==2025.1
+urllib3==2.4.0
+whitenoise==6.6.0

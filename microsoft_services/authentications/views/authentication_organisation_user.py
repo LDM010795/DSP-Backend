@@ -45,6 +45,7 @@ from microsoft_services.core_integrations.exceptions import (
     MicrosoftGraphException,
     ResourceNotFoundException
 )
+from microsoft_services.authentications.state_manager import get_oauth_mixin
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -67,12 +68,11 @@ class OrganizationValidationResult:
     account_enabled: bool = False
 
 
-class MicrosoftAuthenticationMixin:
+class MicrosoftAuthenticationMixin(get_oauth_mixin()):
     """
-    Mixin providing common Microsoft authentication functionality.
+    Production-ready Microsoft authentication functionality.
     
-    This mixin encapsulates shared authentication logic including token exchange,
-    user validation, and error handling to promote code reuse and maintainability.
+    Automatische Auswahl zwischen Production (Redis) und Development (Session) State-Management.
     """
     
     OAUTH_SCOPE = 'openid email profile User.Read Directory.Read.All'
@@ -92,42 +92,15 @@ class MicrosoftAuthenticationMixin:
             
     def _create_oauth_state(self, request) -> str:
         """
-        Create and store OAuth state parameter for CSRF protection.
-        
-        Args:
-            request: Django HTTP request object
-        
-        Returns:
-            Generated state parameter
+        Create OAuth state - Production-ready implementation
         """
-        state = secrets.token_urlsafe(32)
-        request.session['oauth_state'] = state
-        request.session['oauth_timestamp'] = cache.get('current_timestamp', None)
-        return state
+        return self.create_oauth_state(request)
     
     def _validate_oauth_state(self, request, received_state: str) -> bool:
         """
-        Validate OAuth state parameter to prevent CSRF attacks.
-        
-        Args:
-            request: Django HTTP request object
-            received_state: State parameter received from OAuth callback
-        
-        Returns:
-            True if state is valid, False otherwise
+        Validate OAuth state - Production-ready implementation
         """
-        stored_state = request.session.get('oauth_state')
-        if not stored_state or stored_state != received_state:
-            logger.warning(f"OAuth state mismatch. Expected: {stored_state}, Received: {received_state}")
-            return False
-        
-        # Clean up used state
-        if 'oauth_state' in request.session:
-            del request.session['oauth_state']
-        if 'oauth_timestamp' in request.session:
-            del request.session['oauth_timestamp']
-        
-        return True
+        return self.validate_oauth_state(request, received_state)
     
     def _exchange_code_for_token(self, auth_code: str, request) -> Optional[Dict[str, Any]]:
         """

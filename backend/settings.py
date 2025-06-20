@@ -7,6 +7,10 @@ import dj_database_url
 from pathlib import Path
 from datetime import timedelta
 
+# .env Datei laden für Development
+from dotenv import load_dotenv
+load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -95,6 +99,36 @@ else:
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+# Cache Configuration - Production-ready mit Redis
+if os.environ.get('REDIS_URL'):
+    # Production: Redis auf Render.com
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': os.environ.get('REDIS_URL'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'CONNECTION_POOL_KWARGS': {
+                    'max_connections': 20,
+                    'retry_on_timeout': True,
+                },
+                'PARSER_CLASS': 'redis.connection.HiredisParser',
+                'PICKLE_VERSION': -1,
+            }
+        }
+    }
+    # Session Backend für Production (optional - OAuth nutzt jetzt Cache direkt)
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+    SESSION_CACHE_ALIAS = 'default'
+else:
+    # Development: In-Memory Cache
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'oauth-state-cache',
         }
     }
 
