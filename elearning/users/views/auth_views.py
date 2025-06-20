@@ -104,44 +104,52 @@ class LogoutView(APIView):
         Logout user by blacklisting their refresh token.
         
         Args:
-            request: HTTP request containing refresh token
+            request: HTTP request containing refresh token (optional)
             
         Returns:
             Response indicating logout success or failure
             
         Expected Request Data:
-            - refresh_token: JWT refresh token to blacklist
+            - refresh_token: JWT refresh token to blacklist (optional)
+            
+        Note:
+            If no refresh_token provided, logout still succeeds for UX.
+            Frontend should handle token cleanup locally.
         """
         try:
             refresh_token = request.data.get("refresh_token")
             
             if not refresh_token:
+                # Graceful logout even without refresh_token
+                # Frontend can handle local token cleanup
                 return Response(
-                    {'detail': _('Refresh token is required for logout.')},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {'detail': _('Successfully logged out (client-side cleanup recommended).')},
+                    status=status.HTTP_205_RESET_CONTENT
                 )
             
-            # Blacklist the refresh token
+            # Blacklist the refresh token if provided
             token = RefreshToken(refresh_token)
             token.blacklist()
             
-            # Log successful logout
+            # Log successful logout with token blacklisting
             # Could add audit logging here
             
             return Response(
-                {'detail': _('Successfully logged out.')},
+                {'detail': _('Successfully logged out and token blacklisted.')},
                 status=status.HTTP_205_RESET_CONTENT
             )
             
         except TokenError as e:
+            # Even if token is invalid, allow logout to succeed for UX
             return Response(
-                {'detail': _('Invalid token provided.')},
-                status=status.HTTP_400_BAD_REQUEST
+                {'detail': _('Successfully logged out (token was invalid).')},
+                status=status.HTTP_205_RESET_CONTENT
             )
         except Exception as e:
+            # Fallback: allow logout to succeed even if blacklisting fails
             return Response(
-                {'detail': _('An error occurred during logout.')},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'detail': _('Successfully logged out (error during token blacklisting).')},
+                status=status.HTTP_205_RESET_CONTENT
             )
 
 
