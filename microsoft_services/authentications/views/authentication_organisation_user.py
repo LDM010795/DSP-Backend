@@ -88,7 +88,14 @@ class MicrosoftAuthenticationMixin(get_oauth_mixin()):
         Returns:
             Complete redirect URI for OAuth callback
         """
-        return request.build_absolute_uri('/api/microsoft/auth/callback/')
+        redirect_uri = request.build_absolute_uri('/api/microsoft/auth/callback/')
+        
+        # Azure erlaubt nur localhost für HTTP Development, nicht 127.0.0.1
+        if getattr(settings, 'DEBUG', False) and '127.0.0.1' in redirect_uri:
+            redirect_uri = redirect_uri.replace('127.0.0.1', 'localhost')
+            logger.debug(f"Development mode: Redirect URI geändert zu localhost für Azure Kompatibilität: {redirect_uri}")
+        
+        return redirect_uri
             
     def _create_oauth_state(self, request) -> str:
         """
