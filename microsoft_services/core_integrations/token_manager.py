@@ -423,5 +423,34 @@ class AzureTokenManager:
         }
 
 
-# Singleton instance for application-wide use
-azure_token_manager = AzureTokenManager()
+# Lazy-loaded singleton instance for application-wide use
+class _LazyAzureTokenManager:
+    """
+    Lazy wrapper for AzureTokenManager to prevent import-time initialization.
+    
+    This prevents Azure credential validation during Django startup/imports
+    when the token manager is not actually needed (e.g., for management commands).
+    The actual AzureTokenManager is only instantiated when first accessed.
+    """
+    
+    def __init__(self):
+        self._instance: Optional[AzureTokenManager] = None
+        self._lock = Lock()
+    
+    def __getattr__(self, name):
+        """Delegate all attribute access to the actual token manager instance."""
+        if self._instance is None:
+            with self._lock:
+                if self._instance is None:
+                    self._instance = AzureTokenManager()
+        return getattr(self._instance, name)
+    
+    def __bool__(self):
+        """Support boolean checks without triggering initialization."""
+        return True
+    
+    def __repr__(self):
+        """String representation without triggering initialization."""
+        return f"<LazyAzureTokenManager: {'initialized' if self._instance else 'not initialized'}>"
+
+azure_token_manager = _LazyAzureTokenManager()
