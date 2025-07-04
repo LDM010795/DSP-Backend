@@ -21,4 +21,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/elearning/', include('elearning.urls')),
     path('api/microsoft/', include('microsoft_services.urls')),
+    path('api/db-overview/', include('db_overview.urls')),
 ]
