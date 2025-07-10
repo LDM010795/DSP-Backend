@@ -30,8 +30,8 @@ Version: 1.0.0
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
-from django.db.models import Exists, OuterRef
-from typing import Optional, QuerySet
+from django.db.models import Exists, OuterRef, QuerySet
+from typing import Optional
 
 
 class ModuleCategory(models.Model):
