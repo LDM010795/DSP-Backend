@@ -1,6 +1,6 @@
 from rest_framework import serializers
 # Angepasste Importe
-from .models import Module, Content, SupplementaryContent, Task, UserTaskProgress
+from .models import Module, ModuleCategory, Content, SupplementaryContent, Task, UserTaskProgress, Article
 
 class SupplementaryContentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -12,7 +12,7 @@ class ContentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Content
-        fields = ['id', 'title', 'description', 'video_url', 'supplementary_title', 'order', 'supplementary_contents']
+        fields = ['id', 'module', 'title', 'description', 'video_url', 'supplementary_title', 'order', 'supplementary_contents']
 
 class TaskSerializer(serializers.ModelSerializer):
     # Feld, das angibt, ob der aktuelle Benutzer die Aufgabe gelöst hat
@@ -30,18 +30,39 @@ class TaskSerializer(serializers.ModelSerializer):
             return UserTaskProgress.objects.filter(user=user, task=obj, completed=True).exists()
         return False # Für nicht authentifizierte User
 
+class ArticleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Article
+        fields = ['id', 'module', 'title', 'url', 'order']
+
+class ModuleCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ModuleCategory
+        fields = ['id', 'name']
+
+
 class ModuleListSerializer(serializers.ModelSerializer):
+    category = ModuleCategorySerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=ModuleCategory.objects.all(),
+        source='category',
+        write_only=True,
+        required=False,
+    )
+
     class Meta:
         model = Module
-        fields = ['id', 'title', 'category', 'is_public']
+        fields = ['id', 'title', 'category', 'category_id', 'is_public']
 
 class ModuleDetailSerializer(serializers.ModelSerializer):
     contents = ContentSerializer(many=True, read_only=True)
     tasks = serializers.SerializerMethodField() # Verwende SerializerMethodField, um Kontext zu übergeben
+    articles = ArticleSerializer(many=True, read_only=True)
+    category = ModuleCategorySerializer(read_only=True)
 
     class Meta:
         model = Module
-        fields = ['id', 'title', 'category', 'is_public', 'contents', 'tasks']
+        fields = ['id', 'title', 'category', 'is_public', 'contents', 'articles', 'tasks']
 
     def get_tasks(self, obj):
         # Hole den Request aus dem Kontext und übergebe ihn an den TaskSerializer

@@ -41,8 +41,9 @@ INSTALLED_APPS = [
 
     # Local Apps
     'elearning.apps.ElearningConfig',
-    'microsoft_services.apps.MicrosoftServicesConfig',
+    'core.microsoft_services.apps.MicrosoftServicesConfig',
     'db_overview.apps.DbOverviewConfig',
+    'core.employees.apps.EmployeesConfig',
 ]
 
 MIDDLEWARE = [
@@ -58,7 +59,10 @@ MIDDLEWARE = [
 ]
 
 # CORS Settings - Production-ready
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+CORS_ALLOWED_ORIGINS = os.environ.get(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:5173,http://localhost:5174'
+).split(',')
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
     'DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT',
@@ -66,6 +70,10 @@ CORS_ALLOW_METHODS = [
 CORS_ALLOW_HEADERS = [
     'accept', 'accept-encoding', 'authorization', 'content-type', 'dnt',
     'origin', 'user-agent', 'x-csrftoken', 'x-requested-with',
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://localhost:517[0-9]$",
+    r"^http://127\.0\.0\.1:517[0-9]$",
 ]
 
 ROOT_URLCONF = 'backend.urls'

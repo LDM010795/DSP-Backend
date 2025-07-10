@@ -33,7 +33,7 @@ from .final_exam import views as exam_views
 
 app_name = 'elearning'
 
-# --- URL Pattern Definitions for Submodules ---
+# --- Authentication and Token Management ---
 
 def _create_users_router() -> DefaultRouter:
     """
@@ -49,6 +49,8 @@ def _create_users_router() -> DefaultRouter:
 # Initialize user management router
 users_router = _create_users_router()
 
+# --- User Management URL Patterns ---
+
 # User management URL patterns
 users_urlpatterns: List[URLPattern] = [
     # User authentication and account management
@@ -58,6 +60,8 @@ users_urlpatterns: List[URLPattern] = [
     # User administration endpoints (requires admin privileges)
     path('', include(users_router.urls)),
 ]
+
+# --- Learning Modules URL Patterns ---
 
 # Learning modules URL patterns  
 modules_urlpatterns: List[URLPattern] = [
@@ -71,7 +75,25 @@ modules_urlpatterns: List[URLPattern] = [
     
     # Interactive code execution endpoint
     path('execute/', module_views.ExecutePythonCodeView.as_view(), name='execute-python-code'),
+    # Create Module & Content endpoints
+    path('', module_views.ModuleCreateView.as_view(), name='module-create'),
+    path('<int:pk>/', module_views.ModuleUpdateView.as_view(), name='module-update'),
+    path('<int:pk>/detail/', module_views.ModuleDetailAdminView.as_view(), name='module-detail-admin'),
+    # Create content
+    path('content/', module_views.ContentCreateView.as_view(), name='content-create'),
+    # Categories
+    path('categories/', module_views.CategoryListCreateView.as_view(), name='category-list-create'),
+    path('categories/<int:pk>/', module_views.CategoryUpdateView.as_view(), name='category-update'),
+    # Create Article endpoint
+    path('article/', module_views.ArticleCreateView.as_view(), name='article-create'),
+    # Supplementary content
+    path('supplementary/', module_views.SupplementaryContentCreateView.as_view(), name='supplementary-create'),
+    # Update endpoints
+    path('content/<int:pk>/', module_views.ContentUpdateView.as_view(), name='content-update'),
+    path('article/<int:pk>/', module_views.ArticleUpdateView.as_view(), name='article-update'),
 ]
+
+# --- Examination System URL Patterns ---
 
 # Examination system URL patterns
 exams_urlpatterns: List[URLPattern] = [
