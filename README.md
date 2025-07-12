@@ -450,35 +450,6 @@ class EmployeeListAPIView(generics.ListCreateAPIView):
 
 ### 🔒 Sicherheitsstandards
 
-#### 1. Authentifizierung
-
-```python
-# ✅ JWT Token Validierung
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.permissions import IsAuthenticated
-
-class SecureAPIView(generics.ListAPIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
-```
-
-#### 2. Datenvalidierung
-
-```python
-# ✅ Serializer Validierung
-from rest_framework import serializers
-
-class EmployeeSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField()
-
-    def validate_email(self, value):
-        if Employee.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email bereits vergeben")
-        return value
-
-    class Meta:
-        model = Employee
-        fields = ['first_name', 'last_name', 'email']
 ```
 
 ---
