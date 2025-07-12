@@ -448,8 +448,6 @@ class EmployeeListAPIView(generics.ListCreateAPIView):
         return Employee.objects.filter(is_active=True)
 ```
 
-### 🔒 Sicherheitsstandards
-
 ```
 
 ---
