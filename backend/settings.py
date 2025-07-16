@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'core.microsoft_services.apps.MicrosoftServicesConfig',
     'db_overview.apps.DbOverviewConfig',
     'core.employees.apps.EmployeesConfig',
+    'shift_planner.apps.ShiftPlannerConfig',
 ]
 
 MIDDLEWARE = [

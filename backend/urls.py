@@ -23,4 +23,5 @@ urlpatterns = [
     path('api/microsoft/', include('core.microsoft_services.urls')),
     path('api/db-overview/', include('db_overview.urls')),
     path('api/employees/', include('core.employees.urls')),
+    path('api/shift-planner/', include('shift_planner.urls')),
 ]

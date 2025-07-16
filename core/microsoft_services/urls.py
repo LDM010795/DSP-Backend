@@ -18,6 +18,7 @@ from django.urls import path
 from .authentications.views import (
     MicrosoftLoginRedirectView,
     MicrosoftCallbackView,
+    MicrosoftLogoutView,
 )
 
 app_name = "microsoft_services"
@@ -41,4 +42,5 @@ urlpatterns = [
         MicrosoftCallbackView.as_view(),
         name="microsoft-callback-exchange",
     ),
+    path("auth/logout/", MicrosoftLogoutView.as_view(), name="microsoft-logout"),
 ] 
