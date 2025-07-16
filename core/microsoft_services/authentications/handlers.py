@@ -26,6 +26,7 @@ from django.db.models import Q
 
 from core.employees.models import Employee, Tool, EmployeeToolAccess
 
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
@@ -167,18 +168,13 @@ def get_redirect_url(request) -> str:
         
     Security: Validates URLs against allowed domains to prevent open redirects
     """
-    # Get referer from request headers
+    # Prüfe Referer und User-Agent für Tool-Erkennung
     referer = request.META.get('HTTP_REFERER', '')
     user_agent = request.META.get('HTTP_USER_AGENT', '')
     
-    # Check if request is from shift-planner
-    if 'shift-planner' in referer or 'shift-planner' in user_agent:
-        shift_planner_url = os.getenv('SHIFT_PLANNER_FRONTEND_URL')
-        if shift_planner_url:
-            # Security: Validate URL format
-            if shift_planner_url.startswith(('http://', 'https://')):
-                return f"{shift_planner_url}/auth/callback"
+    # Shift-Planner erkennt an spezifischen URLs oder User-Agent
+    if 'shift-planner' in referer.lower() or 'shift-planner' in user_agent.lower():
+        return settings.SHIFT_PLANNER_FRONTEND_URL
     
-    # Default to e-learning frontend
-    elearning_url = os.getenv('ELEARNING_FRONTEND_URL', 'https://dsp-e-learning.onrender.com')
-    return f"{elearning_url}/auth/callback"
+    # E-Learning als Standard
+    return settings.ELEARNING_FRONTEND_URL
