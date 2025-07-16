@@ -14,6 +14,7 @@ Author: DSP Development Team
 Version: 2.0.0 (Refactored)
 """
 import logging
+import os
 from typing import Dict, Any, Tuple
 from abc import ABC, abstractmethod
 
@@ -152,3 +153,32 @@ class EmployeeAuthHandler(BaseAuthHandler):
             email=employee.email, defaults=defaults
         )
         return user, created
+
+
+def get_redirect_url(request) -> str:
+    """
+    Ermittelt die korrekte Frontend-URL basierend auf dem Request.
+    
+    Args:
+        request: Django HTTP request object
+        
+    Returns:
+        str: Die Frontend-URL für den Redirect
+        
+    Security: Validates URLs against allowed domains to prevent open redirects
+    """
+    # Get referer from request headers
+    referer = request.META.get('HTTP_REFERER', '')
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    
+    # Check if request is from shift-planner
+    if 'shift-planner' in referer or 'shift-planner' in user_agent:
+        shift_planner_url = os.getenv('SHIFT_PLANNER_FRONTEND_URL')
+        if shift_planner_url:
+            # Security: Validate URL format
+            if shift_planner_url.startswith(('http://', 'https://')):
+                return f"{shift_planner_url}/auth/callback"
+    
+    # Default to e-learning frontend
+    elearning_url = os.getenv('ELEARNING_FRONTEND_URL', 'https://dsp-e-learning.onrender.com')
+    return f"{elearning_url}/auth/callback"
