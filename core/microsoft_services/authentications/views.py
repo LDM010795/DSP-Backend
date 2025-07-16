@@ -26,7 +26,7 @@ from django.conf import settings
 
 from core.employees.models import Tool
 from .base import MicrosoftAuthClient
-from .handlers import EmployeeAuthHandler
+from .handlers import EmployeeAuthHandler, get_redirect_url
 from ..core_integrations.exceptions import AzureAuthException, MicrosoftGraphException
 
 logger = logging.getLogger(__name__)
@@ -93,7 +93,11 @@ class MicrosoftCallbackView(APIView):
             tool = Tool.objects.get(slug=tool_slug, is_active=True)
             # Forward all query params from Microsoft to the frontend
             query_params = request.GET.urlencode()
-            redirect_url = f"{tool.frontend_url}?{query_params}"
+            
+            # Use the new get_redirect_url function for dynamic frontend URL
+            frontend_url = get_redirect_url(request)
+            redirect_url = f"{frontend_url}?{query_params}"
+            
             logger.info(f"Redirecting user to frontend for tool '{tool_slug}': {redirect_url}")
             return HttpResponseRedirect(redirect_url)
         except Tool.DoesNotExist:
@@ -159,7 +163,7 @@ class MicrosoftLogoutView(APIView):
 
             # Prepare optional Azure logout URL
             azure_logout = "https://login.microsoftonline.com/common/oauth2/v2.0/logout"
-            post_logout = request.data.get("post_logout_redirect_uri") or settings.FRONTEND_URL
+            post_logout = request.data.get("post_logout_redirect_uri") or get_redirect_url(request)
             logout_url = f"{azure_logout}?post_logout_redirect_uri={post_logout}"
 
             response = Response({"success": True, "logout_url": logout_url})
