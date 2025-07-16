@@ -1,3 +1,20 @@
+"""
+Cleanup Inactive Users Management Command - DSP (Digital Solutions Platform)
+
+Dieses Management Command bereinigt inaktive Benutzer, die ihr initiales Passwort
+nicht innerhalb der vorgegebenen Zeit geändert haben.
+
+Features:
+- Automatische Bereinigung abgelaufener Benutzerkonten
+- Konfigurierbare Timeout-Einstellungen
+- Sichere Benutzerverwaltung mit Logging
+- Detaillierte Ausgabe für Monitoring
+
+Author: DSP Development Team
+Created: 10.07.2025
+Version: 1.0.0
+"""
+
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -11,9 +28,31 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
+    """
+    Django Management Command für die Bereinigung inaktiver Benutzer.
+    
+    Löscht Benutzer, die erstellt wurden, aber ihr initiales Passwort nicht 
+    innerhalb der vorgegebenen Zeit (standardmäßig 1 Stunde) geändert haben.
+    
+    Features:
+    - Konfigurierbare Timeout-Einstellungen über PASSWORD_RESET_TIMEOUT
+    - Sichere Benutzerverwaltung mit Logging
+    - Detaillierte Ausgabe für Monitoring und Debugging
+    """
+    
     help = 'Löscht Benutzer, die erstellt wurden, aber ihr initiales Passwort nicht innerhalb der vorgegebenen Zeit (standardmäßig 1 Stunde) geändert haben.'
 
     def handle(self, *args, **options):
+        """
+        Hauptausführungsmethode für das Management Command.
+        
+        Args:
+            *args: Zusätzliche Argumente
+            **options: Command-Optionen
+            
+        Raises:
+            CommandError: Bei Fehlern während der Ausführung
+        """
         # Hole das Timeout aus den Settings, default 3600 Sekunden (1 Stunde)
         # Wir verwenden hier PASSWORD_RESET_TIMEOUT, da es bereits dafür gedacht ist
         timeout_seconds = getattr(settings, 'PASSWORD_RESET_TIMEOUT', 3600)

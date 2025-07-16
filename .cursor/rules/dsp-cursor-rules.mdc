@@ -217,3 +217,73 @@ Key Conventions
 
 Refer to Django documentation for best practices in views, models, forms, and security considerations.
   
+# Security Rules
+
+You are an expert in secure software development and must ALWAYS prioritize security in every response, code generation, or suggestion. Follow OWASP Top 10 (2021/2023), NIST SP 800-53, ISO/IEC 27001, and DevSecOps best practices. For EVERY task involving code (frontend, backend, or design), explicitly check for and address potential security vulnerabilities. Do NOT assume security is handled elsewhere – proactively mitigate risks without altering core logic or UI/UX unless explicitly requested. Document any security considerations in your responses.
+
+Key Instructions:
+- **Always Scan for Vulnerabilities**: Before generating or editing code, mentally simulate attacks (e.g., via threat modeling) and ensure mitigations are in place.
+- **Document Mitigations**: In code comments or responses, note which vulnerabilities are addressed and why (e.g., "Mitigates XSS by using DOMPurify").
+- **Test Recommendations**: Suggest unit/integration tests for security (e.g., with OWASP ZAP or Jest for XSS).
+- **Minimal-Invasive Approach**: Add security wrappers (e.g., sanitization functions) without changing existing logic, UI, or functionality.
+- **Ongoing Vigilance**: In every interaction, remind yourself: "Is this secure? Have I covered OWASP Top 10?"
+
+Detailed Security Vulnerabilities to ALWAYS Consider and Mitigate:
+1. **Injection (OWASP A03)**: Prevents malicious input (e.g., SQL, Command Injection) from executing. 
+   - How to Mitigate: Use parameterized queries (Django ORM), prepared statements, or input validation (e.g., regex whitelisting). 
+   - Example Check: In views/forms, replace raw SQL with ORM; validate all user inputs.
+   - Always: Escape outputs and test with payloads like ' OR 1=1 --.
+
+2. **Broken Authentication (OWASP A07)**: Protects against session hijacking, brute-force, or credential stuffing.
+   - How to Mitigate: Implement JWT with rotation/blacklisting, MFA, rate-limiting (e.g., Django Ratelimit), and secure storage (HttpOnly cookies instead of LocalStorage).
+   - Example Check: In auth contexts, validate tokens and add expiration checks.
+   - Always: Use secure password hashing (e.g., Django's make_password) and avoid predictable tokens.
+
+3. **Sensitive Data Exposure (OWASP A02)**: Prevents leaks of passwords, tokens, or PII.
+   - How to Mitigate: Enforce HTTPS (HSTS in settings.py), hash sensitive data (bcrypt), and encrypt at rest (e.g., Django-fernet-fields).
+   - Example Check: In APIs, ensure no plaintext transmission; use secure headers.
+   - Always: Avoid logging sensitive data and use environment variables for secrets.
+
+4. **Broken Access Control (OWASP A01)**: Ensures users only access authorized resources (e.g., IDOR).
+   - How to Mitigate: Implement RBAC (Role-Based Access Control) with owner checks (e.g., request.user.id == resource.owner_id) and protected routes.
+   - Example Check: In views/components, add decorators like @login_required or ProtectedRoute.
+   - Always: Validate permissions server-side, not just client-side.
+
+5. **Security Misconfiguration (OWASP A05)**: Avoids default or insecure setups (e.g., DEBUG=True in production).
+   - How to Mitigate: Harden configs (e.g., SECURE_SSL_REDIRECT=True in Django), disable unnecessary features, and use CSP headers.
+   - Example Check: In settings.py or vite.config.ts, set secure defaults and scan with tools like Nessus.
+   - Always: Environment-specific configs (e.g., via .env) and regular audits.
+
+6. **Vulnerable and Outdated Components (OWASP A06)**: Protects against known exploits in dependencies.
+   - How to Mitigate: Use dependency scanners (e.g., pip-audit for Python, npm audit for JS) and pin secure versions.
+   - Example Check: In requirements.txt/package.json, fix vulnerabilities and automate updates via Dependabot.
+   - Always: Run scans before deployment and monitor CVEs.
+
+7. **Cross-Site Scripting (XSS, OWASP A03 subset)**: Prevents script injection in outputs.
+   - How to Mitigate: Sanitize inputs/outputs (e.g., Bleach in Django, DOMPurify in React) and use CSP.
+   - Example Check: Wrap renders with sanitization (e.g., dangerouslySetInnerHTML with purify).
+   - Always: Escape dynamic content and test with payloads like <script>alert(1)</script>.
+
+8. **Insecure Deserialization (OWASP A08)**: Avoids tampering with serialized data (e.g., JWT, pickles).
+   - How to Mitigate: Validate signatures and use safe serializers (e.g., Django's signed cookies).
+   - Example Check: In APIs, verify JWT signatures before processing.
+   - Always: Avoid unsafe deserialization like pickle in Python.
+
+9. **Server-Side Request Forgery (SSRF, OWASP A10)**: Prevents servers from ungewollte Requests zu machen.
+   - How to Mitigate: Validate und whitelist URLs; block private IPs.
+   - Example Check: In API-Calls, prüfe request URLs mit regex.
+   - Always: Nutze allowlists für externe Requests.
+
+10. **Cross-Site Request Forgery (CSRF)**: Schützt vor gefälschten Requests.
+    - How to Mitigate: Verwende CSRF-Tokens (Django built-in, oder in React via headers).
+    - Example Check: In Forms, füge {% csrf_token %} oder X-CSRF-Token hinzu.
+    - Always: Aktiviere in Middleware und teste mit Tools wie Burp.
+
+General Best Practices for All Agents:
+- **Frontend (React/JS/TS)**: Verwende React's escaping, aber füge Sanitization für dynamischen Content hinzu. Integriere Security-Linter (eslint-plugin-security).
+- **Backend (Django/Python)**: Nutze built-in Protections (z.B. CSRF-Middleware, ORM) und Middleware für Headers (z.B. django-csp).
+- **Design/UX**: Stelle sicher, dass Security-Features (z.B. Loading-Indikatoren bei sicheren Calls) die Usability nicht beeinträchtigen (WCAG-konform).
+- **DevSecOps Integration**: In CI/CD, führe SAST (Static Application Security Testing, z.B. SonarQube) und DAST (Dynamic, z.B. OWASP ZAP) aus. Dokumentiere Security in Code-Reviews.
+- **Wenn Unsicher**: Frage den User nach Klärung oder schlage Alternativen vor, aber ignoriere NIE Security.
+
+By following these rules, you ensure all generated code is secure by design, preventing professional hackers from exploiting common vulnerabilities.

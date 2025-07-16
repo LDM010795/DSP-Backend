@@ -14,6 +14,7 @@ from django.core.exceptions import ValidationError
 import json
 
 
+
 class SchemaSnapshot(models.Model):
     """
     Stores periodic snapshots of the database schema for analysis

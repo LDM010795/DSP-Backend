@@ -13,12 +13,15 @@ from . import views
 app_name = 'db_overview'
 
 urlpatterns = [
+    # --- Schema Analysis Endpoints ---
     # Hauptendpunkt für Schema-Analyse
     path('api/schema/', views.get_database_schema, name='database_schema'),
     
+    # --- Table Data Endpoints ---
     # Tabellendaten für spezifisches Model
     path('api/table/<str:app_label>/<str:model_name>/', views.get_table_data, name='table_data'),
     
+    # --- Statistics Endpoints ---
     # Datenbankstatistiken
     path('api/statistics/', views.get_database_statistics, name='database_statistics'),
 ] 

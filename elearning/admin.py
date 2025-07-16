@@ -36,7 +36,6 @@ from .models import (
     Exam, ExamCriterion, ExamAttempt, ExamAttachment, CriterionScore, CertificationPath
 )
 
-
 # --- User Management Administration ---
 
 class ProfileInline(admin.StackedInline):
@@ -102,7 +101,6 @@ class UserAdmin(BaseUserAdmin):
 # Register enhanced user administration
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
-
 
 # --- Learning Modules Administration ---
 
