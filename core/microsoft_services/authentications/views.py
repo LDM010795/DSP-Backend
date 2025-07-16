@@ -21,6 +21,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.http import HttpResponseRedirect
 from django.core.cache import cache
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.conf import settings
 
 from core.employees.models import Tool
 from .base import MicrosoftAuthClient
@@ -142,3 +144,28 @@ class MicrosoftCallbackView(APIView):
         except Exception as e:
             logger.exception(f"An unexpected error occurred during authentication postback: {e}")
             return Response({"error": "An unexpected server error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MicrosoftLogoutView(APIView):
+    """Logs out user by blacklisting refresh token (JWT)"""
+
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.data.get("refresh")
+        if not refresh_token:
+            return Response({"error": "No refresh token provided."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            # Prepare optional Azure logout URL
+            azure_logout = "https://login.microsoftonline.com/common/oauth2/v2.0/logout"
+            post_logout = request.data.get("post_logout_redirect_uri") or settings.FRONTEND_URL
+            logout_url = f"{azure_logout}?post_logout_redirect_uri={post_logout}"
+
+            response = Response({"success": True, "logout_url": logout_url})
+            # Remove Django session cookie if present
+            response.delete_cookie(settings.SESSION_COOKIE_NAME, path="/")
+            return response
+        except Exception as e:
+            logger.error(f"Logout failed: {e}")
+            return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
