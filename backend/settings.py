@@ -65,6 +65,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:5173',
     'http://localhost:5174',  # Shift-Planner Development
     'http://127.0.0.1:5174',  # Shift-Planner Development
+    'https://dsp-db-overview.onrender.com',  # DB Overview Production
 ]
 
 # Add environment-based origins if they exist
