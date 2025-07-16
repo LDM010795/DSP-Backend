@@ -61,11 +61,17 @@ MIDDLEWARE = [
 
 # CORS Settings - Production-ready
 CORS_ALLOWED_ORIGINS = [
-    os.getenv('ELEARNING_FRONTEND_URL'),
-    os.getenv('SHIFT_PLANNER_FRONTEND_URL'),
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'http://localhost:5174',  # Shift-Planner Development
+    'http://127.0.0.1:5174',  # Shift-Planner Development
 ]
+
+# Add environment-based origins if they exist
+if os.getenv('ELEARNING_FRONTEND_URL'):
+    CORS_ALLOWED_ORIGINS.append(os.getenv('ELEARNING_FRONTEND_URL'))
+if os.getenv('SHIFT_PLANNER_FRONTEND_URL'):
+    CORS_ALLOWED_ORIGINS.append(os.getenv('SHIFT_PLANNER_FRONTEND_URL'))
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = [
     'DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT',
@@ -223,7 +229,11 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@datasmartpoint.com')
 
-# Frontend URL für Links in Emails etc.
+# Frontend URLs für verschiedene Tools
+ELEARNING_FRONTEND_URL = os.environ.get('ELEARNING_FRONTEND_URL', 'http://localhost:5173')
+SHIFT_PLANNER_FRONTEND_URL = os.environ.get('SHIFT_PLANNER_FRONTEND_URL', 'http://localhost:5174')
+
+# Frontend URL für Links in Emails etc. (Legacy - wird durch spezifische URLs ersetzt)
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
 PASSWORD_RESET_TIMEOUT = int(os.environ.get('PASSWORD_RESET_TIMEOUT', '3600'))
 
