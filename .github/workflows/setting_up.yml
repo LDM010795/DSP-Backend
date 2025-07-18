@@ -1,9 +1,8 @@
 name: setting_up
 
 on:
-  push:
-    branches:
-      - "CCS-32 Testing-Pipeline"
+  workflow_dispatch:
+
 
 jobs:
   print:
