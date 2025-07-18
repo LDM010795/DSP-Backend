@@ -8,6 +8,6 @@ jobs:
   print:
     runs-on: ubuntu-latest
     steps:
-      - name: Print testing output
+      - name: Find out if Action is different
         run: |
-          echo Testing for Github Actions!
+          echo This is a different action
