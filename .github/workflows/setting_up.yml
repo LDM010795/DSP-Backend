@@ -1,0 +1,13 @@
+name: setting_up
+
+on:
+  workflow_dispatch:
+
+
+jobs:
+  print:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print testing output
+        run: |
+          echo Testing for Github Actions!
