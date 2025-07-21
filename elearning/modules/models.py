@@ -435,13 +435,20 @@ class Task(models.Model):
         The test_file_path points to a Python file containing unittest
         cases that can be executed against student submissions.
     """
-    
+    class TaskType(models.TextChoices):
+        """
+        Please add task types here.
+        """
+        NONE = 'none', _('None')
+        PROGRAMMING = 'programming', _('Programming Exercise')
+        MULTIPLE_CHOICE = 'multiple_choice', _('Multiple Choice')
+
     class Difficulty(models.TextChoices):
         """Task difficulty levels with German display names."""
         EASY = 'Einfach', _('Easy')
         MEDIUM = 'Mittel', _('Medium')
         HARD = 'Schwer', _('Hard')
-
+        
     module = models.ForeignKey(
         Module,
         related_name='tasks',
@@ -474,6 +481,14 @@ class Task(models.Model):
         null=True,
         verbose_name=_("Hint"),
         help_text=_("Optional hint to help students solve the task")
+    )
+
+    task_type = models.CharField(
+        max_length=50,
+        choices=TaskType.choices,
+        default=TaskType.PROGRAMMING,
+        verbose_name=_("Task Type"),
+        help_text=_("Type of task")
     )
     
     test_file_path = models.CharField(
