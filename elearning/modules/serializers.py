@@ -22,10 +22,11 @@ class TaskSerializer(serializers.ModelSerializer):
     the current user has completed this task.
     """
     completed = serializers.SerializerMethodField()
+    task_config = serializers.SerializerMethodField()
 
     class Meta:
         model = Task
-        fields = ['id', 'title', 'description', 'difficulty', 'hint', 'order', 'completed']
+        fields = ['id', 'title', 'description', 'difficulty', 'hint', 'order', 'completed', 'task_type', 'task_config']
 
     def get_completed(self, obj):
         """
@@ -42,6 +43,17 @@ class TaskSerializer(serializers.ModelSerializer):
             # Check for existing completion record
             return UserTaskProgress.objects.filter(user=user, task=obj, completed=True).exists()
         return False  # Unauthenticated users haven't completed anything
+    
+    def get_task_config(self, obj):
+        """Get task configuration based on task type."""
+        if obj.task_type == obj.TaskType.MULTIPLE_CHOICE:
+            return obj.get_multiple_choice_config()
+        elif obj.task_type == obj.TaskType.PROGRAMMING:
+            return {
+                'test_file_path': obj.test_file_path,
+                'has_automated_tests': obj.has_automated_tests()
+            }
+        return None
 
 class ArticleSerializer(serializers.ModelSerializer):
     class Meta:
