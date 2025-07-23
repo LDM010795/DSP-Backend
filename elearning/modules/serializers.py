@@ -58,7 +58,7 @@ class TaskSerializer(serializers.ModelSerializer):
 class ArticleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Article
-        fields = ['id', 'module', 'title', 'url', 'order']
+        fields = ['id', 'module', 'title', 'url', 'order', 'json_content']
 
 class ModuleCategorySerializer(serializers.ModelSerializer):
     class Meta:

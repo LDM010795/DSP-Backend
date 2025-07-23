@@ -374,33 +374,41 @@ class Article(models.Model):
         module: Parent module
         url: URL to the external article
         title: Article title
+        json_content: Optional extracted JSON content from source
         order: Display order within module
     """
     
     module = models.ForeignKey(
-        Module,
+        'Module',
         related_name='articles',
         on_delete=models.CASCADE,
         verbose_name=_("Module"),
-        help_text=_("Module this article belongs to")
+        help_text=_("Module this article belongs to.")
     )
     
     url = models.URLField(
         max_length=500,
         verbose_name=_("Article URL"),
-        help_text=_("URL to the external article or resource")
+        help_text=_("URL to the external article or resource.")
     )
     
     title = models.CharField(
         max_length=255,
         verbose_name=_("Article Title"),
-        help_text=_("Descriptive title for the article")
+        help_text=_("Descriptive title for the article.")
+    )
+    
+    json_content = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_("Extracted JSON"),
+        help_text=_("Optional extracted content in JSON format.")
     )
     
     order = models.PositiveIntegerField(
         default=0,
         verbose_name=_("Display Order"),
-        help_text=_("Order of articles within the module")
+        help_text=_("Order of articles within the module.")
     )
 
     def __str__(self) -> str:

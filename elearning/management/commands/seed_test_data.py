@@ -133,10 +133,603 @@ class Command(BaseCommand):
                 hint = "Wähle die richtige Antwort aus den gegebenen Optionen."
                 task = self._create_task(module, task_title, task_desc, difficulty, test_path, i+1, hint)
                 tasks.append(task)
+            
+            # Erstelle bessere Lerninhalte für das Frontend
+            self._create_learning_content(module, title, category)
+            
         # Wenn Modul schon existierte, hole seine Tasks
         if not tasks:
             tasks = list(module.tasks.all())
         return module, tasks
+
+    def _create_learning_content(self, module, title, category):
+        """Erstellt strukturierte Lerninhalte für das Frontend."""
+        
+        # Echte YouTube-Videos je nach Kategorie
+        if "Python" in category.name:
+            video_urls = [
+                "https://www.youtube.com/watch?v=rfscVS0vtbw",  # Python Tutorial for Beginners
+                "https://www.youtube.com/watch?v=daefaLgNkw0",  # Python for Beginners
+                "https://www.youtube.com/watch?v=WGJJIrtnfpk"   # Python Full Course
+            ]
+            
+            # JSON-Artikel für Python Module
+            python_articles = [
+                self._create_python_basics_article(title),
+                self._create_python_data_structures_article(title),
+                self._create_python_functions_article(title)
+            ]
+            
+            contents = [
+                {
+                    "title": f"Einführung in {title}",
+                    "description": f"Lerne die Grundlagen von {title}. In diesem Video erfährst du alles über die wichtigsten Konzepte und wie du sie praktisch anwendest.",
+                    "video_url": video_urls[0],
+                    "order": 1
+                },
+                {
+                    "title": f"Praktische Übungen zu {title}",
+                    "description": f"Hier findest du praktische Beispiele und Übungen zu {title}. Übe das Gelernte und festige dein Verständnis.",
+                    "video_url": video_urls[1],
+                    "order": 2
+                },
+                {
+                    "title": f"Fortgeschrittene Konzepte in {title}",
+                    "description": f"Vertiefe dein Wissen mit fortgeschrittenen Konzepten von {title}. Lerne Techniken für professionelle Anwendungen.",
+                    "video_url": video_urls[2],
+                    "order": 3
+                }
+            ]
+            
+            # Füge Artikel hinzu
+            for i, article in enumerate(python_articles):
+                contents.append({
+                    "title": f"Artikel {i+1}: {title}",
+                    "description": f"Vertiefender Artikel zu {title} mit strukturiertem Inhalt.",
+                    "content_json": article,
+                    "order": 4 + i
+                })
+                
+        elif "Web Development" in category.name:
+            video_urls = [
+                "https://www.youtube.com/watch?v=UB1O30fR-EE",  # HTML Crash Course
+                "https://www.youtube.com/watch?v=yfoY53QXEnI",  # CSS Crash Course
+                "https://www.youtube.com/watch?v=hdI2bqOjy3c"   # JavaScript Crash Course
+            ]
+            
+            # JSON-Artikel für Web Development Module
+            web_articles = [
+                self._create_html_basics_article(title),
+                self._create_css_styling_article(title),
+                self._create_javascript_basics_article(title)
+            ]
+            
+            contents = [
+                {
+                    "title": f"Grundlagen von {title}",
+                    "description": f"Starte mit den Grundlagen von {title}. Lerne die wichtigsten Konzepte für moderne Webentwicklung.",
+                    "video_url": video_urls[0],
+                    "order": 1
+                },
+                {
+                    "title": f"Praktische Anwendung von {title}",
+                    "description": f"Sieh dir praktische Beispiele von {title} an. Erstelle deine ersten Projekte und lerne durch Übung.",
+                    "video_url": video_urls[1],
+                    "order": 2
+                },
+                {
+                    "title": f"Best Practices für {title}",
+                    "description": f"Lerne die Best Practices für {title}. Entwickle sauberen, wartbaren und effizienten Code.",
+                    "video_url": video_urls[2],
+                    "order": 3
+                }
+            ]
+            
+            # Füge Artikel hinzu
+            for i, article in enumerate(web_articles):
+                contents.append({
+                    "title": f"Artikel {i+1}: {title}",
+                    "description": f"Vertiefender Artikel zu {title} mit strukturiertem Inhalt.",
+                    "content_json": article,
+                    "order": 4 + i
+                })
+                
+        elif "Data Science" in category.name:
+            video_urls = [
+                "https://www.youtube.com/watch?v=dcqPhpY7tWk",  # Pandas Tutorial
+                "https://www.youtube.com/watch?v=GB9ByFAIAH4",  # NumPy Tutorial
+                "https://www.youtube.com/watch?v=ua-CiDNNj30"   # Matplotlib Tutorial
+            ]
+            
+            # JSON-Artikel für Data Science Module
+            data_articles = [
+                self._create_pandas_basics_article(title),
+                self._create_numpy_basics_article(title),
+                self._create_visualization_article(title)
+            ]
+            
+            contents = [
+                {
+                    "title": f"Einführung in {title}",
+                    "description": f"Entdecke die Welt der Datenanalyse mit {title}. Lerne die Grundlagen für datengetriebene Entscheidungen.",
+                    "video_url": video_urls[0],
+                    "order": 1
+                },
+                {
+                    "title": f"Praktische Datenanalyse mit {title}",
+                    "description": f"Wende {title} auf echte Daten an. Lerne durch praktische Beispiele und realistische Szenarien.",
+                    "video_url": video_urls[1],
+                    "order": 2
+                },
+                {
+                    "title": f"Visualisierung und Reporting mit {title}",
+                    "description": f"Erstelle aussagekräftige Visualisierungen und Reports mit {title}. Präsentiere deine Ergebnisse professionell.",
+                    "video_url": video_urls[2],
+                    "order": 3
+                }
+            ]
+            
+            # Füge Artikel hinzu
+            for i, article in enumerate(data_articles):
+                contents.append({
+                    "title": f"Artikel {i+1}: {title}",
+                    "description": f"Vertiefender Artikel zu {title} mit strukturiertem Inhalt.",
+                    "content_json": article,
+                    "order": 4 + i
+                })
+                
+        else:  # Default für andere Kategorien
+            video_urls = [
+                "https://www.youtube.com/watch?v=8JJ101D3knE",  # Git Tutorial
+                "https://www.youtube.com/watch?v=pTFZFxd4hOI"   # Docker Tutorial
+            ]
+            
+            # JSON-Artikel für andere Module
+            other_articles = [
+                self._create_git_basics_article(title),
+                self._create_docker_basics_article(title)
+            ]
+            
+            contents = [
+                {
+                    "title": f"Einführung in {title}",
+                    "description": f"Lerne die Grundlagen von {title}. Verstehe die wichtigsten Konzepte und ihre praktische Anwendung.",
+                    "video_url": video_urls[0],
+                    "order": 1
+                },
+                {
+                    "title": f"Praktische Anwendung von {title}",
+                    "description": f"Übe das Gelernte mit praktischen Beispielen zu {title}. Festige dein Verständnis durch Übung.",
+                    "video_url": video_urls[1],
+                    "order": 2
+                }
+            ]
+            
+            # Füge Artikel hinzu
+            for i, article in enumerate(other_articles):
+                contents.append({
+                    "title": f"Artikel {i+1}: {title}",
+                    "description": f"Vertiefender Artikel zu {title} mit strukturiertem Inhalt.",
+                    "content_json": article,
+                    "order": 3 + i
+                })
+        
+        # Erstelle die Inhalte
+        for content_data in contents:
+            if "content_json" in content_data:
+                # Erstelle Content mit JSON
+                self._create_content_with_json(
+                    module=module,
+                    title=content_data["title"],
+                    description=content_data["description"],
+                    order=content_data["order"],
+                    content_json=content_data["content_json"]
+                )
+            else:
+                # Erstelle Content mit Video
+                self._create_content(
+                    module=module,
+                    title=content_data["title"],
+                    description=content_data["description"],
+                    order=content_data["order"],
+                    video_url=content_data["video_url"]
+                )
+
+    def _create_content_with_json(self, module, title, description, order, content_json):
+        """Erstellt Content mit JSON-Struktur."""
+        content, created = Content.objects.get_or_create(
+            module=module,
+            title=title,
+            defaults={
+                'description': description,
+                'order': order,
+                'content_json': content_json  # Neues Feld für JSON-Content
+            }
+        )
+        return content
+
+    def _create_python_basics_article(self, title):
+        """Erstellt einen Python-Grundlagen Artikel."""
+        return {
+            "content": [
+                {
+                    "type": "title",
+                    "level": 1,
+                    "text": f"Einführung in {title}"
+                },
+                {
+                    "type": "table_of_contents",
+                    "items": [
+                        "Einleitung",
+                        "Lernziele",
+                        "Warum Python?",
+                        "Die ersten Schritte",
+                        "Datenstrukturen",
+                        "Wichtige Hinweise",
+                        "Quellen"
+                    ]
+                },
+                {
+                    "type": "text",
+                    "text": f"=={title}== ist eine moderne, einfach zu lernende Programmiersprache, die sich durch ihre klare Syntax und vielseitige Einsetzbarkeit auszeichnet."
+                },
+                {
+                    "type": "learning_goals",
+                    "items": [
+                        f"Sie verstehen die Grundidee und Philosophie von =={title}==",
+                        "Sie können erste einfache Programme schreiben",
+                        "Sie lernen die wichtigsten Datentypen kennen",
+                        "Sie verstehen die Rolle von ==Einrückungen== im Code"
+                    ]
+                },
+                {
+                    "type": "title",
+                    "level": 2,
+                    "text": "Warum Python?"
+                },
+                {
+                    "type": "text",
+                    "text": f"=={title}== wird sowohl in der Webentwicklung als auch in Bereichen wie ==Datenanalyse==, KI, Automatisierung und dem Bildungsbereich eingesetzt."
+                },
+                {
+                    "type": "list",
+                    "items": [
+                        "Einfache Syntax",
+                        "Große Community",
+                        "Viele Bibliotheken",
+                        "Cross-Plattform verfügbar"
+                    ]
+                },
+                {
+                    "type": "note",
+                    "variant": "tipp",
+                    "text": "Verwenden Sie eine IDE wie Visual Studio Code oder PyCharm für eine bessere Code-Übersicht."
+                },
+                {
+                    "type": "title",
+                    "level": 2,
+                    "text": "Die ersten Schritte"
+                },
+                {
+                    "type": "text",
+                    "text": "Ein typisches ==Hello World==-Programm in Python sieht so aus:"
+                },
+                {
+                    "type": "code",
+                    "language": "python",
+                    "code": "print(\"Hello, world!\")"
+                },
+                {
+                    "type": "text",
+                    "text": "Python verwendet ==Einrückungen==, um Blöcke zu definieren. Anders als z. B. in C oder Java gibt es keine geschweiften Klammern."
+                },
+                {
+                    "type": "code",
+                    "language": "python",
+                    "code": "if True:\n    print(\"Das ist eingerückt\")\n    print(\"Und gehört zum Block\")"
+                },
+                {
+                    "type": "note",
+                    "variant": "wichtig",
+                    "text": "Ohne korrekte Einrückung funktioniert Python-Code nicht!"
+                },
+                {
+                    "type": "title",
+                    "level": 2,
+                    "text": "Datenstrukturen"
+                },
+                {
+                    "type": "text",
+                    "text": "Python bietet viele eingebaute Datentypen wie ==Listen==, ==Dictionaries==, ==Mengen== und ==Tupel==."
+                },
+                {
+                    "type": "code",
+                    "language": "python",
+                    "code": "fruits = [\"Apfel\", \"Banane\", \"Kirsche\"]\nprint(fruits[0])  # Ausgabe: Apfel"
+                },
+                {
+                    "type": "note",
+                    "variant": "hinweis",
+                    "text": "Listen können beliebige Datentypen enthalten – sogar andere Listen."
+                },
+                {
+                    "type": "title",
+                    "level": 2,
+                    "text": "Quellen"
+                },
+                {
+                    "type": "sources",
+                    "items": [
+                        "Python Dokumentation: https://docs.python.org",
+                        "W3Schools Python Tutorial: https://w3schools.com/python",
+                        "Automate the Boring Stuff with Python: https://automatetheboringstuff.com"
+                    ]
+                }
+            ]
+        }
+
+    def _create_python_data_structures_article(self, title):
+        """Erstellt einen Python-Datenstrukturen Artikel."""
+        return {
+            "content": [
+                {
+                    "type": "title",
+                    "level": 1,
+                    "text": f"Datenstrukturen in {title}"
+                },
+                {
+                    "type": "text",
+                    "text": f"Lernen Sie die wichtigsten Datenstrukturen in =={title}== kennen und verstehen Sie, wann Sie welche verwenden sollten."
+                },
+                {
+                    "type": "title",
+                    "level": 2,
+                    "text": "Listen"
+                },
+                {
+                    "type": "text",
+                    "text": "==Listen== sind veränderbare Sequenzen von Objekten."
+                },
+                {
+                    "type": "code",
+                    "language": "python",
+                    "code": "# Liste erstellen\nnumbers = [1, 2, 3, 4, 5]\nnames = [\"Alice\", \"Bob\", \"Charlie\"]\n\n# Element hinzufügen\nnumbers.append(6)\n\n# Element entfernen\nnames.remove(\"Bob\")"
+                },
+                {
+                    "type": "title",
+                    "level": 2,
+                    "text": "Dictionaries"
+                },
+                {
+                    "type": "text",
+                    "text": "==Dictionaries== speichern Schlüssel-Wert-Paare."
+                },
+                {
+                    "type": "code",
+                    "language": "python",
+                    "code": "# Dictionary erstellen\nperson = {\n    \"name\": \"Alice\",\n    \"age\": 30,\n    \"city\": \"Berlin\"\n}\n\n# Wert abrufen\nprint(person[\"name\"])  # Alice\n\n# Wert ändern\nperson[\"age\"] = 31"
+                },
+                {
+                    "type": "note",
+                    "variant": "wichtig",
+                    "text": "Dictionary-Schlüssel müssen unveränderbar sein (Strings, Zahlen, Tupel)."
+                }
+            ]
+        }
+
+    def _create_python_functions_article(self, title):
+        """Erstellt einen Python-Funktionen Artikel."""
+        return {
+            "content": [
+                {
+                    "type": "title",
+                    "level": 1,
+                    "text": f"Funktionen in {title}"
+                },
+                {
+                    "type": "text",
+                    "text": f"Funktionen sind das Herzstück der Programmierung in =={title}==. Sie ermöglichen es, Code zu strukturieren und wiederzuverwenden."
+                },
+                {
+                    "type": "title",
+                    "level": 2,
+                    "text": "Funktionen definieren"
+                },
+                {
+                    "type": "code",
+                    "language": "python",
+                    "code": "def greet(name):\n    return f\"Hallo, {name}!\"\n\n# Funktion aufrufen\nmessage = greet(\"Alice\")\nprint(message)  # Hallo, Alice!"
+                },
+                {
+                    "type": "title",
+                    "level": 2,
+                    "text": "Parameter mit Standardwerten"
+                },
+                {
+                    "type": "code",
+                    "language": "python",
+                    "code": "def greet(name, greeting=\"Hallo\"):\n    return f\"{greeting}, {name}!\"\n\nprint(greet(\"Bob\"))  # Hallo, Bob!\nprint(greet(\"Bob\", \"Guten Tag\"))  # Guten Tag, Bob!"
+                }
+            ]
+        }
+
+    def _create_html_basics_article(self, title):
+        """Erstellt einen HTML-Grundlagen Artikel."""
+        return {
+            "content": [
+                {
+                    "type": "title",
+                    "level": 1,
+                    "text": f"HTML Grundlagen - {title}"
+                },
+                {
+                    "type": "text",
+                    "text": f"==HTML== ist die Grundlage des World Wide Web. Lernen Sie die wichtigsten Elemente und Strukturen kennen."
+                },
+                {
+                    "type": "title",
+                    "level": 2,
+                    "text": "Grundstruktur"
+                },
+                {
+                    "type": "code",
+                    "language": "html",
+                    "code": "<!DOCTYPE html>\n<html>\n<head>\n    <title>Meine erste Seite</title>\n</head>\n<body>\n    <h1>Willkommen!</h1>\n    <p>Das ist mein erster HTML-Code.</p>\n</body>\n</html>"
+                },
+                {
+                    "type": "note",
+                    "variant": "wichtig",
+                    "text": "HTML-Tags müssen immer geschlossen werden!"
+                }
+            ]
+        }
+
+    def _create_css_styling_article(self, title):
+        """Erstellt einen CSS-Styling Artikel."""
+        return {
+            "content": [
+                {
+                    "type": "title",
+                    "level": 1,
+                    "text": f"CSS Styling - {title}"
+                },
+                {
+                    "type": "text",
+                    "text": "==CSS== macht Ihre Webseiten schön und benutzerfreundlich."
+                },
+                {
+                    "type": "code",
+                    "language": "css",
+                    "code": "body {\n    font-family: Arial, sans-serif;\n    background-color: #f0f0f0;\n}\n\nh1 {\n    color: #333;\n    text-align: center;\n}"
+                }
+            ]
+        }
+
+    def _create_javascript_basics_article(self, title):
+        """Erstellt einen JavaScript-Grundlagen Artikel."""
+        return {
+            "content": [
+                {
+                    "type": "title",
+                    "level": 1,
+                    "text": f"JavaScript Grundlagen - {title}"
+                },
+                {
+                    "type": "text",
+                    "text": "==JavaScript== macht Webseiten interaktiv und dynamisch."
+                },
+                {
+                    "type": "code",
+                    "language": "javascript",
+                    "code": "// Variable deklarieren\nlet name = \"Alice\";\n\n// Funktion definieren\nfunction greet(person) {\n    return `Hallo, ${person}!`;\n}\n\nconsole.log(greet(name));"
+                }
+            ]
+        }
+
+    def _create_pandas_basics_article(self, title):
+        """Erstellt einen Pandas-Grundlagen Artikel."""
+        return {
+            "content": [
+                {
+                    "type": "title",
+                    "level": 1,
+                    "text": f"Pandas Grundlagen - {title}"
+                },
+                {
+                    "type": "text",
+                    "text": "==Pandas== ist die wichtigste Bibliothek für Datenanalyse in Python."
+                },
+                {
+                    "type": "code",
+                    "language": "python",
+                    "code": "import pandas as pd\n\n# DataFrame erstellen\ndata = {\n    'Name': ['Alice', 'Bob', 'Charlie'],\n    'Alter': [25, 30, 35],\n    'Stadt': ['Berlin', 'Hamburg', 'München']\n}\n\ndf = pd.DataFrame(data)\nprint(df)"
+                }
+            ]
+        }
+
+    def _create_numpy_basics_article(self, title):
+        """Erstellt einen NumPy-Grundlagen Artikel."""
+        return {
+            "content": [
+                {
+                    "type": "title",
+                    "level": 1,
+                    "text": f"NumPy Grundlagen - {title}"
+                },
+                {
+                    "type": "text",
+                    "text": "==NumPy== ist die Grundlage für numerische Berechnungen in Python."
+                },
+                {
+                    "type": "code",
+                    "language": "python",
+                    "code": "import numpy as np\n\n# Array erstellen\narr = np.array([1, 2, 3, 4, 5])\nprint(arr)\n\n# Mathematische Operationen\nprint(arr * 2)  # [2, 4, 6, 8, 10]"
+                }
+            ]
+        }
+
+    def _create_visualization_article(self, title):
+        """Erstellt einen Visualisierungs-Artikel."""
+        return {
+            "content": [
+                {
+                    "type": "title",
+                    "level": 1,
+                    "text": f"Datenvisualisierung - {title}"
+                },
+                {
+                    "type": "text",
+                    "text": "Lernen Sie, wie Sie Daten mit ==Matplotlib== und ==Seaborn== visualisieren."
+                },
+                {
+                    "type": "code",
+                    "language": "python",
+                    "code": "import matplotlib.pyplot as plt\nimport numpy as np\n\nx = np.linspace(0, 10, 100)\ny = np.sin(x)\n\nplt.plot(x, y)\nplt.title('Sinus-Welle')\nplt.show()"
+                }
+            ]
+        }
+
+    def _create_git_basics_article(self, title):
+        """Erstellt einen Git-Grundlagen Artikel."""
+        return {
+            "content": [
+                {
+                    "type": "title",
+                    "level": 1,
+                    "text": f"Git Grundlagen - {title}"
+                },
+                {
+                    "type": "text",
+                    "text": "==Git== ist das wichtigste Versionskontrollsystem für Entwickler."
+                },
+                {
+                    "type": "code",
+                    "language": "bash",
+                    "code": "# Repository initialisieren\ngit init\n\n# Dateien hinzufügen\ngit add .\n\n# Commit erstellen\ngit commit -m \"Erster Commit\""
+                }
+            ]
+        }
+
+    def _create_docker_basics_article(self, title):
+        """Erstellt einen Docker-Grundlagen Artikel."""
+        return {
+            "content": [
+                {
+                    "type": "title",
+                    "level": 1,
+                    "text": f"Docker Grundlagen - {title}"
+                },
+                {
+                    "type": "text",
+                    "text": "==Docker== ermöglicht es, Anwendungen in Containern zu isolieren und zu deployen."
+                },
+                {
+                    "type": "code",
+                    "language": "dockerfile",
+                    "code": "FROM python:3.9\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install -r requirements.txt\nCOPY . .\nCMD [\"python\", \"app.py\"]"
+                }
+            ]
+        }
 
     def _create_content(self, module, title, description, order, video_url=None, supplementary_title=None):
         content, created = Content.objects.get_or_create(
@@ -456,10 +1049,10 @@ class Command(BaseCommand):
             module_obj, task_objs = self._create_module(title, category_obj)
             if module_obj:
                 all_modules[module_obj] = task_objs
-                # Add some basic content to each module
-                self._create_content(module_obj, f"Einführung in {title}", f"Grundlegende Konzepte von {title}.", 1)
-                if len(task_objs) > 0:
-                    self._create_content(module_obj, f"Übungen zu {title}", f"Praktische Aufgaben zum Modul {title}.", 2)
+                # Content wird jetzt automatisch in _create_module erstellt
+                # self._create_content(module_obj, f"Einführung in {title}", f"Grundlegende Konzepte von {title}.", 1)
+                # if len(task_objs) > 0:
+                #     self._create_content(module_obj, f"Übungen zu {title}", f"Praktische Aufgaben zum Modul {title}.", 2)
 
         self.stdout.write(self.style.SUCCESS(f'{len(all_modules)} Module verarbeitet/erstellt.'))
         module_list = list(all_modules.keys()) # Get a list of module objects
