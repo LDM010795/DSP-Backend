@@ -6,7 +6,7 @@ from datetime import timedelta # timedelta hinzufügen
 from django.utils import timezone # timezone hinzufügen
 from decimal import Decimal, ROUND_HALF_UP # Import Decimal
 # Corrected import path assuming models.py is in the parent 'modules' directory
-from ...models import Module, Content, Task, SupplementaryContent, UserTaskProgress
+from ...models import Module, Content, Task, SupplementaryContent, UserTaskProgress, ModuleCategory
 from django.contrib.auth.models import User # Import User model
 # Import von Exam-Modellen
 try:
@@ -123,15 +123,14 @@ class Command(BaseCommand):
         )
         tasks = []
         if created:
-            # self.stdout.write(self.style.SUCCESS(f'Created Module: "{title}"')) # Weniger Output
-            # Immer 1-3 simple Tasks für neue Module hinzufügen
+            # Immer 1-3 Multiple Choice Tasks für neue Module hinzufügen
             num_tasks = random.randint(1, 3)
             for i in range(num_tasks):
-                task_title = f"Aufgabe {i+1}: Print-Ausgabe ({title[:20]}...)"
-                task_desc = f"Schreibe eine Python-Funktion `task_{i+1}()`, die den String 'Modul: {title}, Aufgabe {i+1}' ausgibt."
-                test_path = f"task_tests/common/test_print_task.py" # Generischer Pfad
+                task_title = f"Multiple Choice Aufgabe {i+1}: {title[:20]}..."
+                task_desc = f"Beantworte die Multiple-Choice-Frage zum Thema {title}."
+                test_path = f"task_tests/common/test_multiple_choice.py" # Generischer Pfad
                 difficulty = random.choice(Task.Difficulty.choices)[0]
-                hint = "Benutze die print()-Funktion."
+                hint = "Wähle die richtige Antwort aus den gegebenen Optionen."
                 task = self._create_task(module, task_title, task_desc, difficulty, test_path, i+1, hint)
                 tasks.append(task)
         # Wenn Modul schon existierte, hole seine Tasks
@@ -157,22 +156,181 @@ class Command(BaseCommand):
         return content
 
     def _create_task(self, module, title, description, difficulty, test_path, order, hint=None):
+        # Create multiple choice tasks instead of programming tasks
+        task_config = self._create_multiple_choice_config(module, order)
+        
         task, created = Task.objects.get_or_create(
             module=module,
             title=title,
             defaults={
                 'description': description,
                 'difficulty': difficulty,
-                'test_file_path': test_path,
+                'task_type': Task.TaskType.MULTIPLE_CHOICE,  # Set to multiple choice
+                'task_config': task_config,  # Add task_config
                 'order': order,
-                'hint': hint or f"Standard-Hinweis für {title}"
+                'hint': hint or f"Wähle die richtige Antwort aus."
             }
         )
-        # if created:
-        #     self.stdout.write(self.style.SUCCESS(f'  - Created Task: "{title}" (Tests: {test_path})'))
-        # else:
-        #     self.stdout.write(f'  - Task "{title}" already exists.')
         return task
+
+    def _create_multiple_choice_config(self, module, task_number):
+        """Create multiple choice configuration based on module and task number."""
+        
+        # Different question sets based on module category
+        if "Python" in module.category.name:
+            questions = [
+                {
+                    "question": "Was ist Python?",
+                    "options": [
+                        "Eine interpretierte Programmiersprache",
+                        "Eine kompilierte Programmiersprache", 
+                        "Eine Maschinensprache",
+                        "Eine Hardware-Sprache"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Python wird zur Laufzeit interpretiert, nicht kompiliert."
+                },
+                {
+                    "question": "Welche Datenstruktur ist in Python veränderbar?",
+                    "options": [
+                        "Tuple",
+                        "String",
+                        "List",
+                        "Frozenset"
+                    ],
+                    "correct_answer": 2,
+                    "explanation": "Listen sind veränderbar (mutable), während Tuple, String und Frozenset unveränderbar sind."
+                },
+                {
+                    "question": "Wie definiert man eine Funktion in Python?",
+                    "options": [
+                        "function name():",
+                        "def name():",
+                        "func name():",
+                        "define name():"
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "Funktionen werden in Python mit dem 'def' Keyword definiert."
+                }
+            ]
+        elif "Web Development" in module.category.name:
+            questions = [
+                {
+                    "question": "Was ist HTML?",
+                    "options": [
+                        "Eine Programmiersprache",
+                        "Eine Auszeichnungssprache",
+                        "Ein Stylesheet",
+                        "Ein Framework"
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "HTML ist eine Auszeichnungssprache zur Strukturierung von Webinhalten."
+                },
+                {
+                    "question": "Wofür steht CSS?",
+                    "options": [
+                        "Computer Style Sheets",
+                        "Cascading Style Sheets",
+                        "Creative Style System",
+                        "Code Style Sheets"
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "CSS steht für Cascading Style Sheets."
+                },
+                {
+                    "question": "Was ist React?",
+                    "options": [
+                        "Eine Programmiersprache",
+                        "Ein JavaScript Framework",
+                        "Ein Datenbanksystem",
+                        "Ein Betriebssystem"
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "React ist ein JavaScript Framework für die Entwicklung von Benutzeroberflächen."
+                }
+            ]
+        elif "Data Science" in module.category.name:
+            questions = [
+                {
+                    "question": "Was ist Pandas?",
+                    "options": [
+                        "Ein Tier",
+                        "Eine Python-Bibliothek für Datenanalyse",
+                        "Ein Betriebssystem",
+                        "Eine Programmiersprache"
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "Pandas ist eine Python-Bibliothek für Datenanalyse und -manipulation."
+                },
+                {
+                    "question": "Wofür wird NumPy verwendet?",
+                    "options": [
+                        "Webentwicklung",
+                        "Numerische Berechnungen",
+                        "Datenbankverwaltung",
+                        "Textverarbeitung"
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "NumPy ist für numerische Berechnungen und Array-Operationen optimiert."
+                },
+                {
+                    "question": "Was ist Machine Learning?",
+                    "options": [
+                        "Eine Art von Hardware",
+                        "Ein Teilgebiet der KI",
+                        "Eine Programmiersprache",
+                        "Ein Betriebssystem"
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "Machine Learning ist ein Teilgebiet der künstlichen Intelligenz."
+                }
+            ]
+        else:  # Default questions for other categories
+            questions = [
+                {
+                    "question": "Was ist der Zweck von Version Control?",
+                    "options": [
+                        "Code zu kompilieren",
+                        "Änderungen zu verfolgen",
+                        "Datenbanken zu verwalten",
+                        "Websites zu hosten"
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "Version Control dient dazu, Änderungen am Code zu verfolgen und zu verwalten."
+                },
+                {
+                    "question": "Was ist ein Algorithmus?",
+                    "options": [
+                        "Ein Computer",
+                        "Eine Schritt-für-Schritt-Anweisung",
+                        "Eine Programmiersprache",
+                        "Ein Betriebssystem"
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "Ein Algorithmus ist eine Schritt-für-Schritt-Anweisung zur Lösung eines Problems."
+                },
+                {
+                    "question": "Was ist Debugging?",
+                    "options": [
+                        "Code schreiben",
+                        "Fehler finden und beheben",
+                        "Datenbanken erstellen",
+                        "Websites designen"
+                    ],
+                    "correct_answer": 1,
+                    "explanation": "Debugging ist der Prozess, Fehler im Code zu finden und zu beheben."
+                }
+            ]
+        
+        # Select question based on task number (cycle through available questions)
+        question_index = (task_number - 1) % len(questions)
+        selected_question = questions[question_index]
+        
+        return {
+            'options': [{'answer': option} for option in selected_question['options']],
+            'correct_answer': selected_question['correct_answer'],
+            'explanation': selected_question['explanation']
+        }
 
     # --- Methods for Exam Generation ---
     def _create_exam(self, title, duration_weeks, difficulty, description, modules=None, requirements=None):
@@ -290,14 +448,17 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Starting database seeding...'))
         all_modules = {} # Store module_obj: [task_obj1, ...]
         # Iteriere über das neue Dictionary
-        for title, category in MODULE_CATEGORIES_MAP.items():
-             # Übergebe die Kategorie an _create_module
-             module_obj, task_objs = self._create_module(title, category)
-             if module_obj:
-                 all_modules[module_obj] = task_objs
-                 # Add some basic content to each module
-                 self._create_content(module_obj, f"Einführung in {title}", f"Grundlegende Konzepte von {title}.", 1)
-                 if len(task_objs) > 0:
+        for title, category_name in MODULE_CATEGORIES_MAP.items():
+            # Hole oder erstelle das ModulCategory-Objekt
+            category_obj, created = ModuleCategory.objects.get_or_create(name=category_name)
+            
+            # Übergebe die Kategorie an _create_module
+            module_obj, task_objs = self._create_module(title, category_obj)
+            if module_obj:
+                all_modules[module_obj] = task_objs
+                # Add some basic content to each module
+                self._create_content(module_obj, f"Einführung in {title}", f"Grundlegende Konzepte von {title}.", 1)
+                if len(task_objs) > 0:
                     self._create_content(module_obj, f"Übungen zu {title}", f"Praktische Aufgaben zum Modul {title}.", 2)
 
         self.stdout.write(self.style.SUCCESS(f'{len(all_modules)} Module verarbeitet/erstellt.'))
