@@ -6,7 +6,7 @@ from datetime import timedelta # timedelta hinzufügen
 from django.utils import timezone # timezone hinzufügen
 from decimal import Decimal, ROUND_HALF_UP # Import Decimal
 # Corrected import path assuming models.py is in the parent 'modules' directory
-from ...models import Module, Content, Task, SupplementaryContent, UserTaskProgress, ModuleCategory
+from ...models import Module, Content, Task, SupplementaryContent, UserTaskProgress, ModuleCategory, Article
 from django.contrib.auth.models import User # Import User model
 # Import von Exam-Modellen
 try:
@@ -181,14 +181,25 @@ class Command(BaseCommand):
                 }
             ]
             
-            # Füge Artikel hinzu
+            # Erstelle Content-Objekte für Videos
+            for content_data in contents:
+                self._create_content(
+                    module=module,
+                    title=content_data["title"],
+                    description=content_data["description"],
+                    order=content_data["order"],
+                    video_url=content_data["video_url"]
+                )
+            
+            # Erstelle Article-Objekte für JSON-Inhalt
             for i, article in enumerate(python_articles):
-                contents.append({
-                    "title": f"Artikel {i+1}: {title}",
-                    "description": f"Vertiefender Artikel zu {title} mit strukturiertem Inhalt.",
-                    "content_json": article,
-                    "order": 4 + i
-                })
+                self._create_article_with_json(
+                    module=module,
+                    title=f"Artikel {i+1}: {title}",
+                    description=f"Vertiefender Artikel zu {title} mit strukturiertem Inhalt.",
+                    order=4 + i,
+                    json_content=article
+                )
                 
         elif "Web Development" in category.name:
             video_urls = [
@@ -225,14 +236,25 @@ class Command(BaseCommand):
                 }
             ]
             
-            # Füge Artikel hinzu
+            # Erstelle Content-Objekte für Videos
+            for content_data in contents:
+                self._create_content(
+                    module=module,
+                    title=content_data["title"],
+                    description=content_data["description"],
+                    order=content_data["order"],
+                    video_url=content_data["video_url"]
+                )
+            
+            # Erstelle Article-Objekte für JSON-Inhalt
             for i, article in enumerate(web_articles):
-                contents.append({
-                    "title": f"Artikel {i+1}: {title}",
-                    "description": f"Vertiefender Artikel zu {title} mit strukturiertem Inhalt.",
-                    "content_json": article,
-                    "order": 4 + i
-                })
+                self._create_article_with_json(
+                    module=module,
+                    title=f"Artikel {i+1}: {title}",
+                    description=f"Vertiefender Artikel zu {title} mit strukturiertem Inhalt.",
+                    order=4 + i,
+                    json_content=article
+                )
                 
         elif "Data Science" in category.name:
             video_urls = [
@@ -269,14 +291,25 @@ class Command(BaseCommand):
                 }
             ]
             
-            # Füge Artikel hinzu
+            # Erstelle Content-Objekte für Videos
+            for content_data in contents:
+                self._create_content(
+                    module=module,
+                    title=content_data["title"],
+                    description=content_data["description"],
+                    order=content_data["order"],
+                    video_url=content_data["video_url"]
+                )
+            
+            # Erstelle Article-Objekte für JSON-Inhalt
             for i, article in enumerate(data_articles):
-                contents.append({
-                    "title": f"Artikel {i+1}: {title}",
-                    "description": f"Vertiefender Artikel zu {title} mit strukturiertem Inhalt.",
-                    "content_json": article,
-                    "order": 4 + i
-                })
+                self._create_article_with_json(
+                    module=module,
+                    title=f"Artikel {i+1}: {title}",
+                    description=f"Vertiefender Artikel zu {title} mit strukturiertem Inhalt.",
+                    order=4 + i,
+                    json_content=article
+                )
                 
         else:  # Default für andere Kategorien
             video_urls = [
@@ -305,28 +338,8 @@ class Command(BaseCommand):
                 }
             ]
             
-            # Füge Artikel hinzu
-            for i, article in enumerate(other_articles):
-                contents.append({
-                    "title": f"Artikel {i+1}: {title}",
-                    "description": f"Vertiefender Artikel zu {title} mit strukturiertem Inhalt.",
-                    "content_json": article,
-                    "order": 3 + i
-                })
-        
-        # Erstelle die Inhalte
-        for content_data in contents:
-            if "content_json" in content_data:
-                # Erstelle Content mit JSON
-                self._create_content_with_json(
-                    module=module,
-                    title=content_data["title"],
-                    description=content_data["description"],
-                    order=content_data["order"],
-                    content_json=content_data["content_json"]
-                )
-            else:
-                # Erstelle Content mit Video
+            # Erstelle Content-Objekte für Videos
+            for content_data in contents:
                 self._create_content(
                     module=module,
                     title=content_data["title"],
@@ -334,19 +347,30 @@ class Command(BaseCommand):
                     order=content_data["order"],
                     video_url=content_data["video_url"]
                 )
+            
+            # Erstelle Article-Objekte für JSON-Inhalt
+            for i, article in enumerate(other_articles):
+                self._create_article_with_json(
+                    module=module,
+                    title=f"Artikel {i+1}: {title}",
+                    description=f"Vertiefender Artikel zu {title} mit strukturiertem Inhalt.",
+                    order=3 + i,
+                    json_content=article
+                )
 
-    def _create_content_with_json(self, module, title, description, order, content_json):
-        """Erstellt Content mit JSON-Struktur."""
-        content, created = Content.objects.get_or_create(
+    def _create_article_with_json(self, module, title, description, order, json_content):
+        """Erstellt Article mit JSON-Struktur."""
+        
+        article, created = Article.objects.get_or_create(
             module=module,
             title=title,
             defaults={
-                'description': description,
-                'order': order,
-                'content_json': content_json  # Neues Feld für JSON-Content
+                'url': f'https://example.com/article/{module.id}/{order}',  # Placeholder URL
+                'json_content': json_content,
+                'order': order
             }
         )
-        return content
+        return article
 
     def _create_python_basics_article(self, title):
         """Erstellt einen Python-Grundlagen Artikel."""

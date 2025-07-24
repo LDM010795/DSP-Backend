@@ -495,7 +495,7 @@ class Task(models.Model):
     task_type = models.CharField(
         max_length=50,
         choices=TaskType.choices,
-        default=TaskType.PROGRAMMING,
+        default=TaskType.NONE,
         verbose_name=_("Task Type"),
         help_text=_("Type of task")
     )
