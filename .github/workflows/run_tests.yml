@@ -8,6 +8,9 @@ jobs:
   django-unittests:
     runs-on: ubuntu-latest
     steps:
+      - name: what is going on
+        run: |
+          ls
       - name: install requirements
         run: |
           pip install -r requirements.txt
