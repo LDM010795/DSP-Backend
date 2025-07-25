@@ -6,10 +6,32 @@ from collections import Counter
 class WordExtraction:
     """
     Extrahiert strukturierte Inhalte aus Word-Dokumenttext anhand definierter Tags
-    und liefert ein JSON-Format sowie eine einfache Tag-Statistik.
+    und liefert ein JSON-Format sowie eine detaillierte Tag-Statistik.
+    
+    Diese Klasse verarbeitet Word-Dokumente, die mit speziellen Tags markiert sind
+    (z.B. 'Titel$', 'Text$', 'Lernziele$') und konvertiert sie in ein strukturiertes
+    JSON-Format für die E-Learning Plattform.
+    
+    Attributes:
+        standard_tags (List[str]): Liste aller Standard-Tags, die in JSON umgewandelt werden
+        special_tags (List[str]): Liste der Spezial-Tags (Bild$, Code$), die nur erkannt werden
+        all_tags (List[str]): Kombination aus standard_tags und special_tags
+    
+    Example:
+        >>> extractor = WordExtraction()
+        >>> text = "Titel$ Mein Titel Titel$\\nText$ Mein Text Text$"
+        >>> result = extractor.extract_content_to_json(text)
+        >>> print(result)
+        {'content': [{'type': 'title', 'level': 1, 'text': 'Mein Titel'}, ...]}
     """
 
     def __init__(self):
+        """
+        Initialisiert die WordExtraction Klasse mit allen verfügbaren Tags.
+        
+        Definiert die Standard-Tags (werden in JSON umgewandelt) und Spezial-Tags
+        (werden nur erkannt, aber nicht verarbeitet).
+        """
         self.standard_tags = [
             'Titel$', 'Titel2$', 'Titel3$', 'Text$', 'Hinweis$', 'Wichtig$', 
             'Tipp$', 'Exkurs$', 'Quellen$', 'Lernziele$', 'Inhaltsverzeichnis$', 
@@ -19,6 +41,44 @@ class WordExtraction:
         self.all_tags = self.standard_tags + self.special_tags
 
     def extract_content_to_json(self, text: str) -> Dict[str, Any]:
+        """
+        Extrahiert strukturierte Inhalte aus Text und konvertiert sie in JSON-Format.
+        
+        Diese Methode durchläuft den Text zeilenweise, erkennt Tags und sammelt
+        den Inhalt zwischen öffnenden und schließenden Tags. Der Inhalt wird
+        je nach Tag-Typ in verschiedene JSON-Strukturen umgewandelt.
+        
+        Args:
+            text (str): Der zu verarbeitende Text aus dem Word-Dokument
+            
+        Returns:
+            Dict[str, Any]: JSON-Objekt mit der Struktur:
+                {
+                    "content": [
+                        {"type": "title", "level": 1, "text": "..."},
+                        {"type": "text", "paragraphs": ["...", "..."]},
+                        {"type": "learning_goals", "items": ["...", "..."]},
+                        ...
+                    ]
+                }
+        
+        Example:
+            >>> extractor = WordExtraction()
+            >>> text = '''
+            ... Titel$ Mein Haupttitel Titel$
+            ... Text$ Erster Absatz/nZweiter Absatz Text$
+            ... Lernziele$ • Ziel 1 • Ziel 2 Lernziele$
+            ... '''
+            >>> result = extractor.extract_content_to_json(text)
+            >>> print(result['content'][0]['type'])
+            'title'
+        
+        Note:
+            - Tags müssen am Anfang einer Zeile stehen
+            - Jeder öffnende Tag braucht einen schließenden Tag
+            - Leere Zeilen werden ignoriert
+            - Unbekannte Tags werden erkannt aber nicht verarbeitet
+        """
         result = {"content": []}
         lines = text.split('\n')
         current_tag = None
@@ -45,6 +105,55 @@ class WordExtraction:
         return result
 
     def analyze_tags_in_text(self, text: str) -> Dict[str, Any]:
+        """
+        Analysiert den Text und erstellt detaillierte Statistiken über gefundene Tags.
+        
+        Diese Methode durchläuft den Text und zählt alle gefundenen, verarbeiteten
+        und unbekannten Tags. Sie unterscheidet zwischen öffnenden und schließenden
+        Tags und erkennt Tippfehler in Tag-Namen.
+        
+        Args:
+            text (str): Der zu analysierende Text aus dem Word-Dokument
+            
+        Returns:
+            Dict[str, Any]: Detaillierte Analyse mit folgender Struktur:
+                {
+                    "summary": {
+                        "total_lines": int,
+                        "total_found_tags": int,
+                        "total_found_occurrences": int,
+                        "total_processed_tags": int,
+                        "total_processed_occurrences": int,
+                        "total_unknown_tags": int,
+                        "total_unknown_occurrences": int,
+                        "unused_tags": List[str],
+                        "unprocessed_tags": List[str]
+                    },
+                    "found_tags": List[str],
+                    "found_tags_count": Dict[str, int],
+                    "processed_tags": List[str],
+                    "processed_tags_count": Dict[str, int],
+                    "unknown_tags": List[str],
+                    "unknown_tags_count": Dict[str, int],
+                    "unused_tags": List[str],
+                    "unprocessed_tags": List[str],
+                    "all_available_tags": List[str]
+                }
+        
+        Example:
+            >>> extractor = WordExtraction()
+            >>> text = "Titel$ Mein Titel Titel$\\nText$ Mein Text Text$\\nAuflitung$ Fehler Auflitung$"
+            >>> analysis = extractor.analyze_tags_in_text(text)
+            >>> print(analysis['summary']['total_found_tags'])
+            2
+            >>> print(analysis['unknown_tags'])
+            ['Auflitung$']
+        
+        Note:
+            - Nur öffnende Tags werden in den Zählungen berücksichtigt
+            - Unbekannte Tags sind Wörter, die mit $ enden aber nicht in all_tags sind
+            - Ungenutzte Tags sind verfügbare Tags, die nicht im Text gefunden wurden
+        """
         lines = text.split('\n')
         found_tags_counter = Counter()  # Zählt tatsächliche Vorkommen (nur öffnende Tags)
         found_tags_set = set()  # Verschiedene Tag-Arten
@@ -125,14 +234,33 @@ class WordExtraction:
 
     def _find_tag(self, line: str) -> Optional[str]:
         """
-        Findet Tag in einer Zeile (auch wenn Tag Teil der Zeile ist).
-        Erkennt sowohl bekannte als auch unbekannte Tags (Wörter die mit $ enden).
+        Findet einen Tag in einer Zeile, auch wenn der Tag nur Teil der Zeile ist.
+        
+        Diese Methode sucht nach bekannten Tags aus self.all_tags und unbekannten
+        Tags (Wörter die mit $ enden). Sie erkennt Tags auch wenn sie nicht alleine
+        auf einer Zeile stehen.
         
         Args:
-            line: Zu prüfende Zeile
+            line (str): Die zu prüfende Zeile
             
         Returns:
-            str: Gefundener Tag oder None
+            Optional[str]: Gefundener Tag oder None wenn kein Tag gefunden wurde
+            
+        Example:
+            >>> extractor = WordExtraction()
+            >>> extractor._find_tag("Titel$ Mein Titel")
+            'Titel$'
+            >>> extractor._find_tag("Bild$ ABB1.1.png")
+            'Bild$'
+            >>> extractor._find_tag("Normaler Text ohne Tag")
+            None
+            >>> extractor._find_tag("UnbekannterTag$ mit Inhalt")
+            'UnbekannterTag$'
+        
+        Note:
+            - Erst werden bekannte Tags aus self.all_tags gesucht
+            - Dann werden unbekannte Tags (Wörter mit $ am Ende) gesucht
+            - Tags werden auch erkannt wenn sie Teil einer längeren Zeile sind
         """
         # Erst prüfen ob ein bekannter Tag in der Zeile steht
         for tag in self.all_tags:
@@ -148,12 +276,45 @@ class WordExtraction:
         return None
 
     def _add_content_to_result(self, result: Dict, tag: str, content: List[str]) -> None:
+        """
+        Fügt verarbeiteten Inhalt zum Ergebnis-JSON hinzu.
+        
+        Diese Methode verarbeitet den gesammelten Inhalt basierend auf dem Tag-Typ
+        und fügt ihn in der entsprechenden JSON-Struktur zum Ergebnis hinzu.
+        Sie behandelt verschiedene Tag-Typen unterschiedlich:
+        - Titel-Tags: Einfacher Text
+        - Text-Tags: Aufgeteilt in Absätze
+        - Listen-Tags: Aufgeteilt in Items
+        - Notizen-Tags: Einfacher Text mit Variant
+        
+        Args:
+            result (Dict): Das Ergebnis-JSON, zu dem der Inhalt hinzugefügt wird
+            tag (str): Der Tag-Typ (z.B. 'Titel$', 'Text$', 'Lernziele$')
+            content (List[str]): Liste der Zeilen mit dem Inhalt
+            
+        Note:
+            - Leerer Inhalt wird ignoriert
+            - Unbekannte Tags werden nicht hinzugefügt
+            - Zeilenumbrüche (/n) werden in \n umgewandelt
+            - Absätze werden automatisch erkannt und aufgeteilt
+            - Listen werden automatisch in Items aufgeteilt
+        """
         full_content = ' '.join(content).strip()
         if not full_content:
             return
 
         def split_items():
-            """Extrahiert Auflistungselemente (mit Punkten, Nummerierung oder einfach Zeilen)"""
+            """
+            Extrahiert Auflistungselemente aus Listen-Tags.
+            
+            Erkennt verschiedene Listen-Formate:
+            - Aufzählungszeichen (•, -)
+            - Nummerierung (1., 2., 1), 2))
+            - Einfache Zeilen ohne Formatierung
+            
+            Returns:
+                List[str]: Liste der bereinigten Listenelemente
+            """
             items = []
             
             for line in content:
@@ -170,15 +331,36 @@ class WordExtraction:
                     # Entferne Punkt/Nummerierung
                     clean_line = re.sub(r'^[•\-]\s*', '', line)  # Entferne • oder -
                     clean_line = re.sub(r'^\d+[\.\)]\s*', '', line)  # Entferne Nummerierung
+                    
+                    # Prüfe ob die Zeile Zeilenumbrüche enthält
+                    if '\n' in clean_line or '/n' in clean_line:
+                        # Ersetze /n durch \n für konsistente Verarbeitung
+                        clean_line = clean_line.replace('/n', '\n')
+                    
                     items.append(clean_line)
                 else:
                     # Einfache Zeile ohne Punkt/Nummerierung
+                    # Prüfe ob die Zeile Zeilenumbrüche enthält
+                    if '\n' in line or '/n' in line:
+                        # Ersetze /n durch \n für konsistente Verarbeitung
+                        line = line.replace('/n', '\n')
+                    
                     items.append(line)
             
             return [item for item in items if item]
 
         def split_paragraphs():
-            """Erkennt Absätze in Texten und teilt sie auf"""
+            """
+            Erkennt und teilt Absätze in Text-Tags auf.
+            
+            Erkennt verschiedene Arten von Absätzen:
+            - Leere Zeilen zwischen Text (Word-Absätze)
+            - Zeilenumbrüche (/n) im Text
+            - Echte Zeilenumbrüche (\n) im Text
+            
+            Returns:
+                List[str]: Liste der Absätze
+            """
             paragraphs = []
             current_paragraph = []
             
@@ -214,6 +396,7 @@ class WordExtraction:
             
             return paragraphs
 
+        # Mapping von Tags zu JSON-Strukturen
         mapping = {
             'Titel$': {"type": "title", "level": 1, "text": full_content},
             'Titel2$': {"type": "title", "level": 2, "text": full_content},
