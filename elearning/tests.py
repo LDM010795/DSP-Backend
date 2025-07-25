@@ -19,10 +19,8 @@ Version: 1.0.0
 from django.test import TestCase
 
 from django.contrib.auth.models import User
-from django.urls import reverse
 
 from elearning.modules.models import Module, ModuleCategory
-from elearning.modules.views import ModuleListViewPublic
 
 
 # Create your tests here.
@@ -36,6 +34,7 @@ from elearning.modules.views import ModuleListViewPublic
 
 
 class ModuleViewsTests(TestCase):
+    #This setup is only executed once for the entire testfile
     @classmethod
     def setUpTestData(cls):
         category = ModuleCategory.objects.create(id=1, name="Python")
@@ -54,19 +53,35 @@ class ModuleViewsTests(TestCase):
             }
         )
 
-        User.objects.get_or_create(
+        testuser = User.objects.create_user(
             username="Max",
             password="Musterpassword",
             email="Max@test.com",
             is_staff=False,
             is_superuser=False,
         )
+        testuser.save()
 
-    def setUp(self):
-        self.client.login(username="Max", password="Musterpassword")
+    # This setup is executed before each indivitual test
+    #def setUp(self):
 
-    def testModuleListIstErreichbar(self):
-        response = self.client.get('/api/elearning/')
-        print(response.content)
+
+    def testPublicModuleListIstErreichbar(self):
+        # Route has to be checked at backend/urls combined with elearning/urls
+        response = self.client.get('/api/elearning/modules/public/')
         self.assertEqual(response.status_code, 200)
+
+    def testPublicModuleListHatInhalt(self):
+        # Check if module in database and model reachable by API are same, in this case by checking if the category name is the same
+        response = self.client.get('/api/elearning/modules/public/')
+        self.assertEqual(
+            Module.objects.get(title="Public Modul").category.name,
+            response.json()[0]['category']['name'],
+        )
+
+    def testPrivateModuleListHatInhalt(self):
+        # TODO: fix this test
+        self.client.login(username="Max", password="Musterpassword")
+        response = self.client.get('/api/elearning/modules/user/')
+        print(response.content)
 
