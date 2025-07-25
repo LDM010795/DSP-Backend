@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: what is going on
         run: |
-          ls
+          ls .
       - name: install requirements
         run: |
           pip install -r requirements.txt
