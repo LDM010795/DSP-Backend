@@ -18,6 +18,13 @@ Version: 1.0.0
 
 from django.test import TestCase
 
+from django.contrib.auth.models import User
+from django.urls import reverse
+
+from elearning.modules.models import Module, ModuleCategory
+from elearning.modules.views import ModuleListViewPublic
+
+
 # Create your tests here.
 # 
 # Future tests for:
@@ -26,3 +33,40 @@ from django.test import TestCase
 # - Examination system and certification
 # - API endpoint validation
 # - Integration tests for end-to-end workflows
+
+
+class ModuleViewsTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        category = ModuleCategory.objects.create(id=1, name="Python")
+        Module.objects.get_or_create(
+            title="Privates Modul",
+            defaults={
+                'is_public': False,
+                'category': category,
+            }
+        )
+        Module.objects.get_or_create(
+            title="Public Modul",
+            defaults={
+                'is_public': True,
+                'category': category,
+            }
+        )
+
+        User.objects.get_or_create(
+            username="Max",
+            password="Musterpassword",
+            email="Max@test.com",
+            is_staff=False,
+            is_superuser=False,
+        )
+
+    def setUp(self):
+        self.client.login(username="Max", password="Musterpassword")
+
+    def testModuleListIstErreichbar(self):
+        response = self.client.get('/api/elearning/')
+        print(response.content)
+        self.assertEqual(response.status_code, 200)
+
