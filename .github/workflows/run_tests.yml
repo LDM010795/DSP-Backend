@@ -1,7 +1,9 @@
 name: run_tests
 
 on:
-  push
+  pull_request:
+    branches:
+      - 'develop'
 
 
 jobs:
