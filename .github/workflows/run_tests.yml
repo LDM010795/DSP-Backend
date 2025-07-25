@@ -8,9 +8,10 @@ jobs:
   django-unittests:
     runs-on: ubuntu-latest
     steps:
-      - name: what is going on
-        run: |
-          ls .
+      - name: checkout project
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - name: install requirements
         run: |
           pip install -r requirements.txt
