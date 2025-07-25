@@ -8,6 +8,7 @@ class TestTestCase(TestCase):
 
     def test_feature_to_test(self):
             print("Feature getting tested!")
+            self.assertTrue(True)
 
     def tearDown(self):
         print("This is a teardown phase! If stuff needs to be killed, do it here")
