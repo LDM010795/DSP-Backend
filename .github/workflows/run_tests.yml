@@ -1,0 +1,26 @@
+name: run_tests
+
+on:
+  pull_request:
+    branches:
+      - 'develop'
+
+
+jobs:
+  django-unittests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout project
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - name: install requirements
+        run: |
+          pip install -r requirements.txt
+      - name: collect static files
+        run: |
+          python3 manage.py collectstatic
+
+      - name: run unittests
+        run: |
+          python3 manage.py test

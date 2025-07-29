@@ -32,6 +32,7 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Exists, OuterRef, QuerySet
 from typing import Optional
+from django.core.exceptions import ValidationError
 
 
 class ModuleCategory(models.Model):
@@ -435,13 +436,20 @@ class Task(models.Model):
         The test_file_path points to a Python file containing unittest
         cases that can be executed against student submissions.
     """
-    
+    class TaskType(models.TextChoices):
+        """
+        Please add task types here.
+        """
+        NONE = 'none', _('None')
+        PROGRAMMING = 'programming', _('Programming Exercise')
+        MULTIPLE_CHOICE = 'multiple_choice', _('Multiple Choice')
+
     class Difficulty(models.TextChoices):
         """Task difficulty levels with German display names."""
         EASY = 'Einfach', _('Easy')
         MEDIUM = 'Mittel', _('Medium')
         HARD = 'Schwer', _('Hard')
-
+        
     module = models.ForeignKey(
         Module,
         related_name='tasks',
@@ -458,7 +466,7 @@ class Task(models.Model):
     
     description = models.TextField(
         verbose_name=_("Task Description"),
-        help_text=_("Detailed instructions and requirements for the task")
+        help_text=_("To describe how to use the task type element")
     )
     
     difficulty = models.CharField(
@@ -475,6 +483,25 @@ class Task(models.Model):
         verbose_name=_("Hint"),
         help_text=_("Optional hint to help students solve the task")
     )
+
+    task_type = models.CharField(
+        max_length=50,
+        choices=TaskType.choices,
+        default=TaskType.PROGRAMMING,
+        verbose_name=_("Task Type"),
+        help_text=_("Type of task")
+    )
+    
+    task_config = models.JSONField(
+    blank=True,
+    null=True,
+    verbose_name=_("Task Configuration"),
+    help_text=_(
+        "JSON configuration for task-specific settings. "
+        "For multiple choice: options, correct_answer, explanation. "
+        "For programming: test configuration."
+    )
+)
     
     test_file_path = models.CharField(
         max_length=255,
@@ -511,7 +538,58 @@ class Task(models.Model):
     def has_automated_tests(self) -> bool:
         """Check if this task has automated tests configured."""
         return bool(self.test_file_path)
-
+    
+    def clean(self):
+        """Validate task_config based on task_type."""
+        # Ensures valid JSON structure for each task type
+        super().clean()
+        
+        if self.task_config and self.task_type == self.TaskType.MULTIPLE_CHOICE:
+            # Prüfe required fields
+            required_fields = ['options', 'correct_answer']
+            for field in required_fields:
+                if field not in self.task_config:
+                    raise ValidationError(
+                        f"Multiple choice tasks require '{field}' in task_config"
+                    )
+            
+            # Prüfe options ist eine Liste
+            if not isinstance(self.task_config.get('options'), list):
+                raise ValidationError("Options must be a list")
+            
+            # Prüfe correct_answer ist ein gültiger Index
+            correct_answer = self.task_config.get('correct_answer')
+            options = self.task_config.get('options', [])
+            
+            if not isinstance(correct_answer, int):
+                raise ValidationError("correct_answer must be an integer (index)")
+            
+            if correct_answer < 0 or correct_answer >= len(options):
+                raise ValidationError(f"correct_answer index {correct_answer} is out of range (0-{len(options)-1})")
+    
+    
+    """
+    Create new Task_Type Formats here
+    Region for defining configuration retrieval methods for different task types.
+    Add new 'get_<task_type>_config' methods here.
+    """
+    def get_multiple_choice_config(self):
+        """Get validated multiple choice configuration."""
+        # Returns: {'options': [...], 'correct_answer': 0, 'explanation': '...'}
+        if self.task_type != self.TaskType.MULTIPLE_CHOICE:
+            return None
+        
+        if not self.task_config:
+            return None
+            
+        """
+        This is the format for the multiple choice task.
+        """
+        return {
+            'options': self.task_config.get('options', []),
+            'correct_answer': self.task_config.get('correct_answer'),
+            'explanation': self.task_config.get('explanation', '')
+        }
 
 class UserTaskProgress(models.Model):
     """
