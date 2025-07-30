@@ -333,7 +333,7 @@ class ExternalUserRegistrationSerializer(serializers.ModelSerializer):
     """
 
     # Write-only password fields; not included in responses for security
-    password = serializers.CharField(write_only=True, min_lenght=8, required=True)
+    password = serializers.CharField(write_only=True, min_length=8, required=True)
     password_confirm = serializers.CharField(write_only=True, min_length=8, required=True)
 
     class Meta:
