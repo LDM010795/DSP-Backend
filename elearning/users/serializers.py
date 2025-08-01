@@ -298,4 +298,88 @@ class SetInitialPasswordSerializer(serializers.Serializer):
             # Create profile if it doesn't exist
             Profile.objects.create(user=user, force_password_change=False)
             
-        return user 
+        return user
+
+
+class ExternalUserRegistrationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for registering external users (non-company, non-Microsoft) on the platform.
+
+    This serializer handles user sign-up requests for individuals who do not possess a company account
+    (i.e., not part of Datasmart Point or not using Microsoft SSO). It validates user input for common
+    requirements (unique username/email, password confirmation), creates a new Django user, and
+    optionally manages the associated profile to ensure external users are not forced to change their
+    password on first login.
+
+    Key Features:
+    - Ensures that username and email are unique within the system.
+    - Validates password length and enforces password confirmation.
+    - Creates both the User and, if necessary, an associated Profile object.
+    - Sets force_password_change to False so external users can immediately access the platform.
+    - Designed to be integrated with a public registration endpoint (e.g., /api/register/).
+
+    Fields:
+    - username: Required, must be unique.
+    - email: Required, must be unique.
+    - first_name: Optional (can be required as needed).
+    - last_name: Optional (can be required as needed).
+    - password: Required, write-only, min 8 characters.
+    - password_confirm: Required, write-only, must match password.
+
+    Example usage:
+        serializer = ExternalUserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+    """
+
+    # Write-only password fields; not included in responses for security
+    password = serializers.CharField(write_only=True, min_length=8, required=True)
+    password_confirm = serializers.CharField(write_only=True, min_length=8, required=True)
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'first_name', 'password', 'password_confirm']
+
+    def validate_email(self, value):
+        """
+        Ensure the provided email is unique within the User model.
+        """
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate(self, data):
+        """
+        Object-level validation to ensure passwords match.
+        """
+        if data['password'] != data['password_confirm']:
+            raise serializers.ValidationError({"password_confirm": "Passwords do not match"})
+        return data
+
+    def create(self, validated_data):
+        """
+        Create the new User and, if necessary, an associated Profile with force_password_change=False.
+
+        Args:
+            validated_data (dict): Validated user data.
+
+        Returns:
+            User: The newly created user instance.
+        """
+
+        # Remove password fields form validated data before creating the user
+        password = validated_data.pop('password')
+        validated_data.pop('password_confirm')
+
+        # Create the user instance using Django's built-in create-user method
+        user = User.objects.create_user(**validated_data)
+        user.save()
+
+        # Ensure the associated Profile exists, and set force_password_change to False
+        if hasattr(user, 'profile'):
+            user.profile.force_password_change = False
+            user.profile.save()
+        else:
+            Profile.objects.create(user=user, force_password_change=False)
+
+        return user
