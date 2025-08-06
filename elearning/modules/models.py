@@ -423,6 +423,60 @@ class Article(models.Model):
         db_table = 'elearning_article'
 
 
+class ArticleImage(models.Model):
+    """
+    Bildverwaltung für Artikel in Lernmodulen.
+    
+    Speichert Cloud-URLs und Metadaten für Bilder, die in Artikeln vorkommen.
+    Ermöglicht automatische Zuordnung durch Frontend basierend auf Bildnamen.
+    """
+    
+    module = models.ForeignKey(
+        Module,
+        on_delete=models.CASCADE,
+        related_name='article_images',
+        verbose_name=_("Module"),
+        help_text=_("Modul, zu dem dieses Bild gehört")
+    )
+    
+    image_name = models.CharField(
+        max_length=255,
+        unique=True,
+        verbose_name=_("Image Name"),
+        help_text=_("Eindeutiger Name für automatische Frontend-Zuordnung")
+    )
+    
+    cloud_url = models.URLField(
+        max_length=1000,
+        verbose_name=_("Cloud URL"),
+        help_text=_("Vollständige Cloud-URL des Bildes")
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Created At")
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Updated At")
+    )
+
+    class Meta:
+        verbose_name = _("Article Image")
+        verbose_name_plural = _("Article Images")
+        ordering = ['module', 'image_name']
+        db_table = 'elearning_article_image'
+        indexes = [
+            models.Index(fields=['module']),
+            models.Index(fields=['image_name']),
+        ]
+
+    def __str__(self) -> str:
+        """String representation of the article image."""
+        return f"{self.module.title} - {self.image_name}"
+
+
 class Task(models.Model):
     """
     Programming exercises with difficulty levels and testing integration.
