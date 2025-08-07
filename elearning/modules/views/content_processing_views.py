@@ -22,6 +22,9 @@ from django.views.decorators.http import require_http_methods
 
 # Import des Orchestration Services
 from ...services.content_processing import ContentOrchestrationService
+from ...services.cloud_storage import CloudStorageService
+import re
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +93,95 @@ def process_module_content(request):
         return Response({
             'success': False,
             'error': f'Interner Serverfehler: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def validate_video_url(request):
+    """
+    Validiert eine Video-URL aus der Cloud und extrahiert den Dateinamen.
+    
+    POST /api/content/validate-video-url/
+    
+    Request Body:
+    {
+        "video_url": "https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Videos/1.1 Einführung.mp4"
+    }
+    
+    Response:
+    {
+        "success": true,
+        "video_url": "https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Videos/1.1 Einführung.mp4",
+        "filename": "1.1 Einführung.mp4",
+        "title": "1.1 Einführung",
+        "is_valid": true
+    }
+    """
+    try:
+        video_url = request.data.get('video_url')
+        if not video_url:
+            return Response({
+                'success': False,
+                'error': 'video_url ist erforderlich'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Cloud Storage Service initialisieren
+        cloud_service = CloudStorageService()
+        
+        # URL validieren (muss Wasabi Cloud URL sein)
+        if not video_url.startswith('https://s3.eu-central-2.wasabisys.com/dsp-e-learning/'):
+            return Response({
+                'success': False,
+                'error': 'Ungültige Cloud-URL. Muss eine Wasabi Cloud URL sein.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Dateiname aus URL extrahieren
+        filename = video_url.split('/')[-1]
+        
+        # Prüfen ob es eine Video-Datei ist
+        video_extensions = ['.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm']
+        if not any(filename.lower().endswith(ext) for ext in video_extensions):
+            return Response({
+                'success': False,
+                'error': 'Keine gültige Video-Datei. Unterstützte Formate: mp4, avi, mov, mkv, wmv, flv, webm'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Titel aus Dateiname extrahieren (ohne Extension)
+        title = os.path.splitext(filename)[0]
+        
+        # Prüfen ob die Datei tatsächlich existiert
+        try:
+            # Object key aus URL extrahieren
+            object_key = video_url.replace('https://s3.eu-central-2.wasabisys.com/dsp-e-learning/', '')
+            
+            # Prüfen ob Datei existiert
+            cloud_service.client.head_object(
+                Bucket=cloud_service.bucket_name,
+                Key=object_key
+            )
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': f'Video-Datei nicht gefunden: {str(e)}'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        response_data = {
+            'success': True,
+            'video_url': video_url,
+            'filename': filename,
+            'title': title,
+            'is_valid': True
+        }
+        
+        logger.info(f"Video-URL validiert: {filename}")
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Fehler bei der Video-URL-Validierung: {e}")
+        return Response({
+            'success': False,
+            'error': f'Fehler bei der Validierung: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

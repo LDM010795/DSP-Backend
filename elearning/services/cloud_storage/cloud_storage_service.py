@@ -50,6 +50,7 @@ class ModuleContent:
     module_name: str
     images: List[CloudFile]
     articles: List[CloudFile]
+    videos: List[CloudFile]
 
 
 class CloudStorageService:
@@ -65,6 +66,7 @@ class CloudStorageService:
         self.base_path = "Lerninhalte"
         self.images_folder = "Bilder"
         self.articles_folder = "Artikel"
+        self.videos_folder = "Videos"
         
         # Cloud Storage Client initialisieren
         self.client = None
@@ -128,13 +130,13 @@ class CloudStorageService:
     
     def get_module_content(self, module_name: str) -> Optional[ModuleContent]:
         """
-        Holt alle Bilder und Artikel für ein spezifisches Modul.
+        Holt alle Bilder, Artikel und Videos für ein spezifisches Modul.
         
         Args:
             module_name: Name des Moduls (z.B. "SQL", "Python Grundlagen")
             
         Returns:
-            ModuleContent mit Bildern und Artikeln oder None
+            ModuleContent mit Bildern, Artikeln und Videos oder None
         """
         if not self.client:
             logger.error("Cloud Storage Client nicht verfügbar")
@@ -147,13 +149,17 @@ class CloudStorageService:
             # Artikel aus Modul/Artikel/ Ordner holen
             articles = self._get_articles_for_module(module_name)
             
+            # Videos aus Modul/Videos/ Ordner holen
+            videos = self._get_videos_for_module(module_name)
+            
             content = ModuleContent(
                 module_name=module_name,
                 images=images,
-                articles=articles
+                articles=articles,
+                videos=videos
             )
             
-            logger.info(f"Modul {module_name}: {len(images)} Bilder, {len(articles)} Artikel gefunden")
+            logger.info(f"Modul {module_name}: {len(images)} Bilder, {len(articles)} Artikel, {len(videos)} Videos gefunden")
             return content
             
         except ClientError as e:
@@ -258,6 +264,58 @@ class CloudStorageService:
             
         except ClientError as e:
             logger.error(f"Fehler beim Abrufen der Artikel für {module_name}: {e}")
+            return []
+    
+    def _get_videos_for_module(self, module_name: str) -> List[CloudFile]:
+        """
+        Holt alle Videos für ein spezifisches Modul.
+        
+        Args:
+            module_name: Name des Moduls
+            
+        Returns:
+            Liste der CloudFile Objekte für Videos
+        """
+        try:
+            # Pfad zum Videos-Ordner des Moduls
+            videos_prefix = f"{self.base_path}/{module_name}/{self.videos_folder}/"
+            
+            response = self.client.list_objects_v2(
+                Bucket=self.bucket_name,
+                Prefix=videos_prefix
+            )
+            
+            videos = []
+            if 'Contents' in response:
+                for obj in response['Contents']:
+                    # Überspringe Ordner selbst
+                    if obj['Key'].endswith('/'):
+                        continue
+                    
+                    # Nur Video-Dateien (.mp4, .avi, .mov, .mkv, etc.)
+                    file_name = os.path.basename(obj['Key'])
+                    video_extensions = ['.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm']
+                    if not any(file_name.lower().endswith(ext) for ext in video_extensions):
+                        continue
+                    
+                    # Generiere Cloud-URL
+                    cloud_url = self._generate_cloud_url(obj['Key'])
+                    
+                    cloud_file = CloudFile(
+                        name=file_name,
+                        path=obj['Key'],
+                        size=obj['Size'],
+                        last_modified=obj['LastModified'],
+                        url=cloud_url,
+                        content_type=obj.get('ContentType', 'video/mp4')
+                    )
+                    videos.append(cloud_file)
+            
+            logger.info(f"Gefundene Videos für {module_name}: {[vid.name for vid in videos]}")
+            return videos
+            
+        except ClientError as e:
+            logger.error(f"Fehler beim Abrufen der Videos für {module_name}: {e}")
             return []
     
     def _generate_cloud_url(self, object_key: str) -> str:

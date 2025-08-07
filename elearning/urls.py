@@ -90,6 +90,12 @@ modules_urlpatterns: List[URLPattern] = [
     path('article/', module_views.ArticleCreateView.as_view(), name='article-create'),
     # Supplementary content
     path('supplementary/', module_views.SupplementaryContentCreateView.as_view(), name='supplementary-create'),
+    # Chapter endpoints
+    path('chapters/', module_views.ChapterCreateView.as_view(), name='chapter-create'),
+    path('chapters/<int:pk>/', module_views.ChapterUpdateView.as_view(), name='chapter-update'),
+    path('chapters/<int:pk>/detail/', module_views.ChapterDetailView.as_view(), name='chapter-detail'),
+    path('chapters/list/', module_views.ChapterListView.as_view(), name='chapter-list'),
+    path('chapters/<int:pk>/delete/', module_views.ChapterDeleteView.as_view(), name='chapter-delete'),
     # Update endpoints
     path('content/<int:pk>/', module_views.ContentUpdateView.as_view(), name='content-update'),
     path('article/<int:pk>/', module_views.ArticleUpdateView.as_view(), name='article-update'),
@@ -105,6 +111,9 @@ modules_urlpatterns: List[URLPattern] = [
     # Article Processing endpoints (automatic processing from Cloud URLs)
     path('content/process-article/', article_views.process_article_from_cloud, name='process-article-from-cloud'),
     path('content/validate-cloud-url/', article_views.validate_cloud_url, name='validate-cloud-url'),
+    
+    # Video Processing endpoints (automatic processing from Cloud URLs)
+    path('content/validate-video-url/', content_views.validate_video_url, name='validate-video-url'),
 ]
 
 # --- Examination System URL Patterns ---
