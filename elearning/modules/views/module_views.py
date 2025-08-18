@@ -78,7 +78,9 @@ class ContentUpdateView(generics.UpdateAPIView):
         
         return Response(serializer.data)
 
-class ArticleUpdateView(generics.UpdateAPIView):
+class ArticleUpdateView(generics.RetrieveUpdateDestroyAPIView):
+    """Handle Article CRUD operations: GET (retrieve), PUT/PATCH (update), DELETE (destroy)."""
+    
     queryset = Article.objects.all()
     serializer_class = ArticleSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -95,7 +97,25 @@ class ArticleUpdateView(generics.UpdateAPIView):
         except Exception as e:
             print(f"[DEBUG] Update failed with error: {e}")
             print(f"[DEBUG] Error type: {type(e)}")
-            raise 
+            raise
+    
+    def destroy(self, request, *args, **kwargs):
+        """
+        Custom destroy method with proper logging.
+        """
+        instance = self.get_object()
+        
+        # Log the deletion attempt
+        print(f"🗑️ [DEBUG] Deleting article: {instance.title} (ID: {instance.id})")
+        
+        # Note: ArticleImage models are linked to Module, not Article directly
+        # So they will persist after article deletion, which is intentional
+        # (images can be reused across multiple articles in the same module)
+        
+        # Perform the actual deletion
+        response = super().destroy(request, *args, **kwargs)
+        print(f"✅ [DEBUG] Article {instance.id} successfully deleted")
+        return response 
 
 # --- Administrative Create/Update Views ---
 
@@ -245,4 +265,3 @@ class ChapterDeleteView(generics.DestroyAPIView):
     
     queryset = Chapter.objects.all()
     serializer_class = ChapterSerializer
-    permission_classes = [permissions.IsAuthenticated] 

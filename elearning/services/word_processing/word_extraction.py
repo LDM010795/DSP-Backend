@@ -12,6 +12,7 @@ class WordExtraction:
     - Normale Tags: Tag$ Content Tag$ (öffnend/schließend)
     - Spezielle Tags: Bild$ bild-name.png (selbstständig)
     - Code Tags: Code$ language$ code-content Code$ (öffnend/schließend)
+    - Tabellen: Tabelle$ <zeilen> Tabelle$ (öffnend/schließend)
     """
     
     def __init__(self):
@@ -19,7 +20,7 @@ class WordExtraction:
         self.tags = [
             'Titel$', 'Titel2$', 'Titel3$', 'Text$', 'Hinweis$', 'Exkurs$',
             'Quellen$', 'Lernziele$', 'Inhaltsverzeichnis$', 'Auflistung$',
-            'Wichtig$', 'Tipp$'
+            'Wichtig$', 'Tipp$', 'Tabelle$'
         ]
         
         # Spezielle Tags (selbstständig, kein schließender Tag)
@@ -169,30 +170,93 @@ class WordExtraction:
         current_content = []
         code_info = None
         
+        # Titel-Tracking für mehrzeilige Titel
+        in_title_mode = False
+        title_level = None
+        title_content = []
+        
         for line in lines:
             line = line.strip()
             if not line:
                 continue
             
-            # Prüfe auf Tag-Muster
+            # Prüfe ZUERST auf vollständige Titel-Tags in einer Zeile (z.B. "Titel2$ Content Titel2$")
+            title_match = self._extract_complete_title(line)
+            if title_match:
+                # Verarbeite vorherigen Tag falls noch aktiv
+                if current_tag and current_content:
+                    self._add_content_to_result(result, current_tag, current_content, code_info)
+                    current_tag = None
+                    current_content = []
+                    code_info = None
+                
+                # Füge Titel direkt zum Ergebnis hinzu
+                result["content"].append({
+                    "type": "title" if title_match['level'] == 1 else f"title{title_match['level']}",
+                    "text": title_match['text']
+                })
+                continue
+            
+            # Prüfe auf Titel-Tags (mehrzeilig)
+            if line in ['Titel$', 'Titel2$', 'Titel3$']:
+                if not in_title_mode:
+                    # Öffnender Titel-Tag
+                    # Verarbeite vorherigen Tag falls noch aktiv
+                    if current_tag and current_content:
+                        self._add_content_to_result(result, current_tag, current_content, code_info)
+                        current_tag = None
+                        current_content = []
+                        code_info = None
+                    
+                    in_title_mode = True
+                    title_level = 1 if line == 'Titel$' else (2 if line == 'Titel2$' else 3)
+                    title_content = []
+                    continue
+                else:
+                    # Schließender Titel-Tag (gleicher Level)
+                    if ((line == 'Titel$' and title_level == 1) or 
+                        (line == 'Titel2$' and title_level == 2) or 
+                        (line == 'Titel3$' and title_level == 3)):
+                        
+                        # Titel abschließen
+                        if title_content:
+                            title_text = ' '.join(title_content).strip()
+                            result["content"].append({
+                                "type": "title" if title_level == 1 else f"title{title_level}",
+                                "text": title_text
+                            })
+                        
+                        in_title_mode = False
+                        title_level = None
+                        title_content = []
+                        continue
+            
+            # Wenn wir im Titel-Modus sind, sammle Titel-Content
+            if in_title_mode:
+                title_content.append(line)
+                continue
+            
+            # Prüfe auf öffnende Tags
             tag_match = re.match(r'^([A-Za-zäöüßÄÖÜ]+)\$\s*(.*)$', line)
             
             if tag_match:
-                # Verarbeite den vorherigen Tag
+                # Verarbeite den vorherigen Tag falls noch aktiv
                 if current_tag and current_content:
                     self._add_content_to_result(result, current_tag, current_content, code_info)
                 
                 # Starte neuen Tag
                 current_tag = tag_match.group(1) + '$'
-                current_content = [tag_match.group(2)] if tag_match.group(2) else []
+                remaining_content = tag_match.group(2).strip()
+                current_content = [remaining_content] if remaining_content else []
                 code_info = None
                 
                 # Spezielle Behandlung für Code-Tags
                 if current_tag == 'Code$':
                     code_info = {
                         'language': 'sql',
-                        'code': tag_match.group(2) if tag_match.group(2) else ''
+                        'code': remaining_content
                     }
+                # Für Tabellen sammeln wir rohe Zeilen und parsen beim Schließen
             else:
                 # Füge Zeile zum aktuellen Content hinzu
                 if current_tag:
@@ -202,11 +266,45 @@ class WordExtraction:
                     if current_tag == 'Code$' and code_info:
                         code_info['code'] += '\n' + line
         
+        # Verarbeite verbleibende Titel
+        if in_title_mode and title_content:
+            title_text = ' '.join(title_content).strip()
+            result["content"].append({
+                "type": "title" if title_level == 1 else f"title{title_level}",
+                "text": title_text
+            })
+        
         # Verarbeite den letzten Tag
         if current_tag and current_content:
             self._add_content_to_result(result, current_tag, current_content, code_info)
         
         return result
+    
+    def _extract_complete_title(self, line: str) -> Optional[Dict[str, Any]]:
+        """
+        Extrahiert vollständige Titel-Tags aus einer Zeile.
+        
+        Args:
+            line: Die zu prüfende Zeile
+            
+        Returns:
+            Dictionary mit 'text' und 'level' falls Titel gefunden, sonst None
+        """
+        # Prüfe auf verschiedene Titel-Muster
+        patterns = [
+            (r'^Titel\$\s*(.*?)\s*Titel\$$', 1),      # Titel$ ... Titel$
+            (r'^Titel2\$\s*(.*?)\s*Titel2\$$', 2),    # Titel2$ ... Titel2$
+            (r'^Titel3\$\s*(.*?)\s*Titel3\$$', 3),    # Titel3$ ... Titel3$
+        ]
+        
+        for pattern, level in patterns:
+            match = re.match(pattern, line)
+            if match:
+                content = match.group(1).strip()
+                if content:  # Nur wenn tatsächlich Content vorhanden ist
+                    return {'text': content, 'level': level}
+        
+        return None
     
     def _add_content_to_result(self, result: Dict, tag: str, content: List[str], code_info: Optional[Dict] = None) -> None:
         """
@@ -219,16 +317,19 @@ class WordExtraction:
             code_info: Zusätzliche Informationen für Code-Blöcke
         """
         if tag == 'Titel$':
+            # Direkte Titel-Verarbeitung ohne Listen-Parsing
             result["content"].append({
                 "type": "title",
                 "text": ' '.join(content).strip()
             })
         elif tag == 'Titel2$':
+            # Direkte Titel-Verarbeitung ohne Listen-Parsing
             result["content"].append({
                 "type": "title2",
                 "text": ' '.join(content).strip()
             })
         elif tag == 'Titel3$':
+            # Direkte Titel-Verarbeitung ohne Listen-Parsing
             result["content"].append({
                 "type": "title3",
                 "text": ' '.join(content).strip()
@@ -261,18 +362,24 @@ class WordExtraction:
                     "alt": f"Bild: {image_content}"
                 })
         elif tag == 'Code$':
-            if code_info:
-                result["content"].append({
-                    "type": "code",
-                    "language": code_info.get("language", "sql"),
-                    "code": code_info.get("code", ' '.join(content))
-                })
-            else:
-                result["content"].append({
-                    "type": "code",
-                    "language": "sql",
-                    "code": ' '.join(content)
-                })
+            # Bereinige Code-Content: Entferne Sprach-Prefix (z.B. "sql$")
+            raw_code = code_info.get("code", ' '.join(content)) if code_info else ' '.join(content)
+            
+            # Extrahiere Sprache und bereinige Code
+            language = "sql"  # Default
+            clean_code = raw_code
+            
+            # Prüfe auf Sprach-Prefix (z.B. "sql$", "python$", "js$")
+            lang_match = re.match(r'^([a-zA-Z]+)\$\s*(.*)', raw_code, re.DOTALL)
+            if lang_match:
+                language = lang_match.group(1).lower()
+                clean_code = lang_match.group(2).strip()
+            
+            result["content"].append({
+                "type": "code",
+                "language": language,
+                "code": clean_code
+            })
         elif tag == 'Wichtig$':
             result["content"].append({
                 "type": "important",
@@ -294,10 +401,13 @@ class WordExtraction:
                 "text": ' '.join(content).strip()
             })
         elif tag == 'Quellen$':
-            result["content"].append({
-                "type": "sources",
-                "text": ' '.join(content).strip()
-            })
+            # Verarbeite Quellen als Liste (wie Lernziele) - jede Quelle als separates Element
+            items = self._parse_list_content(content)
+            if items:
+                result["content"].append({
+                    "type": "sources",
+                    "items": items
+                })
         elif tag == 'Lernziele$':
             items = self._parse_list_content(content)
             result["content"].append({
@@ -316,6 +426,26 @@ class WordExtraction:
                 "type": "list",
                 "items": items
             })
+        elif tag == 'Tabelle$':
+            # Parse einfache Tabellen aus Zeilen (Tab/; getrennt)
+            headers: List[str] = []
+            rows: List[List[str]] = []
+            # Entferne leere Zeilen
+            lines = [l for l in content if l and l.strip()]
+            if lines:
+                # Erwarte erste Zeile als Header
+                header_line = lines[0]
+                headers = re.split(r'\s*\t\s*|\s*;\s*|\s*\|\s*', header_line.strip())
+                # Restliche Zeilen als rows
+                for data_line in lines[1:]:
+                    cells = re.split(r'\s*\t\s*|\s*;\s*|\s*\|\s*', data_line.strip())
+                    rows.append(cells)
+            if headers:
+                result["content"].append({
+                    "type": "table",
+                    "headers": headers,
+                    "rows": rows
+                })
         else:
             # Unbekannter Tag - füge als Text hinzu
             result["content"].append({

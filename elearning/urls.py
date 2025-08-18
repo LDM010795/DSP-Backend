@@ -31,6 +31,7 @@ from .users import views as user_views
 from .modules import views as module_views
 from .modules.views import article_processing_views as article_views
 from .modules.views import content_processing_views as content_views
+from .modules.views import video_url_views as video_views
 from .final_exam import views as exam_views
 
 app_name = 'elearning'
@@ -114,6 +115,13 @@ modules_urlpatterns: List[URLPattern] = [
     
     # Video Processing endpoints (automatic processing from Cloud URLs)
     path('content/validate-video-url/', content_views.validate_video_url, name='validate-video-url'),
+    
+    # Video presigned URL endpoints (secure video access)
+    path('videos/test/', video_views.test_video_endpoint, name='test-video-endpoint'),
+    path('videos/<int:content_id>/url/', video_views.get_video_presigned_url, name='get-video-presigned-url'),
+    path('videos/sign/', video_views.get_video_presigned_url_by_key, name='get-video-presigned-url-by-key'),
+    # Generic storage presign alias (can be used for images and other assets as well)
+    path('storage/sign/', video_views.get_video_presigned_url_by_key, name='get-storage-presigned-url-by-key'),
 ]
 
 # --- Examination System URL Patterns ---

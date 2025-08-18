@@ -1,7 +1,7 @@
 from rest_framework import serializers
 import os
 # Angepasste Importe
-from .models import Module, ModuleCategory, Content, SupplementaryContent, Task, UserTaskProgress, Article, Chapter
+from .models import Module, ModuleCategory, Content, SupplementaryContent, Task, UserTaskProgress, Article, Chapter, ArticleImage
 
 class SupplementaryContentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -165,9 +165,12 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
         required=False,
     )
 
+    # Map von Bildname zu Cloud-URL für Bildauflösung im Frontend
+    article_images = serializers.SerializerMethodField()
+
     class Meta:
         model = Module
-        fields = ['id', 'title', 'category', 'category_id', 'is_public', 'chapters', 'contents', 'articles', 'tasks']
+        fields = ['id', 'title', 'category', 'category_id', 'is_public', 'chapters', 'contents', 'articles', 'tasks', 'article_images']
 
     def get_contents(self, obj):
         """
@@ -203,6 +206,11 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
         else:
             # Fallback without user context
             return TaskSerializer(tasks, many=True, context={}).data
+
+    def get_article_images(self, obj):
+        # Liefert Mapping { image_name: cloud_url } für das Modul
+        images = ArticleImage.objects.filter(module=obj).values('image_name', 'cloud_url')
+        return {img['image_name']: img['cloud_url'] for img in images}
 
 class ExecuteCodeSerializer(serializers.Serializer):
     code = serializers.CharField(trim_whitespace=False)

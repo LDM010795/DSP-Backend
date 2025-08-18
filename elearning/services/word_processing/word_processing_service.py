@@ -74,13 +74,14 @@ class WordProcessingService:
             # Word-Dokument laden
             doc = Document(io.BytesIO(file_content))
             
-            # Text-Inhalt extrahieren
+            # Text-Inhalt extrahieren (inkl. Tabellen als Tabelle$-Blöcke in korrekter Reihenfolge)
             word_content = self._extract_text_from_docx(doc)
             
             # Titel aus Dateiname extrahieren
             title = self._extract_title_from_filename(file_name)
             
             # Durch WordExtraction verarbeiten
+            print("[DEBUG] WordProcessingService: Übergabe an WordExtraction (mit Tabellenmarkern)")
             json_content = self.word_extractor.extract_content_to_json(word_content)
             
             # Tag-Analyse durchführen
@@ -108,7 +109,10 @@ class WordProcessingService:
     
     def _extract_text_from_docx(self, doc: Document) -> str:
         """
-        Extrahiert Text-Inhalt aus einem Word-Dokument.
+        Extrahiert Text-Inhalt aus einem Word-Dokument in Original-Reihenfolge der Blöcke.
+        Paragraphen werden als Zeilen ausgegeben, Tabellen werden als Tabelle$-Blöcke
+        (mit Header + Zeilen) in den Text eingebettet, damit die Reihenfolge in der
+        nachfolgenden Tag-Extraktion erhalten bleibt.
         
         Args:
             doc: Das geöffnete Word-Dokument
@@ -116,13 +120,57 @@ class WordProcessingService:
         Returns:
             Extrahierter Text als String
         """
-        text_content = []
-        
-        for paragraph in doc.paragraphs:
-            if paragraph.text.strip():
-                text_content.append(paragraph.text.strip())
-        
-        return '\n'.join(text_content)
+        def _clean(s: str) -> str:
+            return (s or "").replace("\u00ad", "").replace("\r", " ").replace("\n", " ").strip()
+
+        # Helper: iterate body items in order (paragraphs and tables)
+        from docx.oxml.table import CT_Tbl
+        from docx.oxml.text.paragraph import CT_P
+        from docx.table import Table
+        from docx.text.paragraph import Paragraph
+
+        body = doc.element.body
+        lines: list[str] = []
+
+        for child in body.iterchildren():
+            if isinstance(child, CT_P):
+                p = Paragraph(child, doc)
+                text = _clean(p.text)
+                if text:
+                    lines.append(text)
+            elif isinstance(child, CT_Tbl):
+                tbl = Table(child, doc)
+                # Serialize table as Tabelle$ block
+                # Build headers from first row (if available)
+                headers: list[str] = []
+                data_rows: list[list[str]] = []
+                try:
+                    if tbl.rows and tbl.columns:
+                        headers = [_clean(c.text) for c in tbl.rows[0].cells]
+                        for r in tbl.rows[1:]:
+                            data_rows.append([_clean(c.text) for c in r.cells])
+                except Exception:
+                    # best-effort: skip malformed table
+                    headers = []
+                    data_rows = []
+
+                if headers:
+                    print(f"[DEBUG] _extract_text_from_docx: Tabelle gefunden mit {len(headers)} Spalten und {len(data_rows)} Zeilen")
+                    lines.append("Tabelle$")
+                    # join cells with pipe for robust splitting later
+                    lines.append(" | ".join(headers))
+                    for row in data_rows:
+                        lines.append(" | ".join(row))
+                    lines.append("Tabelle$")
+                else:
+                    # If table has no clear header, skip embedding
+                    print("[DEBUG] _extract_text_from_docx: Tabelle übersprungen (keine Header erkannt)")
+                    continue
+            else:
+                # Unhandled element types are ignored
+                continue
+
+        return "\n".join(lines)
     
     def _extract_title_from_filename(self, file_name: str) -> str:
         """
@@ -142,6 +190,10 @@ class WordProcessingService:
         title = re.sub(r'^\d+\.\d+\s+', '', name_without_ext)
         
         return title if title else name_without_ext
+
+    # Hinweis: separate Tabellen-Nachverarbeitung entfernt – Tabellen werden jetzt
+    # in _extract_text_from_docx inline als Tabelle$-Blöcke codiert und in
+    # WordExtraction an der korrekten Stelle ins JSON umgewandelt.
     
     def process_multiple_documents(self, documents: List[tuple]) -> List[ProcessedArticle]:
         """

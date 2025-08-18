@@ -14,6 +14,7 @@ Version: 1.0.0
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 from django.db import transaction
+from django.db.models import Max
 from django.core.exceptions import ObjectDoesNotExist
 
 # Import der Models
@@ -129,6 +130,8 @@ class DatabaseService:
         saved_articles = []
         
         with transaction.atomic():
+            # Starte mit aktuellem Max-Order für das Modul
+            current_max_order = Article.objects.filter(module=module).aggregate(Max('order')).get('order__max') or 0
             for article_data in articles:
                 try:
                     # Prüfe ob Artikel bereits existiert
@@ -141,16 +144,22 @@ class DatabaseService:
                         # Aktualisiere existierenden Artikel
                         existing_article.url = article_data['url']
                         existing_article.json_content = article_data['json_content']
+                        # Falls Order noch 0/None ist, weise eine neue Order zu
+                        if not getattr(existing_article, 'order', None):
+                            current_max_order += 1
+                            existing_article.order = current_max_order
                         existing_article.save()
                         saved_articles.append(existing_article)
                         self.logger.info(f"Artikel aktualisiert: {article_data['title']}")
                     else:
                         # Erstelle neuen Artikel
+                        current_max_order += 1
                         article = Article.objects.create(
                             module=module,
                             title=article_data['title'],
                             url=article_data['url'],
-                            json_content=article_data['json_content']
+                            json_content=article_data['json_content'],
+                            order=current_max_order
                         )
                         saved_articles.append(article)
                         self.logger.info(f"Neuer Artikel gespeichert: {article_data['title']}")
