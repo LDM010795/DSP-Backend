@@ -85,6 +85,7 @@ modules_urlpatterns: List[URLPattern] = [
     path('', module_views.ModuleCreateView.as_view(), name='module-create'),
     path('<int:pk>/', module_views.ModuleUpdateView.as_view(), name='module-update'),
     path('<int:pk>/detail/', module_views.ModuleDetailAdminView.as_view(), name='module-detail-admin'),
+    path('<int:pk>/delete/', module_views.ModuleDeleteView.as_view(), name='module-delete'),
     # Create content
     path('content/', module_views.ContentCreateView.as_view(), name='content-create'),
     # Categories
