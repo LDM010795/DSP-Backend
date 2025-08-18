@@ -33,6 +33,27 @@ from django.utils.translation import gettext_lazy as _
 from django.db.models import Exists, OuterRef, QuerySet
 from typing import Optional
 from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
+import re
+
+
+def validate_cloud_url(value):
+    """
+    Custom validator for cloud storage URLs that may contain spaces.
+    Accepts URLs with spaces in the path (common in cloud storage).
+    """
+    if not value:
+        return
+    
+    # Basic URL pattern that allows spaces in the path
+    url_pattern = r'^https?://[^\s]+(?:\s[^\s]*)*$'
+    
+    if not re.match(url_pattern, value):
+        raise ValidationError(_('Enter a valid URL.'))
+    
+    # Additional check: must start with http/https
+    if not value.startswith(('http://', 'https://')):
+        raise ValidationError(_('Enter a valid URL.'))
 
 
 class ModuleCategory(models.Model):
@@ -178,13 +199,18 @@ class Module(models.Model):
     
     @property
     def content_count(self) -> int:
-        """Get total number of content items in this module."""
-        return self.contents.count()
+        """Get total number of content items across all chapters in this module."""
+        return sum(chapter.contents.count() for chapter in self.chapters.all())
     
     @property
     def task_count(self) -> int:
-        """Get total number of tasks in this module."""
-        return self.tasks.count()
+        """Get total number of tasks across all chapters in this module."""
+        return sum(chapter.tasks.count() for chapter in self.chapters.all())
+    
+    @property
+    def chapter_count(self) -> int:
+        """Get total number of chapters in this module."""
+        return self.chapters.count()
 
 
 class ModuleAccess(models.Model):
@@ -239,37 +265,110 @@ class ModuleAccess(models.Model):
         db_table = 'elearning_module_access'
 
 
-class Content(models.Model):
+class Chapter(models.Model):
     """
-    Video and text content within learning modules.
+    Kapitel innerhalb von Lernmodulen.
     
-    Content represents the primary learning materials within a module,
-    typically including instructional videos, text descriptions, and
-    supplementary information. Content items are ordered within modules.
+    Chapters ermöglichen eine strukturierte Organisation von Lerninhalten
+    innerhalb von Modulen. Sie können Videos, Text-Content und andere
+    Lernmaterialien enthalten.
     
     Attributes:
         module: Parent module
-        video_url: Optional video content URL
-        title: Content title
-        description: Detailed content description
-        supplementary_title: Optional additional title
+        title: Chapter title
+        description: Detailed chapter description
         order: Display order within module
+        is_active: Whether the chapter is active and visible
     """
     
     module = models.ForeignKey(
         Module,
-        related_name='contents',
+        related_name='chapters',
         on_delete=models.CASCADE,
         verbose_name=_("Module"),
-        help_text=_("Module this content belongs to")
+        help_text=_("Module this chapter belongs to")
     )
     
-    video_url = models.URLField(
+    title = models.CharField(
+        max_length=255,
+        verbose_name=_("Chapter Title"),
+        help_text=_("Descriptive title for this chapter")
+    )
+    
+    description = models.TextField(
+        blank=True,
+        verbose_name=_("Description"),
+        help_text=_("Detailed description of the chapter content")
+    )
+    
+    order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Display Order"),
+        help_text=_("Order of chapters within the module (0 = first)")
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("Active"),
+        help_text=_("Whether this chapter is active and visible to users")
+    )
+
+    def __str__(self) -> str:
+        """String representation of the chapter."""
+        return f"{self.module.title} - {self.title}"
+
+    class Meta:
+        verbose_name = _("Chapter")
+        verbose_name_plural = _("Chapters")
+        unique_together = ('module', 'title')
+        ordering = ['module', 'order', 'title']
+        db_table = 'elearning_chapter'
+    
+    @property
+    def content_count(self) -> int:
+        """Get total number of content items in this chapter."""
+        return self.contents.count()
+    
+    @property
+    def task_count(self) -> int:
+        """Get total number of tasks in this chapter."""
+        return self.tasks.count()
+
+
+class Content(models.Model):
+    """
+    Video and text content within learning chapters.
+    
+    Content represents the primary learning materials within a chapter,
+    typically including instructional videos, text descriptions, and
+    supplementary information. Content items are ordered within chapters.
+    
+    Attributes:
+        chapter: Parent chapter
+        video_url: Optional video content URL
+        title: Content title
+        description: Detailed content description
+        supplementary_title: Optional additional title
+        order: Display order within chapter
+    """
+    
+    chapter = models.ForeignKey(
+        Chapter,
+        related_name='contents',
+        on_delete=models.CASCADE,
+        verbose_name=_("Chapter"),
+        help_text=_("Chapter this content belongs to"),
+        null=True,
+        blank=True
+    )
+    
+    video_url = models.CharField(
         max_length=500,
         blank=True,
         null=True,
         verbose_name=_("Video URL"),
-        help_text=_("Optional URL to video content (YouTube, Vimeo, etc.)")
+        help_text=_("Optional URL to video content (YouTube, Vimeo, etc.)"),
+        validators=[validate_cloud_url]
     )
     
     title = models.CharField(
@@ -295,18 +394,18 @@ class Content(models.Model):
     order = models.PositiveIntegerField(
         default=0,
         verbose_name=_("Display Order"),
-        help_text=_("Order of content within the module (0 = first)")
+        help_text=_("Order of content within the chapter (0 = first)")
     )
 
     def __str__(self) -> str:
         """String representation of the content."""
-        return f"{self.module.title} - {self.title}"
+        return f"{self.chapter.title} - {self.title}"
 
     class Meta:
         verbose_name = _("Learning Content")
         verbose_name_plural = _("Learning Contents")
-        unique_together = ('module', 'title')
-        ordering = ['module', 'order', 'title']
+        unique_together = ('chapter', 'title')
+        ordering = ['chapter', 'order', 'title']
         db_table = 'elearning_content'
 
 
@@ -339,10 +438,11 @@ class SupplementaryContent(models.Model):
         help_text=_("Descriptive label for the supplementary link")
     )
     
-    url = models.URLField(
+    url = models.CharField(
         max_length=500,
         verbose_name=_("Resource URL"),
-        help_text=_("URL to the supplementary resource")
+        help_text=_("URL to the supplementary resource"),
+        validators=[validate_cloud_url]
     )
     
     order = models.PositiveIntegerField(
@@ -374,33 +474,42 @@ class Article(models.Model):
         module: Parent module
         url: URL to the external article
         title: Article title
+        json_content: Optional extracted JSON content from source
         order: Display order within module
     """
     
     module = models.ForeignKey(
-        Module,
+        'Module',
         related_name='articles',
         on_delete=models.CASCADE,
         verbose_name=_("Module"),
-        help_text=_("Module this article belongs to")
+        help_text=_("Module this article belongs to.")
     )
     
-    url = models.URLField(
+    url = models.CharField(
         max_length=500,
         verbose_name=_("Article URL"),
-        help_text=_("URL to the external article or resource")
+        help_text=_("URL to the external article or resource."),
+        validators=[validate_cloud_url]
     )
     
     title = models.CharField(
         max_length=255,
         verbose_name=_("Article Title"),
-        help_text=_("Descriptive title for the article")
+        help_text=_("Descriptive title for the article.")
+    )
+    
+    json_content = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_("Extracted JSON"),
+        help_text=_("Optional extracted content in JSON format.")
     )
     
     order = models.PositiveIntegerField(
         default=0,
         verbose_name=_("Display Order"),
-        help_text=_("Order of articles within the module")
+        help_text=_("Order of articles within the module.")
     )
 
     def __str__(self) -> str:
@@ -415,22 +524,77 @@ class Article(models.Model):
         db_table = 'elearning_article'
 
 
+class ArticleImage(models.Model):
+    """
+    Bildverwaltung für Artikel in Lernmodulen.
+    
+    Speichert Cloud-URLs und Metadaten für Bilder, die in Artikeln vorkommen.
+    Ermöglicht automatische Zuordnung durch Frontend basierend auf Bildnamen.
+    """
+    
+    module = models.ForeignKey(
+        Module,
+        on_delete=models.CASCADE,
+        related_name='article_images',
+        verbose_name=_("Module"),
+        help_text=_("Modul, zu dem dieses Bild gehört")
+    )
+    
+    image_name = models.CharField(
+        max_length=255,
+        unique=True,
+        verbose_name=_("Image Name"),
+        help_text=_("Eindeutiger Name für automatische Frontend-Zuordnung")
+    )
+    
+    cloud_url = models.CharField(
+        max_length=1000,
+        verbose_name=_("Cloud URL"),
+        help_text=_("Vollständige Cloud-URL des Bildes"),
+        validators=[validate_cloud_url]
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Created At")
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Updated At")
+    )
+
+    class Meta:
+        verbose_name = _("Article Image")
+        verbose_name_plural = _("Article Images")
+        ordering = ['module', 'image_name']
+        db_table = 'elearning_article_image'
+        indexes = [
+            models.Index(fields=['module']),
+            models.Index(fields=['image_name']),
+        ]
+
+    def __str__(self) -> str:
+        """String representation of the article image."""
+        return f"{self.module.title} - {self.image_name}"
+
+
 class Task(models.Model):
     """
     Programming exercises with difficulty levels and testing integration.
     
     Tasks represent hands-on programming exercises that allow students
-    to practice concepts learned in the module. They include automated
+    to practice concepts learned in the chapter. They include automated
     testing capabilities and difficulty grading.
     
     Attributes:
-        module: Parent module
+        chapter: Parent chapter
         title: Task title
         description: Task instructions and requirements
         difficulty: Difficulty level (Easy/Medium/Hard)
         hint: Optional hint for students
         test_file_path: Path to automated test file
-        order: Display order within module
+        order: Display order within chapter
         
     Testing Integration:
         The test_file_path points to a Python file containing unittest
@@ -450,12 +614,14 @@ class Task(models.Model):
         MEDIUM = 'Mittel', _('Medium')
         HARD = 'Schwer', _('Hard')
         
-    module = models.ForeignKey(
-        Module,
+    chapter = models.ForeignKey(
+        Chapter,
         related_name='tasks',
         on_delete=models.CASCADE,
-        verbose_name=_("Module"),
-        help_text=_("Module this task belongs to")
+        verbose_name=_("Chapter"),
+        help_text=_("Chapter this task belongs to"),
+        null=True,
+        blank=True
     )
     
     title = models.CharField(
@@ -487,7 +653,7 @@ class Task(models.Model):
     task_type = models.CharField(
         max_length=50,
         choices=TaskType.choices,
-        default=TaskType.PROGRAMMING,
+        default=TaskType.NONE,
         verbose_name=_("Task Type"),
         help_text=_("Type of task")
     )
@@ -521,13 +687,13 @@ class Task(models.Model):
 
     def __str__(self) -> str:
         """String representation of the task."""
-        return f"{self.module.title} - Task: {self.title}"
+        return f"{self.chapter.title} - Task: {self.title}"
 
     class Meta:
         verbose_name = _("Programming Task")
         verbose_name_plural = _("Programming Tasks")
-        unique_together = ('module', 'title')
-        ordering = ['module', 'order', 'title']
+        unique_together = ('chapter', 'title')
+        ordering = ['chapter', 'order', 'title']
         db_table = 'elearning_task'
     
     @property

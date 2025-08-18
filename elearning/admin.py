@@ -32,7 +32,7 @@ from django.http import HttpRequest
 # Import all models from the central models registry
 from .models import (
     Profile,
-    Module, ModuleAccess, Content, SupplementaryContent, Task, UserTaskProgress,
+    Module, ModuleAccess, Chapter, Content, SupplementaryContent, Task, UserTaskProgress,
     Exam, ExamCriterion, ExamAttempt, ExamAttachment, CriterionScore, CertificationPath
 )
 
@@ -104,11 +104,19 @@ admin.site.register(User, UserAdmin)
 
 # --- Learning Modules Administration ---
 
+class ChapterInline(admin.TabularInline):
+    """Inline admin for module chapter management."""
+    model = Chapter
+    extra = 1
+    fields = ('title', 'description', 'order', 'is_active')
+    ordering = ('order',)
+
+
 class ContentInline(admin.TabularInline):
-    """Inline admin for module content management."""
+    """Inline admin for chapter content management."""
     model = Content
     extra = 1
-    fields = ('title', 'content_type', 'order')
+    fields = ('title', 'video_url', 'order')
     ordering = ('order',)
 
 
@@ -121,7 +129,7 @@ class ContentInline(admin.TabularInline):
 
 
 class TaskInline(admin.TabularInline):
-    """Inline admin for module task management."""
+    """Inline admin for chapter task management."""
     model = Task
     extra = 1
     fields = ('title', 'difficulty', 'order')
@@ -133,14 +141,14 @@ class ModuleAdmin(admin.ModelAdmin):
     """
     Administration interface for learning modules.
     
-    Provides comprehensive module management including content and task editing,
+    Provides comprehensive module management including chapter editing,
     access control, and categorization features.
     """
-    list_display = ('title', 'category', 'is_public')
+    list_display = ('title', 'category', 'is_public', 'chapter_count')
     list_filter = ('category', 'is_public')
     search_fields = ('title', 'description')
     prepopulated_fields = {'slug': ('title',)} if hasattr(Module, 'slug') else {}
-    inlines = [ContentInline, TaskInline]
+    inlines = [ChapterInline]
     
     fieldsets = (
         (_('Basic Information'), {
@@ -154,7 +162,31 @@ class ModuleAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request: HttpRequest) -> QuerySet:
         """Optimize queryset for better performance."""
-        return super().get_queryset(request).prefetch_related('content_set', 'task_set')
+        return super().get_queryset(request).prefetch_related('chapters')
+
+
+@admin.register(Chapter)
+class ChapterAdmin(admin.ModelAdmin):
+    """Administration interface for learning chapters."""
+    list_display = ('title', 'module', 'order', 'is_active', 'content_count', 'task_count')
+    list_filter = ('module', 'is_active', 'order')
+    search_fields = ('title', 'description', 'module__title')
+    autocomplete_fields = ('module',)
+    ordering = ('module', 'order')
+    inlines = [ContentInline, TaskInline]
+    
+    fieldsets = (
+        (_('Chapter Information'), {
+            'fields': ('title', 'description', 'module')
+        }),
+        (_('Configuration'), {
+            'fields': ('order', 'is_active')
+        }),
+    )
+    
+    def get_queryset(self, request: HttpRequest) -> QuerySet:
+        """Optimize queryset with related object prefetch."""
+        return super().get_queryset(request).select_related('module').prefetch_related('contents', 'tasks')
 
 
 @admin.register(ModuleAccess)
@@ -174,15 +206,15 @@ class ModuleAccessAdmin(admin.ModelAdmin):
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     """Administration interface for learning tasks."""
-    list_display = ('title', 'module', 'difficulty', 'order')
-    list_filter = ('module', 'difficulty')
-    search_fields = ('title', 'description', 'module__title')
-    autocomplete_fields = ('module',)
-    ordering = ('module', 'order')
+    list_display = ('title', 'chapter', 'difficulty', 'order')
+    list_filter = ('chapter', 'difficulty')
+    search_fields = ('title', 'description', 'chapter__title')
+    autocomplete_fields = ('chapter',)
+    ordering = ('chapter', 'order')
     
     fieldsets = (
         (_('Task Information'), {
-            'fields': ('title', 'description', 'module')
+            'fields': ('title', 'description', 'chapter')
         }),
         (_('Configuration'), {
             'fields': ('difficulty', 'order', 'task_type') if hasattr(Task, 'task_type') else ('difficulty', 'order')
@@ -197,14 +229,14 @@ class TaskAdmin(admin.ModelAdmin):
 class UserTaskProgressAdmin(admin.ModelAdmin):
     """Administration interface for tracking user task progress."""
     list_display = ('user', 'task', 'completed', 'completed_at')
-    list_filter = ('completed', 'task__module', 'completed_at')
+    list_filter = ('completed', 'task__chapter', 'completed_at')
     search_fields = ('user__username', 'task__title')
     autocomplete_fields = ('user', 'task')
     readonly_fields = ('completed_at',)
     
     def get_queryset(self, request: HttpRequest) -> QuerySet:
         """Optimize queryset with related object prefetch."""
-        return super().get_queryset(request).select_related('user', 'task', 'task__module')
+        return super().get_queryset(request).select_related('user', 'task', 'task__chapter')
 
 
 # --- Examination System Administration ---
