@@ -26,9 +26,12 @@ from django.urls import path, include, URLPattern
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
-# Import view modules from clean submodule structure
+# Import der Views
 from .users import views as user_views
 from .modules import views as module_views
+from .modules.views import article_processing_views as article_views
+from .modules.views import content_processing_views as content_views
+from .modules.views import video_url_views as video_views
 from .final_exam import views as exam_views
 
 app_name = 'elearning'
@@ -56,6 +59,9 @@ users_urlpatterns: List[URLPattern] = [
     # User authentication and account management
     path('logout/', user_views.LogoutView.as_view(), name='logout'),
     path('set-initial-password/', user_views.SetInitialPasswordView.as_view(), name='set_initial_password'),
+
+    # External user registration (public endpoint)
+    path('register/', user_views.ExternalUserRegistrationView.as_view(), name='external-register'),
     
     # User administration endpoints (requires admin privileges)
     path('', include(users_router.urls)),
@@ -88,9 +94,37 @@ modules_urlpatterns: List[URLPattern] = [
     path('article/', module_views.ArticleCreateView.as_view(), name='article-create'),
     # Supplementary content
     path('supplementary/', module_views.SupplementaryContentCreateView.as_view(), name='supplementary-create'),
+    # Chapter endpoints
+    path('chapters/', module_views.ChapterCreateView.as_view(), name='chapter-create'),
+    path('chapters/<int:pk>/', module_views.ChapterUpdateView.as_view(), name='chapter-update'),
+    path('chapters/<int:pk>/detail/', module_views.ChapterDetailView.as_view(), name='chapter-detail'),
+    path('chapters/list/', module_views.ChapterListView.as_view(), name='chapter-list'),
+    path('chapters/<int:pk>/delete/', module_views.ChapterDeleteView.as_view(), name='chapter-delete'),
     # Update endpoints
     path('content/<int:pk>/', module_views.ContentUpdateView.as_view(), name='content-update'),
     path('article/<int:pk>/', module_views.ArticleUpdateView.as_view(), name='article-update'),
+    
+    # Content Processing endpoints (automatic extraction from Cloud Storage)
+    path('content/process-module/', content_views.process_module_content, name='process-module-content'),
+    path('content/available-modules/', content_views.get_available_modules, name='get-available-modules'),
+    path('content/module-statistics/', content_views.get_module_statistics, name='get-module-statistics'),
+    path('content/test-services/', content_views.test_all_services, name='test-all-services'),
+    path('content/process-multiple-modules/', content_views.process_multiple_modules, name='process-multiple-modules'),
+    path('content/cleanup-module/', content_views.cleanup_module_content, name='cleanup-module-content'),
+    
+    # Article Processing endpoints (automatic processing from Cloud URLs)
+    path('content/process-article/', article_views.process_article_from_cloud, name='process-article-from-cloud'),
+    path('content/validate-cloud-url/', article_views.validate_cloud_url, name='validate-cloud-url'),
+    
+    # Video Processing endpoints (automatic processing from Cloud URLs)
+    path('content/validate-video-url/', content_views.validate_video_url, name='validate-video-url'),
+    
+    # Video presigned URL endpoints (secure video access)
+    path('videos/test/', video_views.test_video_endpoint, name='test-video-endpoint'),
+    path('videos/<int:content_id>/url/', video_views.get_video_presigned_url, name='get-video-presigned-url'),
+    path('videos/sign/', video_views.get_video_presigned_url_by_key, name='get-video-presigned-url-by-key'),
+    # Generic storage presign alias (can be used for images and other assets as well)
+    path('storage/sign/', video_views.get_video_presigned_url_by_key, name='get-storage-presigned-url-by-key'),
 ]
 
 # --- Examination System URL Patterns ---

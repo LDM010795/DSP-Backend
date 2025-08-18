@@ -15,5 +15,10 @@ Created: 10.07.2025
 Version: 1.0.0
 """
 
-from .auth_views import CustomTokenObtainPairView, LogoutView, SetInitialPasswordView
+from .auth_views import (
+    CustomTokenObtainPairView,
+    LogoutView,
+    SetInitialPasswordView,
+    ExternalUserRegistrationView,
+)
 from .user_crud_view import UserCrudViewSet
