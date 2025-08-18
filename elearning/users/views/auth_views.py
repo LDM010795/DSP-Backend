@@ -22,7 +22,7 @@ Version: 1.0.0
 from typing import Any, Dict, Optional
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -31,8 +31,11 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+
 from ..models import Profile
-from ..serializers import CustomTokenObtainPairSerializer, SetInitialPasswordSerializer
+from ..serializers import (
+    CustomTokenObtainPairSerializer,
+    SetInitialPasswordSerializer, ExternalUserRegistrationSerializer)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -226,4 +229,65 @@ class SetInitialPasswordView(APIView):
         return Response(
             serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
-        ) 
+        )
+
+
+class ExternalUserRegistrationView(generics.CreateAPIView):
+    """
+    API endpoint for the registration of external users
+    (i.e., users who are not part of the company and do not have a Microsoft account).
+
+    Features:
+    - Accepts POST requests with registration data (username, email, password, etc.).
+    - Uses the ExternalUserRegistrationSerializer for data validation and user creation.
+    - Returns a success message and HTTP 201 status on successful registration.
+    - Returns detailed validation errors and HTTP 400 status if registration fails.
+
+    Typical Use Case:
+    This endpoint allows people outside the company to sign up for access to the e-learning platform,
+    enabling self-service onboarding and payment in the future.
+
+    Methods:
+        post(request): Handles the registration logic for incoming data.
+    """
+
+    serializer_class = ExternalUserRegistrationSerializer
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests to register a new external user.
+
+        Request Body Example (JSON):
+        {
+            "username": "johndoe",
+            "email": "johndoe@example.com",
+            "first_name": "John",
+            "last_name": "Doe",
+            "password": "secret1234",
+            "password_confirm": "secret1234"
+        }
+
+        Response (success):
+            {
+                "detail": "Registration successful."
+            }
+        Response (validation error):
+            {
+                "email": ["A user with this email already exists."],
+                "password_confirm": ["Passwords do not match."]
+            }
+        """
+        # Initialize the serializer with the incoming data
+        serializer = self.get_serializer(data=request.data)
+
+        # Validate the data
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(
+                {"detail": _("Registration successful.")},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
