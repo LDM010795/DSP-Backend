@@ -14,7 +14,7 @@ dj-database-url==2.1.0
 
 # HTTP & API
 requests==2.32.2
-urllib3==2.2.1
+# urllib3 wird transitiv von requests/botocore installiert (botocore verlangt <2.1)
 certifi==2024.2.2
 charset-normalizer==3.3.2
 idna==3.7
