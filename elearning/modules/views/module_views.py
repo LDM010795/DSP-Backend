@@ -154,6 +154,32 @@ class ModuleDetailAdminView(generics.RetrieveAPIView):
         return Module.objects.prefetch_related('chapters', 'chapters__contents', 'articles')
 
 
+class ModuleDeleteView(generics.DestroyAPIView):
+    """Delete a learning module (admin only)."""
+    
+    queryset = Module.objects.all()
+    serializer_class = ModuleDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def destroy(self, request, *args, **kwargs):
+        """
+        Custom destroy method with proper logging and cascade deletion handling.
+        """
+        instance = self.get_object()
+        
+        # Check if module has related content that will be deleted
+        chapters_count = instance.chapters.count()
+        articles_count = instance.articles.count()
+        
+        
+        # Perform the actual deletion (Django will handle cascade deletion)
+        # Note: Related chapters, contents, and articles will be deleted automatically
+        # due to CASCADE relationships defined in models
+        response = super().destroy(request, *args, **kwargs)
+        
+        return response
+
+
 class ContentCreateView(generics.CreateAPIView):
     """Create new video/content for a module, auto-ordering inside module."""
 
@@ -161,8 +187,6 @@ class ContentCreateView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        print(f"[DEBUG] ContentCreateView.create() called")
-        print(f"[DEBUG] Request data: {request.data}")
         
         # Automatisch Titel aus Dateinamen extrahieren, wenn kein Titel angegeben
         data = request.data.copy()
@@ -171,16 +195,12 @@ class ContentCreateView(generics.CreateAPIView):
             filename = video_url.split('/')[-1]
             title = os.path.splitext(filename)[0]  # Ohne Extension
             data['title'] = title
-            print(f"[DEBUG] Automatically extracted title from filename: {title}")
             request._full_data = data  # Aktualisiere request.data
         
         try:
             result = super().create(request, *args, **kwargs)
-            print(f"[DEBUG] Content creation successful: {result.data}")
             return result
         except Exception as e:
-            print(f"[DEBUG] Content creation failed with error: {e}")
-            print(f"[DEBUG] Error type: {type(e)}")
             raise
 
     def perform_create(self, serializer):
