@@ -338,7 +338,8 @@ class ExternalUserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'first_name', 'password', 'password_confirm']
+        fields = ['username', 'email', 'first_name', 'last_name', 'password', 'password_confirm']
+        extra_kwargs = {'email': {'required': True}}
 
     def validate_email(self, value):
         """
@@ -373,6 +374,7 @@ class ExternalUserRegistrationSerializer(serializers.ModelSerializer):
 
         # Create the user instance using Django's built-in create-user method
         user = User.objects.create_user(**validated_data)
+        user.set_password(password)
         user.save()
 
         # Ensure the associated Profile exists, and set force_password_change to False

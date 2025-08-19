@@ -23,7 +23,7 @@ from typing import Any, Dict, Optional
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status, generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -280,9 +280,11 @@ class ExternalUserRegistrationView(generics.CreateAPIView):
         # Initialize the serializer with the incoming data
         serializer = self.get_serializer(data=request.data)
 
+        permission_classes = [AllowAny]  # <-- make public
+
         # Validate the data
         if serializer.is_valid():
-            user = serializer.save()
+            serializer.save()
             return Response(
                 {"detail": _("Registration successful.")},
                 status=status.HTTP_201_CREATED
