@@ -351,7 +351,7 @@ def main():
     print("=" * 80)
     
     # Definiere Pfade
-    root_path = os.path.join(os.path.dirname(__file__), "../../../../../../../..")
+    root_path = os.path.join(os.path.dirname(__file__), "..)
     output_dir = os.path.join(root_path, "word_analysis_output")
     
     print(f"📁 DSP Root-Ordner: {root_path}")
