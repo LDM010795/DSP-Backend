@@ -24,4 +24,10 @@ urlpatterns = [
     path('api/db-overview/', include('db_overview.urls')),
     path('api/employees/', include('core.employees.urls')),
     path('api/shift-planner/', include('shift_planner.urls')),
+
+    # ---- Stripe / dj-stripe ----
+    # Exposes dj-stripe’s webhook listener at /stripe/webhook/
+    # Stripe will POST events (payment succeeded, failed, etc.) to this URL.
+    # Make sure this endpoint is added in your Stripe Dashboard > Developers > Webhooks.
+    path('api/payments/stripe/', include('djstripe.urls')),
 ]

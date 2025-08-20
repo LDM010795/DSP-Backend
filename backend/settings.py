@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     'db_overview.apps.DbOverviewConfig',
     'core.employees.apps.EmployeesConfig',
     'shift_planner.apps.ShiftPlannerConfig',
+
+    # Stripe App
+    "djstripe",
 ]
 
 MIDDLEWARE = [
@@ -315,3 +318,61 @@ JAZZMIN_UI_TWEAKS = {
         "success": "btn-success",
     },
 }
+
+# ---- Payments / Stripe / dj-stripe ----
+# Stripe integration using dj-stripe.
+# We support both TEST mode (development/sandbox) and LIVE mode (production).
+# Which environment is active depends on STRIPE_LIVE_MODE.
+
+# Mode toggle
+#    - If STRIPE_LIVE_MODE=True → project uses LIVE Stripe environment (real payments).
+#    - If STRIPE_LIVE_MODE=False → project uses TEST environment (fake payments).
+STRIPE_LIVE_MODE = os.environ.get("STRIPE_LIVE_MODE", "False").lower() == "true"
+
+
+# Secret keys (backend only)
+#    - Used by Django (server) to communicate with Stripe API.
+#    - These keys allow creating customers, payment intents, subscriptions, etc.
+#    - NEVER expose to frontend or commit to GitHub.
+STRIPE_TEST_SECRET_KEY = os.environ.get("STRIPE_TEST_SECRET_KEY", "")   # sk_test_xxx
+STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY", "")   # sk_live_xxx
+
+
+# Publishable keys (frontend safe)
+#    - Used by the React frontend to initialize Stripe.js and create payment tokens.
+#    - These keys are safe to expose in the browser.
+#    - They cannot directly charge customers — only generate secure tokens.
+STRIPE_TEST_PUBLISHABLE_KEY = os.environ.get("STRIPE_TEST_PUBLISHABLE_KEY", "")   # pk_test_xxx
+STRIPE_LIVE_PUBLISHABLE_KEY = os.environ.get("STRIPE_LIVE_PUBLISHABLE_KEY", "")   # pk_live_xxx
+
+
+# Webhook secret
+#    - Each webhook endpoint you configure in Stripe Dashboard has a unique signing secret.
+#    - This is required to verify that incoming webhook requests (e.g., "payment succeeded")
+#      really come from Stripe and were not faked.
+DJSTRIPE_WEBHOOK_SECRET = os.environ.get("DJSTRIPE_WEBHOOK_SECRET", "")
+
+
+# Default currency
+#    - The currency that will be used for payments if no other is specified.
+#    - Example: "eur" for Euro, "usd" for US Dollar.
+#    - Can be overridden per transaction if needed.
+DEFAULT_CURRENCY = os.environ.get("DEFAULT_CURRENCY", "eur")
+
+
+# Stripe API version
+#    - Ensures dj-stripe and your project use a consistent Stripe API version.
+#    - Set to the version displayed in your Stripe Dashboard under:
+#      Developers → API Version.
+DJSTRIPE_STRIPE_API_VERSION = os.environ.get("DJSTRIPE_STRIPE_API_VERSION", "2024-06-20")
+
+
+# Active secret key at runtime
+#    - dj-stripe looks at STRIPE_SECRET_KEY for making all API calls.
+#    - We dynamically set it based on STRIPE_LIVE_MODE.
+STRIPE_SECRET_KEY = STRIPE_LIVE_SECRET_KEY if STRIPE_LIVE_MODE else STRIPE_TEST_SECRET_KEY
+
+# dj-stripe relation mode:
+# - "id"         → (new installs) use Stripe object "id" (e.g., "cus_...") as FK target
+# - "djstripe_id"→ (legacy installs) use dj-stripe’s internal PK
+DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"
