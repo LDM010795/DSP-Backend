@@ -53,13 +53,14 @@ class ArticleProcessingService:
         self.db_service = DatabaseService()
         self.logger = logger
     
-    def process_article_from_cloud_url(self, module_id: int, cloud_url: str) -> ProcessedArticleResult:
+    def process_article_from_cloud_url(self, module_id: int, cloud_url: str, chapter_id: Optional[int] = None) -> ProcessedArticleResult:
         """
         Verarbeitet einen Artikel aus einer Cloud-URL.
         
         Args:
             module_id: ID des Moduls
             cloud_url: Cloud-URL des Word-Dokuments
+            chapter_id: Optional ID des Kapitels für Zuordnung
             
         Returns:
             ProcessedArticleResult mit Verarbeitungs-Ergebnissen
@@ -138,7 +139,7 @@ class ArticleProcessingService:
                 'json_content': processed_article.json_content
             }
             
-            saved_article = self.db_service.save_processed_articles(module, [article_data])
+            saved_article = self.db_service.save_processed_articles(module, [article_data], chapter_id)
             if saved_article:
                 result.article_id = saved_article[0].id if saved_article else None
                 print(f"✅ [DEBUG] Artikel gespeichert mit ID: {result.article_id}")

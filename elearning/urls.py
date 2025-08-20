@@ -101,6 +101,17 @@ modules_urlpatterns: List[URLPattern] = [
     path('chapters/<int:pk>/detail/', module_views.ChapterDetailView.as_view(), name='chapter-detail'),
     path('chapters/list/', module_views.ChapterListView.as_view(), name='chapter-list'),
     path('chapters/<int:pk>/delete/', module_views.ChapterDeleteView.as_view(), name='chapter-delete'),
+    
+    # Task endpoints
+    path('tasks/', module_views.TaskCreateView.as_view(), name='task-create'),
+    path('tasks/list/', module_views.TaskListView.as_view(), name='task-list'),
+    path('tasks/<int:pk>/', module_views.TaskUpdateView.as_view(), name='task-update'),
+    
+    # TaskMultipleChoice endpoints
+    path('task-multiple-choice/', module_views.TaskMultipleChoiceCreateView.as_view(), name='task-multiple-choice-create'),
+    path('task-multiple-choice/list/', module_views.TaskMultipleChoiceListView.as_view(), name='task-multiple-choice-list'),
+    path('task-multiple-choice/<int:pk>/', module_views.TaskMultipleChoiceUpdateView.as_view(), name='task-multiple-choice-update'),
+    
     # Update endpoints
     path('content/<int:pk>/', module_views.ContentUpdateView.as_view(), name='content-update'),
     path('article/<int:pk>/', module_views.ArticleUpdateView.as_view(), name='article-update'),

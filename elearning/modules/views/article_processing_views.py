@@ -31,6 +31,7 @@ def process_article_from_cloud(request):
     Request Body:
     {
         "moduleId": 1,
+        "chapterId": 2,  // Optional
         "cloudUrl": "https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Artikel/1.1 Installation und erste Schritte.docx"
     }
     
@@ -48,6 +49,7 @@ def process_article_from_cloud(request):
     try:
         # Request-Daten validieren
         module_id = request.data.get('moduleId')
+        chapter_id = request.data.get('chapterId')  # Optional
         cloud_url = request.data.get('cloudUrl')
         
         if not module_id:
@@ -74,8 +76,8 @@ def process_article_from_cloud(request):
                 'details': validation['errors']
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Artikel verarbeiten
-        result = article_service.process_article_from_cloud_url(module_id, cloud_url)
+        # Artikel verarbeiten mit optionaler Chapter-Zuordnung
+        result = article_service.process_article_from_cloud_url(module_id, cloud_url, chapter_id)
         
         # Response erstellen
         response_data = {

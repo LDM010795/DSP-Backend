@@ -472,6 +472,7 @@ class Article(models.Model):
     
     Attributes:
         module: Parent module
+        chapter: Parent chapter (optional)
         url: URL to the external article
         title: Article title
         json_content: Optional extracted JSON content from source
@@ -484,6 +485,16 @@ class Article(models.Model):
         on_delete=models.CASCADE,
         verbose_name=_("Module"),
         help_text=_("Module this article belongs to.")
+    )
+    
+    chapter = models.ForeignKey(
+        Chapter,
+        related_name='articles',
+        on_delete=models.CASCADE,
+        verbose_name=_("Chapter"),
+        help_text=_("Chapter this article belongs to (optional)."),
+        null=True,
+        blank=True
     )
     
     url = models.CharField(
@@ -581,11 +592,10 @@ class ArticleImage(models.Model):
 
 class Task(models.Model):
     """
-    Programming exercises with difficulty levels and testing integration.
+    Base task model for learning exercises.
     
-    Tasks represent hands-on programming exercises that allow students
-    to practice concepts learned in the chapter. They include automated
-    testing capabilities and difficulty grading.
+    This model represents a learning task that can contain multiple
+    task type elements (multiple choice, programming, etc.).
     
     Attributes:
         chapter: Parent chapter
@@ -593,26 +603,25 @@ class Task(models.Model):
         description: Task instructions and requirements
         difficulty: Difficulty level (Easy/Medium/Hard)
         hint: Optional hint for students
-        test_file_path: Path to automated test file
         order: Display order within chapter
+        task_type: Type of task (multiple_choice, programming, etc.)
         
-    Testing Integration:
-        The test_file_path points to a Python file containing unittest
-        cases that can be executed against student submissions.
+    Task Types:
+        Tasks can contain multiple task type elements through related models:
+        - TaskMultipleChoice: Multiple choice questions
+        - Future: TaskProgramming, TaskEssay, etc.
     """
-    class TaskType(models.TextChoices):
-        """
-        Please add task types here.
-        """
-        NONE = 'none', _('None')
-        PROGRAMMING = 'programming', _('Programming Exercise')
-        MULTIPLE_CHOICE = 'multiple_choice', _('Multiple Choice')
 
     class Difficulty(models.TextChoices):
         """Task difficulty levels with German display names."""
         EASY = 'Einfach', _('Easy')
         MEDIUM = 'Mittel', _('Medium')
         HARD = 'Schwer', _('Hard')
+    
+    class TaskType(models.TextChoices):
+        """Task types with display names."""
+        MULTIPLE_CHOICE = 'multiple_choice', _('Multiple Choice')
+        PROGRAMMING = 'programming', _('Programming Exercise')
         
     chapter = models.ForeignKey(
         Chapter,
@@ -627,12 +636,12 @@ class Task(models.Model):
     title = models.CharField(
         max_length=255,
         verbose_name=_("Task Title"),
-        help_text=_("Descriptive title for the programming task")
+        help_text=_("Descriptive title for the task")
     )
     
     description = models.TextField(
         verbose_name=_("Task Description"),
-        help_text=_("To describe how to use the task type element")
+        help_text=_("Description and instructions for the task")
     )
     
     difficulty = models.CharField(
@@ -649,49 +658,28 @@ class Task(models.Model):
         verbose_name=_("Hint"),
         help_text=_("Optional hint to help students solve the task")
     )
-
-    task_type = models.CharField(
-        max_length=50,
-        choices=TaskType.choices,
-        default=TaskType.NONE,
-        verbose_name=_("Task Type"),
-        help_text=_("Type of task")
-    )
-    
-    task_config = models.JSONField(
-    blank=True,
-    null=True,
-    verbose_name=_("Task Configuration"),
-    help_text=_(
-        "JSON configuration for task-specific settings. "
-        "For multiple choice: options, correct_answer, explanation. "
-        "For programming: test configuration."
-    )
-)
-    
-    test_file_path = models.CharField(
-        max_length=255,
-        blank=True,
-        verbose_name=_("Test File Path"),
-        help_text=_(
-            "Relative path from the 'elearning' app directory to the python file "
-            "containing unittest cases. E.g., 'task_tests/module1/task10_tests.py'"
-        )
-    )
     
     order = models.PositiveIntegerField(
         default=0,
         verbose_name=_("Display Order"),
-        help_text=_("Order of tasks within the module")
+        help_text=_("Order of tasks within the chapter")
+    )
+    
+    task_type = models.CharField(
+        max_length=50,
+        choices=TaskType.choices,
+        default=TaskType.MULTIPLE_CHOICE,
+        verbose_name=_("Task Type"),
+        help_text=_("Type of task")
     )
 
     def __str__(self) -> str:
         """String representation of the task."""
-        return f"{self.chapter.title} - Task: {self.title}"
+        return f"{self.chapter.title if self.chapter else 'No Chapter'} - Task: {self.title}"
 
     class Meta:
-        verbose_name = _("Programming Task")
-        verbose_name_plural = _("Programming Tasks")
+        verbose_name = _("Task")
+        verbose_name_plural = _("Tasks")
         unique_together = ('chapter', 'title')
         ordering = ['chapter', 'order', 'title']
         db_table = 'elearning_task'
@@ -701,61 +689,110 @@ class Task(models.Model):
         """Get the display name for the difficulty level."""
         return self.get_difficulty_display()
     
-    def has_automated_tests(self) -> bool:
-        """Check if this task has automated tests configured."""
-        return bool(self.test_file_path)
+    def get_multiple_choice_questions(self):
+        """Get all multiple choice questions for this task."""
+        return self.multiple_choice_questions.all().order_by('order')
+    
+    def has_multiple_choice_questions(self) -> bool:
+        """Check if this task has multiple choice questions."""
+        return self.multiple_choice_questions.exists()
+
+
+class TaskMultipleChoice(models.Model):
+    """
+    Multiple choice question model.
+    
+    This model represents a single multiple choice question that belongs to a task.
+    A task can have multiple multiple choice questions.
+    
+    Attributes:
+        task: Parent task
+        question: The question text
+        options: List of answer options (max 4)
+        correct_answer: Index of the correct answer (0-3)
+        order: Display order within the task
+    """
+    
+    task = models.ForeignKey(
+        Task,
+        related_name='multiple_choice_questions',
+        on_delete=models.CASCADE,
+        verbose_name=_("Task"),
+        help_text=_("Task this multiple choice question belongs to")
+    )
+    
+    question = models.TextField(
+        verbose_name=_("Question"),
+        help_text=_("The multiple choice question text")
+    )
+    
+    option_1 = models.CharField(
+        max_length=500,
+        verbose_name=_("Option 1"),
+        help_text=_("First answer option")
+    )
+    
+    option_2 = models.CharField(
+        max_length=500,
+        verbose_name=_("Option 2"),
+        help_text=_("Second answer option")
+    )
+    
+    option_3 = models.CharField(
+        max_length=500,
+        verbose_name=_("Option 3"),
+        help_text=_("Third answer option")
+    )
+    
+    option_4 = models.CharField(
+        max_length=500,
+        verbose_name=_("Option 4"),
+        help_text=_("Fourth answer option")
+    )
+    
+    correct_answer = models.PositiveSmallIntegerField(
+        choices=[(i, f"Option {i+1}") for i in range(4)],
+        verbose_name=_("Correct Answer"),
+        help_text=_("Index of the correct answer (0-3)")
+    )
+    
+    order = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Display Order"),
+        help_text=_("Order of questions within the task")
+    )
+
+    def __str__(self) -> str:
+        """String representation of the multiple choice question."""
+        return f"{self.task.title} - Question {self.order + 1}"
+
+    class Meta:
+        verbose_name = _("Multiple Choice Question")
+        verbose_name_plural = _("Multiple Choice Questions")
+        ordering = ['task', 'order']
+        db_table = 'elearning_task_multiple_choice'
+    
+    def get_options(self):
+        """Get all options as a list."""
+        return [self.option_1, self.option_2, self.option_3, self.option_4]
+    
+    def get_correct_option(self):
+        """Get the correct answer text."""
+        options = self.get_options()
+        return options[self.correct_answer]
     
     def clean(self):
-        """Validate task_config based on task_type."""
-        # Ensures valid JSON structure for each task type
+        """Validate the model."""
         super().clean()
         
-        if self.task_config and self.task_type == self.TaskType.MULTIPLE_CHOICE:
-            # Prüfe required fields
-            required_fields = ['options', 'correct_answer']
-            for field in required_fields:
-                if field not in self.task_config:
-                    raise ValidationError(
-                        f"Multiple choice tasks require '{field}' in task_config"
-                    )
-            
-            # Prüfe options ist eine Liste
-            if not isinstance(self.task_config.get('options'), list):
-                raise ValidationError("Options must be a list")
-            
-            # Prüfe correct_answer ist ein gültiger Index
-            correct_answer = self.task_config.get('correct_answer')
-            options = self.task_config.get('options', [])
-            
-            if not isinstance(correct_answer, int):
-                raise ValidationError("correct_answer must be an integer (index)")
-            
-            if correct_answer < 0 or correct_answer >= len(options):
-                raise ValidationError(f"correct_answer index {correct_answer} is out of range (0-{len(options)-1})")
-    
-    
-    """
-    Create new Task_Type Formats here
-    Region for defining configuration retrieval methods for different task types.
-    Add new 'get_<task_type>_config' methods here.
-    """
-    def get_multiple_choice_config(self):
-        """Get validated multiple choice configuration."""
-        # Returns: {'options': [...], 'correct_answer': 0, 'explanation': '...'}
-        if self.task_type != self.TaskType.MULTIPLE_CHOICE:
-            return None
+        # Ensure correct_answer is within valid range
+        if self.correct_answer < 0 or self.correct_answer > 3:
+            raise ValidationError("correct_answer must be between 0 and 3")
         
-        if not self.task_config:
-            return None
-            
-        """
-        This is the format for the multiple choice task.
-        """
-        return {
-            'options': self.task_config.get('options', []),
-            'correct_answer': self.task_config.get('correct_answer'),
-            'explanation': self.task_config.get('explanation', '')
-        }
+        # Ensure all options are filled
+        options = self.get_options()
+        if not all(option.strip() for option in options):
+            raise ValidationError("All options must be filled")
 
 class UserTaskProgress(models.Model):
     """

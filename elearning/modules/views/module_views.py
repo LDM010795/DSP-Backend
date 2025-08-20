@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 import os
 
 # Angepasste Importe
-from ..models import Module, ModuleCategory, Article, Content, SupplementaryContent, Chapter
+from ..models import Module, ModuleCategory, Article, Content, SupplementaryContent, Chapter, Task, TaskMultipleChoice
 from ..serializers import (
     ModuleListSerializer,
     ModuleDetailSerializer,
@@ -13,6 +13,8 @@ from ..serializers import (
     SupplementaryContentSerializer,
     ModuleCategorySerializer,
     ChapterSerializer,
+    TaskSerializer,
+    TaskMultipleChoiceSerializer,
 )
 
 # --- Public Views (ohne User-Kontext) ---
@@ -116,6 +118,98 @@ class ArticleUpdateView(generics.RetrieveUpdateDestroyAPIView):
         response = super().destroy(request, *args, **kwargs)
         print(f"✅ [DEBUG] Article {instance.id} successfully deleted")
         return response 
+
+# --- Task Views ---
+
+class TaskCreateView(generics.CreateAPIView):
+    """Handle Task creation."""
+    
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # Automatically compute order per chapter
+        chapter = serializer.validated_data.get('chapter')
+        if chapter:
+            next_order = (
+                Task.objects.filter(chapter=chapter).count() + 1
+            )
+            serializer.save(order=next_order)
+        else:
+            serializer.save()
+
+class TaskUpdateView(generics.RetrieveUpdateDestroyAPIView):
+    """Handle Task CRUD operations: GET (retrieve), PUT/PATCH (update), DELETE (destroy)."""
+    
+    queryset = Task.objects.all()
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def update(self, request, *args, **kwargs):
+        print(f"[DEBUG] TaskUpdateView.update() called for task {kwargs.get('pk')}")
+        print(f"[DEBUG] Request data: {request.data}")
+        print(f"[DEBUG] Request method: {request.method}")
+        
+        try:
+            response = super().update(request, *args, **kwargs)
+            print(f"[DEBUG] Update successful: {response.data}")
+            return response
+        except Exception as e:
+            print(f"[DEBUG] Update failed with error: {e}")
+            print(f"[DEBUG] Error type: {type(e)}")
+            raise
+
+class TaskListView(generics.ListAPIView):
+    """Handle Task listing with optional chapter filter."""
+    
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = Task.objects.all()
+        chapter_id = self.request.query_params.get('chapter_id', None)
+        if chapter_id is not None:
+            queryset = queryset.filter(chapter_id=chapter_id)
+        return queryset.order_by('chapter', 'order', 'title')
+
+# --- TaskMultipleChoice Views ---
+
+class TaskMultipleChoiceCreateView(generics.CreateAPIView):
+    """Handle TaskMultipleChoice creation."""
+    
+    serializer_class = TaskMultipleChoiceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # Automatically compute order per task
+        task = serializer.validated_data.get('task')
+        if task:
+            next_order = (
+                TaskMultipleChoice.objects.filter(task=task).count() + 1
+            )
+            serializer.save(order=next_order)
+        else:
+            serializer.save()
+
+class TaskMultipleChoiceUpdateView(generics.RetrieveUpdateDestroyAPIView):
+    """Handle TaskMultipleChoice CRUD operations."""
+    
+    queryset = TaskMultipleChoice.objects.all()
+    serializer_class = TaskMultipleChoiceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+class TaskMultipleChoiceListView(generics.ListAPIView):
+    """Handle TaskMultipleChoice listing with optional task filter."""
+    
+    serializer_class = TaskMultipleChoiceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = TaskMultipleChoice.objects.all()
+        task_id = self.request.query_params.get('task_id', None)
+        if task_id is not None:
+            queryset = queryset.filter(task_id=task_id)
+        return queryset.order_by('task', 'order')
 
 # --- Administrative Create/Update Views ---
 

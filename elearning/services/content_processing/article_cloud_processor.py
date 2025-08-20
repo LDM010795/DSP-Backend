@@ -138,7 +138,7 @@ class ArticleProcessingService:
                 'json_content': processed_article.json_content
             }
             
-            saved_article = self.db_service.save_processed_articles(module, [article_data])
+            saved_article = self.db_service.save_processed_articles(module, [article_data], None)
             if saved_article:
                 result.article_id = saved_article[0].id if saved_article else None
                 print(f"✅ [DEBUG] Artikel gespeichert mit ID: {result.article_id}")

@@ -116,13 +116,14 @@ class DatabaseService:
         self.logger.info(f"{len(saved_images)} Bilder für Modul {module.title} gespeichert")
         return saved_images
     
-    def save_processed_articles(self, module: Module, articles: List[Dict[str, Any]]) -> List[Article]:
+    def save_processed_articles(self, module: Module, articles: List[Dict[str, Any]], chapter_id: Optional[int] = None) -> List[Article]:
         """
         Speichert verarbeitete Artikel in der Datenbank.
         
         Args:
             module: Das Modul, zu dem die Artikel gehören
             articles: Liste der verarbeiteten Artikel
+            chapter_id: Optional ID des Kapitels für Zuordnung
             
         Returns:
             Liste der erstellten Article Objekte
@@ -144,6 +145,8 @@ class DatabaseService:
                         # Aktualisiere existierenden Artikel
                         existing_article.url = article_data['url']
                         existing_article.json_content = article_data['json_content']
+                        if chapter_id:
+                            existing_article.chapter_id = chapter_id
                         # Falls Order noch 0/None ist, weise eine neue Order zu
                         if not getattr(existing_article, 'order', None):
                             current_max_order += 1
@@ -156,6 +159,7 @@ class DatabaseService:
                         current_max_order += 1
                         article = Article.objects.create(
                             module=module,
+                            chapter_id=chapter_id,
                             title=article_data['title'],
                             url=article_data['url'],
                             json_content=article_data['json_content'],
