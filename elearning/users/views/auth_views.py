@@ -30,6 +30,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+from djstripe.models import Customer
 
 
 from ..models import Profile
@@ -252,6 +253,7 @@ class ExternalUserRegistrationView(generics.CreateAPIView):
     """
 
     serializer_class = ExternalUserRegistrationSerializer
+    permission_classes = [AllowAny]  # <-- make public
 
     def post(self, request, *args, **kwargs):
         """
@@ -280,11 +282,13 @@ class ExternalUserRegistrationView(generics.CreateAPIView):
         # Initialize the serializer with the incoming data
         serializer = self.get_serializer(data=request.data)
 
-        permission_classes = [AllowAny]  # <-- make public
+
 
         # Validate the data
         if serializer.is_valid():
-            serializer.save()
+            user = serializer.save()
+
+            Customer.get_or_create(subscriber=user)
             return Response(
                 {"detail": _("Registration successful.")},
                 status=status.HTTP_201_CREATED
