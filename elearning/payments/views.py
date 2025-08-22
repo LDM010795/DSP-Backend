@@ -103,7 +103,7 @@ import stripe
 from django.conf import settings
 from djstripe.models import Customer, PaymentMethod
 
-stripe.api_key = settings.STRIPE_API_KEY
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class CreateSetupIntentView(APIView):
     permission_classes = [IsAuthenticated]
