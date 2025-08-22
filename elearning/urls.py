@@ -33,6 +33,13 @@ from .modules.views import article_processing_views as article_views
 from .modules.views import content_processing_views as content_views
 from .modules.views import video_url_views as video_views
 from .final_exam import views as exam_views
+from .payments.views import (
+    CreateSetupIntentView,
+    CreateCheckoutSessionView,
+    GetStripeConfigView,
+    SetDefaultPaymentMethodView,
+    ListPaymentMethodsView
+)
 
 app_name = 'elearning'
 
@@ -152,6 +159,32 @@ exams_urlpatterns: List[URLPattern] = [
     path('certification-paths/', exam_views.CertificationPathViewSet.as_view({'get': 'list'}), name='certification-path-list'),
 ]
 
+# --- Payments URL Patterns ---
+payments_urlpatterns: List[URLPattern] = [
+    # Create a SetupIntent so the frontend can save a card (no charge yet)
+    path(
+        "stripe/setup-intent/",
+        CreateSetupIntentView.as_view(),
+        name="stripe-setup-intent",
+    ),
+
+    # Create a Checkout Session for one-time course payments
+    path(
+        "stripe/checkout-session/",
+        CreateCheckoutSessionView.as_view(),
+        name="stripe-checkout-session",
+    ),
+
+    # Initialize Stripe.js
+    path("stripe/config/",
+         GetStripeConfigView.as_view(),
+         name="stripe-config"),
+
+    # Helpers
+    path("stripe/payment-methods/", ListPaymentMethodsView.as_view(), name="stripe-list-payment-methods"),
+    path("stripe/payment-methods/default/", SetDefaultPaymentMethodView.as_view(), name="stripe-set-default-payment-method"),
+]
+
 # --- Main URL Configuration for E-Learning Application ---
 
 urlpatterns: List[URLPattern] = [
@@ -164,4 +197,7 @@ urlpatterns: List[URLPattern] = [
     path('users/', include((users_urlpatterns, 'users'))),
     path('modules/', include((modules_urlpatterns, 'modules'))),
     path('exams/', include((exams_urlpatterns, 'exams'))),
+
+    # Stripe SetupIntent endpoint
+    path('payments/', include((payments_urlpatterns, 'payments'))),
 ]
