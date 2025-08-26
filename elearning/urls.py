@@ -33,7 +33,6 @@ from .modules.views import article_processing_views as article_views
 from .modules.views import content_processing_views as content_views
 from .modules.views import video_url_views as video_views
 from .final_exam import views as exam_views
-from .users.views.auth_views import CookieTokenRefreshView
 
 app_name = 'elearning'
 
@@ -58,8 +57,8 @@ users_router = _create_users_router()
 # User management URL patterns
 users_urlpatterns: List[URLPattern] = [
     # User authentication and account management
-    path('logout/', user_views.CookieLogoutView.as_view(), name='logout'),
-    #path('set-initial-password/', user_views.SetInitialPasswordView.as_view(), name='set_initial_password'),
+    path('logout/', user_views.LogoutView.as_view(), name='logout'),
+    path('set-initial-password/', user_views.SetInitialPasswordView.as_view(), name='set_initial_password'),
 
     # External user registration (public endpoint)
     #path('register/', user_views.ExternalUserRegistrationView.as_view(), name='external-register'),
@@ -157,8 +156,8 @@ exams_urlpatterns: List[URLPattern] = [
 
 urlpatterns: List[URLPattern] = [
     # Authentication endpoints (JWT token management)
-    path('token/', user_views.CookieTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
+    path('token/', user_views.CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     
     # Functional area URL includes with proper namespacing

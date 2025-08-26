@@ -16,7 +16,9 @@ Version: 1.0.0
 """
 
 from .auth_views import (
-    CookieTokenObtainPairView,
-    CookieLogoutView
+    CustomTokenObtainPairView,
+    LogoutView,
+    SetInitialPasswordView,
+    ExternalUserRegistrationView,
 )
 from .user_crud_view import UserCrudViewSet

@@ -19,15 +19,28 @@ Author: DSP Development Team
 Version: 1.0.0
 """
 
-
+from typing import Any, Dict, Optional
+from django.contrib.auth.models import User
 from django.http import JsonResponse
-from rest_framework.permissions import IsAuthenticated
+from django.utils.translation import gettext_lazy as _
+from rest_framework import status, generics
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenObtainPairView
+from djstripe.models import Customer
 
 
-class CookieTokenObtainPairView(TokenObtainPairView):
+from ..models import Profile
+from ..serializers import (
+    CustomTokenObtainPairSerializer,
+    SetInitialPasswordSerializer, ExternalUserRegistrationSerializer)
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
@@ -47,22 +60,8 @@ class CookieTokenObtainPairView(TokenObtainPairView):
                 )
         return response
 
-class CookieTokenRefreshView(TokenRefreshView):
-    def post(self, request, *args, **kwargs):
-        refresh_token = request.COOKIES.get("refresh_token")
-        if refresh_token:
-            request.data["refresh"] = refresh_token
-        response = super().post(request, *args, **kwargs)
-        if response.status_code == 200 and "access" in response.data:
-            access = response.data["access"]
-            response.set_cookie(
-                "access_token", access,
-                httponly=True, secure=True, samesite="None"
-            )
-            del response.data["access"]
-        return response
 
-class CookieLogoutView(APIView):
+class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -77,3 +76,145 @@ class CookieLogoutView(APIView):
         response.delete_cookie("refresh_token")
         response.delete_cookie("access_token")
         return response
+
+
+class SetInitialPasswordView(APIView):
+    """
+    Secure initial password setting view for new users.
+    
+    Handles the initial password setup process for users who are required
+    to change their password on first login, ensuring security compliance
+    and proper profile management.
+    
+    Security Features:
+    - Password strength validation
+    - Confirmation matching validation
+    - Profile-based access control
+    - Automatic profile update after successful password change
+    """
+    
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request: Request) -> Response:
+        """
+        Set initial password for authenticated user.
+        
+        Args:
+            request: HTTP request containing new password data
+            
+        Returns:
+            Response indicating password change success or failure
+            
+        Expected Request Data:
+            - password: New password (minimum 8 characters)
+            - password_confirm: Password confirmation
+            
+        Security Requirements:
+            - User must be authenticated
+            - User profile must have force_password_change=True
+            - Password must meet Django's validation requirements
+        """
+        user = request.user
+        
+        try:
+            # Check if user is required to change password
+            if not user.profile.force_password_change:
+                return Response(
+                    {'detail': _('Password has already been set.')},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Profile.DoesNotExist:
+            # Create missing profile
+            Profile.objects.create(user=user, force_password_change=True)
+        
+        # Validate and process password change
+        serializer = SetInitialPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                # Use serializer's save method for comprehensive handling
+                updated_user = serializer.save(user)
+                
+                # Log successful password change
+                # Could add audit logging here
+                
+                return Response(
+                    {'detail': _('Password successfully set.')},
+                    status=status.HTTP_200_OK
+                )
+                
+            except Exception as e:
+                return Response(
+                    {'detail': _('An error occurred while setting the password.')},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+class ExternalUserRegistrationView(generics.CreateAPIView):
+    """
+    API endpoint for the registration of external users
+    (i.e., users who are not part of the company and do not have a Microsoft account).
+
+    Features:
+    - Accepts POST requests with registration data (username, email, password, etc.).
+    - Uses the ExternalUserRegistrationSerializer for data validation and user creation.
+    - Returns a success message and HTTP 201 status on successful registration.
+    - Returns detailed validation errors and HTTP 400 status if registration fails.
+
+    Typical Use Case:
+    This endpoint allows people outside the company to sign up for access to the e-learning platform,
+    enabling self-service onboarding and payment in the future.
+
+    Methods:
+        post(request): Handles the registration logic for incoming data.
+    """
+
+    serializer_class = ExternalUserRegistrationSerializer
+    permission_classes = [AllowAny]  # <-- make public
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST requests to register a new external user.
+
+        Request Body Example (JSON):
+        {
+            "username": "johndoe",
+            "email": "johndoe@example.com",
+            "first_name": "John",
+            "last_name": "Doe",
+            "password": "secret1234",
+            "password_confirm": "secret1234"
+        }
+
+        Response (success):
+            {
+                "detail": "Registration successful."
+            }
+        Response (validation error):
+            {
+                "email": ["A user with this email already exists."],
+                "password_confirm": ["Passwords do not match."]
+            }
+        """
+        # Initialize the serializer with the incoming data
+        serializer = self.get_serializer(data=request.data)
+
+
+
+        # Validate the data
+        if serializer.is_valid():
+            user = serializer.save()
+
+            Customer.get_or_create(subscriber=user)
+            return Response(
+                {"detail": _("Registration successful.")},
+                status=status.HTTP_201_CREATED
+            )
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )
