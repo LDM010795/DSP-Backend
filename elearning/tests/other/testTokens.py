@@ -18,7 +18,7 @@ class TokenTests(TestCase):
 
 
     def test_no_JWT(self):
-        self.assertIsNone(self.body)
+        self.assertEqual(self.body, {})
 
     def test_refresh_token_success(self):
         self.client.cookies["refresh_token"] = self.refresh_token
