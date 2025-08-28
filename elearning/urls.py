@@ -59,6 +59,7 @@ users_urlpatterns: List[URLPattern] = [
     # User authentication and account management
     path('logout/', user_views.LogoutView.as_view(), name='logout'),
     path('set-initial-password/', user_views.SetInitialPasswordView.as_view(), name='set_initial_password'),
+    path('me/', user_views.CurrentUserView.as_view(), name='current_user'),
 
     # External user registration (public endpoint)
     #path('register/', user_views.ExternalUserRegistrationView.as_view(), name='external-register'),
