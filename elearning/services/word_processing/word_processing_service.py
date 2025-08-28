@@ -10,7 +10,7 @@ Service für die Verarbeitung von Word-Dokumenten:
 Author: DSP Development Team
 Version: 1.0.0
 """
-
+from __future__ import annotations
 import io
 import logging
 from typing import Dict, Any, Optional, List
