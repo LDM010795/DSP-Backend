@@ -29,8 +29,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from djstripe.models import Customer
 
 
@@ -41,6 +42,16 @@ from ..serializers import (
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+Custom view extending SimpleJWT's TokenObtainPairView to store JWT tokens in secure HTTP-only cookies
+instead of returning them in the response body.
+- Calls the parent class's `post` method to get access/refresh tokens.
+- Removes tokens from the response payload to avoid exposing them in JSON.
+- Sets `refresh_token` and `access_token` cookies with secure flags:
+ * httponly=True → prevents JavaScript access (mitigates XSS attacks)
+ * secure=True → transmits cookies only over HTTPS
+ * samesite="None" → required for cross-site requests; should be "Strict" or "Lax" in production
+    """
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
@@ -60,8 +71,59 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 )
         return response
 
+class CustomTokenRefreshView(TokenRefreshView):
+        """
+    Custom view extending SimpleJWT's TokenRefreshView to refresh JWT tokens and store them
+    in secure HTTP-only cookies instead of returning them in the response body.
+    - Calls the parent class's `post` method to generate new access/refresh tokens.
+    - Removes tokens from the response payload.
+    - Updates `refresh_token` and `access_token` cookies with secure flags.
+        """
+
+        def post(self, request, *args, **kwargs):
+
+            refresh_token = request.COOKIES.get("refresh_token")
+            if not refresh_token:
+                return Response({"detail": "Refresh token not provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer = TokenRefreshSerializer(data={"refresh": refresh_token})
+            try:
+                serializer.is_valid(raise_exception=True)
+            except TokenError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+            data = serializer.validated_data
+
+            refresh = data.pop("refresh", None)
+            access = data.pop("access", None)
+
+            response = Response(status=status.HTTP_200_OK)
+
+            if refresh:
+                response.set_cookie(
+                    "refresh_token", refresh,
+                    httponly=True, secure=True, samesite="None"
+                )
+            if access:
+                response.set_cookie(
+                    "access_token", access,
+                    httponly=True, secure=True, samesite="None"  # switch to Strict in prod
+                )
+
+            return response
+
 
 class LogoutView(APIView):
+    """
+    API endpoint to handle user logout by invalidating JWT tokens and clearing cookies.
+    - Requires authentication (IsAuthenticated).
+    - On POST:
+      * Attempts to retrieve the refresh token from cookies.
+      * If present, constructs a RefreshToken instance and blacklists it.
+      * Any errors during token invalidation are silently ignored.
+    - Always returns a 205 Reset Content response with a success message.
+    - Deletes both "refresh_token" and "access_token" cookies from the client to complete logout.
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):

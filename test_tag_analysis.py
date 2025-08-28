@@ -11,7 +11,7 @@ import glob
 import re
 from typing import List
 from docx import Document
-from elearning.services.word_extraction import WordExtraction
+from elearning.services.word_processing import WordExtraction
 
 
 def find_word_documents(root_path: str) -> List[str]:
