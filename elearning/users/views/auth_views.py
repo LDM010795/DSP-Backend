@@ -21,6 +21,7 @@ Version: 1.0.0
 
 from typing import Any, Dict, Optional
 from django.contrib.auth.models import User
+from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -28,8 +29,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from djstripe.models import Customer
 
 
@@ -41,120 +43,101 @@ from ..serializers import (
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
-    Enhanced JWT token authentication view.
-    
-    Extends the default JWT token view to include additional user metadata
-    in the token and response for improved frontend integration and
-    user experience.
-    
-    Features:
-    - Enhanced token payload with user role information
-    - Profile integration for force password change status
-    - Comprehensive error handling for authentication failures
+Custom view extending SimpleJWT's TokenObtainPairView to store JWT tokens in secure HTTP-only cookies
+instead of returning them in the response body.
+- Calls the parent class's `post` method to get access/refresh tokens.
+- Removes tokens from the response payload to avoid exposing them in JSON.
+- Sets `refresh_token` and `access_token` cookies with secure flags:
+ * httponly=True → prevents JavaScript access (mitigates XSS attacks)
+ * secure=True → transmits cookies only over HTTPS
+ * samesite="None" → required for cross-site requests; should be "Strict" or "Lax" in production
     """
-    
-    serializer_class = CustomTokenObtainPairSerializer
-    
-    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            data = response.data
+            refresh = data.pop("refresh", None)
+            access = data.pop("access", None)
+
+            if refresh:
+                response.set_cookie(
+                    "refresh_token", refresh,
+                    httponly=True, secure=True, samesite="None"
+                )
+            if access:
+                response.set_cookie(
+                    "access_token", access,
+                    httponly=True, secure=True, samesite="None" # TODO: Definitely change this to Strict on Prod!
+                )
+        return response
+
+class CustomTokenRefreshView(TokenRefreshView):
         """
-        Authenticate user and return enhanced JWT tokens.
-        
-        Args:
-            request: HTTP request containing authentication credentials
-            *args: Additional positional arguments
-            **kwargs: Additional keyword arguments
-            
-        Returns:
-            Response containing JWT tokens and user metadata
-            
-        Raises:
-            ValidationError: If authentication credentials are invalid
+    Custom view extending SimpleJWT's TokenRefreshView to refresh JWT tokens and store them
+    in secure HTTP-only cookies instead of returning them in the response body.
+    - Calls the parent class's `post` method to generate new access/refresh tokens.
+    - Removes tokens from the response payload.
+    - Updates `refresh_token` and `access_token` cookies with secure flags.
         """
-        try:
-            response = super().post(request, *args, **kwargs)
-            
-            # Log successful authentication
-            if response.status_code == status.HTTP_200_OK and hasattr(self, 'user'):
-                # Could add audit logging here
-                pass
-                
+
+        def post(self, request, *args, **kwargs):
+
+            refresh_token = request.COOKIES.get("refresh_token")
+            if not refresh_token:
+                return Response({"detail": "Refresh token not provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer = TokenRefreshSerializer(data={"refresh": refresh_token})
+            try:
+                serializer.is_valid(raise_exception=True)
+            except TokenError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+            data = serializer.validated_data
+
+            refresh = data.pop("refresh", None)
+            access = data.pop("access", None)
+
+            response = Response(status=status.HTTP_200_OK)
+
+            if refresh:
+                response.set_cookie(
+                    "refresh_token", refresh,
+                    httponly=True, secure=True, samesite="None"
+                )
+            if access:
+                response.set_cookie(
+                    "access_token", access,
+                    httponly=True, secure=True, samesite="None"  # switch to Strict in prod
+                )
+
             return response
-            
-        except Exception as e:
-            # Log authentication failure
-            return Response(
-                {'detail': _('Authentication failed. Please check your credentials.')},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
 
 
 class LogoutView(APIView):
     """
-    Secure user logout view with token blacklisting.
-    
-    Provides secure logout functionality by blacklisting the refresh token
-    to prevent its reuse, ensuring proper session termination.
-    
-    Security Features:
-    - Token blacklisting to prevent reuse
-    - Comprehensive error handling for invalid tokens
-    - Proper HTTP status codes for different scenarios
+    API endpoint to handle user logout by invalidating JWT tokens and clearing cookies.
+    - Requires authentication (IsAuthenticated).
+    - On POST:
+      * Attempts to retrieve the refresh token from cookies.
+      * If present, constructs a RefreshToken instance and blacklists it.
+      * Any errors during token invalidation are silently ignored.
+    - Always returns a 205 Reset Content response with a success message.
+    - Deletes both "refresh_token" and "access_token" cookies from the client to complete logout.
     """
-    
-    permission_classes = (IsAuthenticated,)
-    
-    def post(self, request: Request) -> Response:
-        """
-        Logout user by blacklisting their refresh token.
-        
-        Args:
-            request: HTTP request containing refresh token (optional)
-            
-        Returns:
-            Response indicating logout success or failure
-            
-        Expected Request Data:
-            - refresh_token: JWT refresh token to blacklist (optional)
-            
-        Note:
-            If no refresh_token provided, logout still succeeds for UX.
-            Frontend should handle token cleanup locally.
-        """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
         try:
-            refresh_token = request.data.get("refresh_token")
-            
-            if not refresh_token:
-                # Graceful logout even without refresh_token
-                # Frontend can handle local token cleanup
-                return Response(
-                    {'detail': _('Successfully logged out (client-side cleanup recommended).')},
-                    status=status.HTTP_205_RESET_CONTENT
-                )
-            
-            # Blacklist the refresh token if provided
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            
-            # Log successful logout with token blacklisting
-            # Could add audit logging here
-            
-            return Response(
-                {'detail': _('Successfully logged out and token blacklisted.')},
-                status=status.HTTP_205_RESET_CONTENT
-            )
-            
-        except TokenError as e:
-            # Even if token is invalid, allow logout to succeed for UX
-            return Response(
-                {'detail': _('Successfully logged out (token was invalid).')},
-                status=status.HTTP_205_RESET_CONTENT
-            )
-        except Exception as e:
-            # Fallback: allow logout to succeed even if blacklisting fails
-            return Response(
-                {'detail': _('Successfully logged out (error during token blacklisting).')},
-                status=status.HTTP_205_RESET_CONTENT
-            )
+            refresh_token = request.COOKIES.get("refresh_token")
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+        except Exception:
+            pass
+        response = JsonResponse({"detail": "Successfully logged out."}, status=205)
+        response.delete_cookie("refresh_token")
+        response.delete_cookie("access_token")
+        return response
 
 
 class SetInitialPasswordView(APIView):

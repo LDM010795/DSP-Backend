@@ -22,3 +22,4 @@ from .auth_views import (
     ExternalUserRegistrationView,
 )
 from .user_crud_view import UserCrudViewSet
+from .user_self_info import CurrentUserView
