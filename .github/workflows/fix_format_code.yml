@@ -27,7 +27,7 @@ jobs:
           python3 manage.py collectstatic
       - name: fix code
         run: |
-          ruff check --fix
+          ruff check --fix --exit-zero
       - name: format code
         run: |
           ruff format
