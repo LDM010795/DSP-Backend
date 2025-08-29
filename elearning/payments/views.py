@@ -114,6 +114,7 @@ class CreateSetupIntentView(APIView):
         # Create SetupIntent so frontend can collect and attach a payment method
         si = stripe.SetupIntent.create(
             customer=customer.id,
+            usage="off_session",  # ensure future automatic charges work
             payment_method_types=["card"]
         )
         return Response({"client_secret": si.client_secret}, status=status.HTTP_200_OK)
@@ -136,8 +137,8 @@ class CreateCheckoutSessionView(APIView):
             mode="payment",
             customer=customer.id,
             line_items=[{"price": price_id, "quantity": 1}],
-            success_url=f"{settings.FRONTEND_URL}/payments/success?session_id={{CHECKOUT_SESSION_ID}}&course={course_id}",
-            cancel_url=f"{settings.FRONTEND_URL}/payments/cancel?course={course_id}",
+            success_url=f"{settings.FRONTEND_URL}/payments/checkout/success?session_id={{CHECKOUT_SESSION_ID}}&course={course_id}",
+            cancel_url = f"{settings.FRONTEND_URL}/payments/cancel?course={course_id}",
             allow_promotion_codes=True,
             metadata={"course_id": str(course_id), "user_id": str(request.user.id)},
         )

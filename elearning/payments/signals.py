@@ -114,6 +114,10 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from djstripe.models import Event
+import stripe
+from django.conf import settings
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -266,7 +270,10 @@ def on_djstripe_event_created(sender, instance: Event, created: bool, **kwargs):
     logger.info("[webhook] %s (event_id=%s)", event_type, instance.id)
 
     try:
-        if event_type == "checkout.session.completed":
+        if event_type == "setup_intent.succeeded":
+            _handle_setup_intent_succeeded(obj)
+
+        elif event_type == "checkout.session.completed":
             _handle_checkout_session_completed(obj)
 
         elif event_type == "payment_intent.succeeded":
@@ -393,36 +400,32 @@ def _handle_charge_refund(charge_or_refund: Dict[str, Any]) -> None:
         logger.exception("Failed to mark payment refunded: %s", exc)
 
 
-@receiver(post_save, sender=Event)
-def _on_djstripe_event_saved(sender, instance: Event, created: bool, **kwargs):
+def _handle_setup_intent_succeeded(setup_intent: Dict[str, Any]) -> None:
     """
-    Runs after dj-stripe has validated & stored the event.
-    We only handle on first save (created=True) to avoid reprocessing on updates.
+       On `setup_intent.succeeded`, attach the PaymentMethod to the Customer
+       and set it as the default for future invoices. Ensures saved cards are
+       usable without re-entering details. Idempotent and logs errors.
     """
-    if not created:
-        return  # avoid reprocessing when dj-stripe touches the row later
 
-    # Extract type & payload safely
-    event_type = instance.type
-    data_object = instance.data.get("object", {}) if isinstance(instance.data, dict) else {}
+    customer_id = setup_intent.get("customer")
+    pm_id = setup_intent.get("payment_method")
+    if not customer_id or not pm_id:
+        logger.warning("setup_intent.succeeded missing customer or payment_method")
+        return
 
     try:
-        if event_type == "checkout.session.completed":
-            _handle_checkout_session_completed(data_object)
+        # Attach (idempotent): will no-op/error if already attached — safe to try
+        try:
+            stripe.PaymentMethod.attach(pm_id, customer=customer_id)
+        except stripe.error.InvalidRequestError as e:
+            if "already exists" not in str(e).lower():
+                raise
 
-        elif event_type == "payment_intent.succeeded":
-            _handle_payment_intent_succeeded(data_object)
-
-        elif event_type == "invoice.payment_succeeded":
-            _handle_invoice_payment_succeeded(data_object)
-
-        elif event_type in {"charge.refunded", "charge.refund.updated"}:
-            _handle_charge_refund(data_object)
-
-        else:
-            # Not interesting for us—keep logs quiet to avoid noise
-            logger.debug("Ignoring Stripe event type: %s (id=%s)", event_type, instance.id)
-
-    except Exception as exc:
-        # Never raise from a signal—log and move on to prevent retry storms
-        logger.exception("Error handling Stripe event %s (id=%s): %s", event_type, instance.id, exc)
+        # Make default for invoices (the key to stop “ask for card again”)
+        stripe.Customer.modify(
+            customer_id,
+            invoice_settings={"default_payment_method": pm_id},
+        )
+        logger.info("Set default PaymentMethod %s for customer %s", pm_id, customer_id)
+    except Exception:
+        logger.exception("Failed handling setup_intent.succeeded")
