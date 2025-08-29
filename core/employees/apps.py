@@ -21,9 +21,10 @@ from django.apps import AppConfig
 class EmployeesConfig(AppConfig):
     """
     Django AppConfig für das Employee Management Modul.
-    
+
     Initialisiert die App und stellt Metadaten bereit.
     """
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'core.employees'
-    label = 'employees'
+
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "core.employees"
+    label = "employees"

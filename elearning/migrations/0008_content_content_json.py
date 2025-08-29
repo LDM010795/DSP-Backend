@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('elearning', '0007_article_json_content_alter_article_module_and_more'),
+        ("elearning", "0007_article_json_content_alter_article_module_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='content',
-            name='content_json',
-            field=models.JSONField(blank=True, help_text='Structured content in JSON format for articles and rich content', null=True, verbose_name='Content JSON'),
+            model_name="content",
+            name="content_json",
+            field=models.JSONField(
+                blank=True,
+                help_text="Structured content in JSON format for articles and rich content",
+                null=True,
+                verbose_name="Content JSON",
+            ),
         ),
     ]

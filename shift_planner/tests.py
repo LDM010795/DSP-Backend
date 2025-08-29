@@ -18,10 +18,9 @@ Created: 10.07.2025
 Version: 1.0.0
 """
 
-from django.test import TestCase
 
 # Create your tests here.
-# 
+#
 # Future tests for:
 # - Shift planning functionality
 # - Employee management

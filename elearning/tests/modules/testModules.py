@@ -24,7 +24,7 @@ from elearning.modules.models import Module, ModuleCategory
 
 
 # Create your tests here.
-# 
+#
 # Future tests for:
 # - User management and authentication
 # - Module system and learning content
@@ -34,23 +34,23 @@ from elearning.modules.models import Module, ModuleCategory
 
 
 class ModuleViewsTests(TestCase):
-    #This setup is only executed once for the entire testfile
+    # This setup is only executed once for the entire testfile
     @classmethod
     def setUpTestData(cls):
         category = ModuleCategory.objects.create(id=1, name="Python")
         Module.objects.get_or_create(
             title="Privates Modul",
             defaults={
-                'is_public': False,
-                'category': category,
-            }
+                "is_public": False,
+                "category": category,
+            },
         )
         Module.objects.get_or_create(
             title="Public Modul",
             defaults={
-                'is_public': True,
-                'category': category,
-            }
+                "is_public": True,
+                "category": category,
+            },
         )
 
         testuser = User.objects.create_user(
@@ -63,25 +63,23 @@ class ModuleViewsTests(TestCase):
         testuser.save()
 
     # This setup is executed before each indivitual test
-    #def setUp(self):
-
+    # def setUp(self):
 
     def testPublicModuleListIstErreichbar(self):
         # Route has to be checked at backend/urls combined with elearning/urls
-        response = self.client.get('/api/elearning/modules/public/')
+        response = self.client.get("/api/elearning/modules/public/")
         self.assertEqual(response.status_code, 200)
 
     def testPublicModuleListHatInhalt(self):
         # Check if module in database and model reachable by API are same, in this case by checking if the category name is the same
-        response = self.client.get('/api/elearning/modules/public/')
+        response = self.client.get("/api/elearning/modules/public/")
         self.assertEqual(
             Module.objects.get(title="Public Modul").category.name,
-            response.json()[0]['category']['name'],
+            response.json()[0]["category"]["name"],
         )
 
     def testPrivateModuleListHatInhalt(self):
         # TODO: fix this test
         self.client.login(username="Max", password="Musterpassword")
-        response = self.client.get('/api/elearning/modules/user/')
+        response = self.client.get("/api/elearning/modules/user/")
         print(response.content)
-

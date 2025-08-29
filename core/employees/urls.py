@@ -7,7 +7,7 @@ with consistent RESTful patterns.
 
 API Endpoints:
 - /api/employees/departments/ - Department management
-- /api/employees/positions/ - Position management  
+- /api/employees/positions/ - Position management
 - /api/employees/employees/ - Employee management
 - /api/employees/attendances/ - Attendance tracking
 - /api/employees/tools/ - Tool management
@@ -26,26 +26,33 @@ Version: 1.0.0
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import DepartmentViewSet, PositionViewSet, EmployeeViewSet, AttendanceViewSet, ToolViewSet, EmployeeToolAccessViewSet
+from .views import (
+    DepartmentViewSet,
+    PositionViewSet,
+    EmployeeViewSet,
+    AttendanceViewSet,
+    ToolViewSet,
+    EmployeeToolAccessViewSet,
+)
 
 # Django REST Framework Router für automatische URL-Generierung
 router = DefaultRouter()
-router.register(r'departments', DepartmentViewSet, basename='department')
-router.register(r'positions', PositionViewSet, basename='position')
-router.register(r'employees', EmployeeViewSet, basename='employee')
-router.register(r'attendances', AttendanceViewSet, basename='attendance')
-router.register(r'tools', ToolViewSet, basename='tool')
-router.register(r'tool-access', EmployeeToolAccessViewSet, basename='toolaccess')
+router.register(r"departments", DepartmentViewSet, basename="department")
+router.register(r"positions", PositionViewSet, basename="position")
+router.register(r"employees", EmployeeViewSet, basename="employee")
+router.register(r"attendances", AttendanceViewSet, basename="attendance")
+router.register(r"tools", ToolViewSet, basename="tool")
+router.register(r"tool-access", EmployeeToolAccessViewSet, basename="toolaccess")
 
-app_name = 'employees'
+app_name = "employees"
 
 urlpatterns = [
     # API-Routen über Router
-    path('', include(router.urls)),
+    path("", include(router.urls)),
 ]
 
 # Die folgenden URLs werden automatisch durch den Router generiert:
-# 
+#
 # Departments:
 # GET    /employees/departments/          - Liste aller Departments
 # POST   /employees/departments/          - Neues Department erstellen
@@ -73,4 +80,4 @@ urlpatterns = [
 # DELETE /employees/employees/{id}/       - Employee löschen
 # GET    /employees/employees/active/     - Nur aktive Employees
 # GET    /employees/employees/by_department/ - Employees gruppiert nach Department
-# GET    /employees/employees/statistics/ - Employee-Statistiken 
+# GET    /employees/employees/statistics/ - Employee-Statistiken

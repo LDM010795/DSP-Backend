@@ -35,8 +35,10 @@ class IsOwnerOrAdmin(BasePermission):
             return True
 
         # Admins dürfen alles (is_staff ODER Employee-Rolle = Admin)
-        if request.user and request.user.is_authenticated and (
-            request.user.is_staff or is_employee_role_admin(request.user)
+        if (
+            request.user
+            and request.user.is_authenticated
+            and (request.user.is_staff or is_employee_role_admin(request.user))
         ):
             return True
 
@@ -56,9 +58,11 @@ class IsOwnerOrAdmin(BasePermission):
         if request.method in SAFE_METHODS:
             return True
         # Admin (is_staff ODER Employee-Rolle = Admin)
-        if request.user and request.user.is_authenticated and (
-            request.user.is_staff or is_employee_role_admin(request.user)
+        if (
+            request.user
+            and request.user.is_authenticated
+            and (request.user.is_staff or is_employee_role_admin(request.user))
         ):
             return True
         # Owner
-        return obj.employee.email == request.user.email 
+        return obj.employee.email == request.user.email

@@ -6,63 +6,165 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Department',
+            name="Department",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True, verbose_name='Abteilungsname')),
-                ('description', models.TextField(blank=True, null=True, verbose_name='Beschreibung')),
-                ('is_active', models.BooleanField(default=True, verbose_name='Aktiv')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Erstellt am')),
-                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Aktualisiert am')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        max_length=100, unique=True, verbose_name="Abteilungsname"
+                    ),
+                ),
+                (
+                    "description",
+                    models.TextField(
+                        blank=True, null=True, verbose_name="Beschreibung"
+                    ),
+                ),
+                ("is_active", models.BooleanField(default=True, verbose_name="Aktiv")),
+                (
+                    "created_at",
+                    models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am"),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="Aktualisiert am"),
+                ),
             ],
             options={
-                'verbose_name': 'Abteilung',
-                'verbose_name_plural': 'Abteilungen',
-                'ordering': ['name'],
+                "verbose_name": "Abteilung",
+                "verbose_name_plural": "Abteilungen",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Position',
+            name="Position",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=100, unique=True, verbose_name='Positionsbezeichnung')),
-                ('description', models.TextField(blank=True, null=True, verbose_name='Beschreibung')),
-                ('is_active', models.BooleanField(default=True, verbose_name='Aktiv')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Erstellt am')),
-                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Aktualisiert am')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "title",
+                    models.CharField(
+                        max_length=100, unique=True, verbose_name="Positionsbezeichnung"
+                    ),
+                ),
+                (
+                    "description",
+                    models.TextField(
+                        blank=True, null=True, verbose_name="Beschreibung"
+                    ),
+                ),
+                ("is_active", models.BooleanField(default=True, verbose_name="Aktiv")),
+                (
+                    "created_at",
+                    models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am"),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="Aktualisiert am"),
+                ),
             ],
             options={
-                'verbose_name': 'Position',
-                'verbose_name_plural': 'Positionen',
-                'ordering': ['title'],
+                "verbose_name": "Position",
+                "verbose_name_plural": "Positionen",
+                "ordering": ["title"],
             },
         ),
         migrations.CreateModel(
-            name='Employee',
+            name="Employee",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('first_name', models.CharField(max_length=50, verbose_name='Vorname')),
-                ('last_name', models.CharField(max_length=50, verbose_name='Nachname')),
-                ('max_working_hours', models.PositiveIntegerField(help_text='Maximale Arbeitsstunden pro Woche', validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(60)], verbose_name='Maximale Arbeitsstunden')),
-                ('is_active', models.BooleanField(default=True, help_text='Ist der Mitarbeiter noch aktiv beschäftigt?', verbose_name='Aktiv')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Erstellt am')),
-                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Aktualisiert am')),
-                ('department', models.ForeignKey(help_text='Abteilung in der der Mitarbeiter arbeitet', on_delete=django.db.models.deletion.PROTECT, to='employees.department', verbose_name='Abteilung')),
-                ('position', models.ForeignKey(help_text='Position/Rolle des Mitarbeiters', on_delete=django.db.models.deletion.PROTECT, to='employees.position', verbose_name='Position')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("first_name", models.CharField(max_length=50, verbose_name="Vorname")),
+                ("last_name", models.CharField(max_length=50, verbose_name="Nachname")),
+                (
+                    "max_working_hours",
+                    models.PositiveIntegerField(
+                        help_text="Maximale Arbeitsstunden pro Woche",
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(60),
+                        ],
+                        verbose_name="Maximale Arbeitsstunden",
+                    ),
+                ),
+                (
+                    "is_active",
+                    models.BooleanField(
+                        default=True,
+                        help_text="Ist der Mitarbeiter noch aktiv beschäftigt?",
+                        verbose_name="Aktiv",
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am"),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="Aktualisiert am"),
+                ),
+                (
+                    "department",
+                    models.ForeignKey(
+                        help_text="Abteilung in der der Mitarbeiter arbeitet",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="employees.department",
+                        verbose_name="Abteilung",
+                    ),
+                ),
+                (
+                    "position",
+                    models.ForeignKey(
+                        help_text="Position/Rolle des Mitarbeiters",
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="employees.position",
+                        verbose_name="Position",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Mitarbeiter',
-                'verbose_name_plural': 'Mitarbeiter',
-                'ordering': ['last_name', 'first_name'],
-                'indexes': [models.Index(fields=['last_name', 'first_name'], name='employees_e_last_na_99a4c0_idx'), models.Index(fields=['department', 'is_active'], name='employees_e_departm_fa1d35_idx')],
+                "verbose_name": "Mitarbeiter",
+                "verbose_name_plural": "Mitarbeiter",
+                "ordering": ["last_name", "first_name"],
+                "indexes": [
+                    models.Index(
+                        fields=["last_name", "first_name"],
+                        name="employees_e_last_na_99a4c0_idx",
+                    ),
+                    models.Index(
+                        fields=["department", "is_active"],
+                        name="employees_e_departm_fa1d35_idx",
+                    ),
+                ],
             },
         ),
     ]

@@ -3,7 +3,7 @@ E-Learning Services Package für DSP (Digital Solutions Platform)
 
 Dieses Paket enthält alle Services für die E-Learning-Plattform:
 - Cloud Storage Services
-- Word Processing Services  
+- Word Processing Services
 - Database Services
 - Content Processing Services
 
@@ -28,29 +28,26 @@ from .database import DatabaseService
 
 # Content Processing Services
 from .content_processing import (
-    ContentOrchestrationService, 
+    ContentOrchestrationService,
     ProcessingResult,
     ArticleProcessingService,
-    ProcessedArticleResult
+    ProcessedArticleResult,
 )
 
 __all__ = [
     # Cloud Storage
-    'CloudStorageService',
-    'CloudFile',
-    'ModuleContent',
-    
+    "CloudStorageService",
+    "CloudFile",
+    "ModuleContent",
     # Word Processing
-    'WordProcessingService',
-    'ProcessedArticle',
-    'WordExtraction',
-    
+    "WordProcessingService",
+    "ProcessedArticle",
+    "WordExtraction",
     # Database
-    'DatabaseService',
-    
+    "DatabaseService",
     # Content Processing
-    'ContentOrchestrationService',
-    'ProcessingResult',
-    'ArticleProcessingService',
-    'ProcessedArticleResult'
-] 
+    "ContentOrchestrationService",
+    "ProcessingResult",
+    "ArticleProcessingService",
+    "ProcessedArticleResult",
+]

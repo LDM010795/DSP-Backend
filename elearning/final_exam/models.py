@@ -1,20 +1,22 @@
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 import datetime
 
 # Angepasster, sauberer Import innerhalb der 'elearning' App
-from ..modules.models import Module, Task, UserTaskProgress
+from ..modules.models import Module, UserTaskProgress
 
 User = settings.AUTH_USER_MODEL
+
 
 class ExamDifficulty(models.TextChoices):
     EASY = "easy", _("Einfach")
     MEDIUM = "medium", _("Mittel")
     HARD = "hard", _("Schwer")
+
 
 class Exam(models.Model):
     title = models.CharField(max_length=255, unique=True)
@@ -61,17 +63,15 @@ class Exam(models.Model):
         if not required_modules.exists():
             return True
 
-        for module in required_modules.prefetch_related('tasks'):
-            all_task_ids_for_module = set(module.tasks.values_list('id', flat=True))
+        for module in required_modules.prefetch_related("tasks"):
+            all_task_ids_for_module = set(module.tasks.values_list("id", flat=True))
             if not all_task_ids_for_module:
                 continue
 
             completed_task_ids_for_module = set(
                 UserTaskProgress.objects.filter(
-                    user=user,
-                    task_id__in=all_task_ids_for_module,
-                    completed=True
-                ).values_list('task_id', flat=True)
+                    user=user, task_id__in=all_task_ids_for_module, completed=True
+                ).values_list("task_id", flat=True)
             )
 
             if not all_task_ids_for_module.issubset(completed_task_ids_for_module):
@@ -79,7 +79,9 @@ class Exam(models.Model):
 
         return True
 
+
 # ... (Rest der Datei bleibt identisch, hier gekürzt zur Übersicht)
+
 
 class ExamAttempt(models.Model):
     class Status(models.TextChoices):
@@ -88,7 +90,9 @@ class ExamAttempt(models.Model):
         GRADED = "graded", _("Bewertet")
 
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="attempts")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="exam_attempts")
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="exam_attempts"
+    )
     status = models.CharField(
         max_length=15, choices=Status.choices, default=Status.STARTED
     )
@@ -123,7 +127,7 @@ class ExamAttempt(models.Model):
         if due:
             return (due - timezone.now()).days
         return None
-    
+
     @property
     def processing_time_days(self):
         if self.started_at and self.submitted_at:
@@ -131,7 +135,11 @@ class ExamAttempt(models.Model):
         return None
 
     def _calculate_total_score(self) -> float:
-        total = sum(cs.achieved_points for cs in self.criterion_scores.all() if cs.achieved_points is not None)
+        total = sum(
+            cs.achieved_points
+            for cs in self.criterion_scores.all()
+            if cs.achieved_points is not None
+        )
         return round(total, 2)
 
     def save(self, *args, **kwargs):
@@ -142,13 +150,18 @@ class ExamAttempt(models.Model):
                 original_status = ExamAttempt.objects.get(pk=self.pk).status
             except ExamAttempt.DoesNotExist:
                 pass
-        
-        if self.status == self.Status.SUBMITTED and original_status != self.Status.SUBMITTED:
+
+        if (
+            self.status == self.Status.SUBMITTED
+            and original_status != self.Status.SUBMITTED
+        ):
             self.submitted_at = timezone.now()
-        elif self.status == self.Status.GRADED and original_status != self.Status.GRADED:
+        elif (
+            self.status == self.Status.GRADED and original_status != self.Status.GRADED
+        ):
             self.graded_at = timezone.now()
             self.score = self._calculate_total_score()
-        
+
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -156,10 +169,12 @@ class ExamAttempt(models.Model):
 
 
 class ExamRequirement(models.Model):
-    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="requirements")
+    exam = models.ForeignKey(
+        Exam, on_delete=models.CASCADE, related_name="requirements"
+    )
     description = models.TextField(help_text=_("Beschreibung der Anforderung."))
     order = models.PositiveSmallIntegerField(default=0)
-    
+
     class Meta:
         verbose_name = _("Exam Requirement")
         verbose_name_plural = _("Exam Requirements")
@@ -186,9 +201,7 @@ class ExamAttachment(models.Model):
 
 
 class ExamCriterion(models.Model):
-    exam = models.ForeignKey(
-        Exam, on_delete=models.CASCADE, related_name="criteria"
-    )
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name="criteria")
     title = models.CharField(max_length=120)
     description = models.TextField(blank=True)
     max_points = models.PositiveIntegerField(
@@ -216,7 +229,7 @@ class CriterionScore(models.Model):
         max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(0)],
-        help_text=_("Erreichte Punkte für dieses Kriterium.")
+        help_text=_("Erreichte Punkte für dieses Kriterium."),
     )
 
     class Meta:
@@ -240,35 +253,32 @@ class CriterionScore(models.Model):
         super().save(*args, **kwargs)
         if self.attempt.status == ExamAttempt.Status.GRADED:
             self.attempt.score = self.attempt._calculate_total_score()
-            self.attempt.save(update_fields=['score'])
+            self.attempt.save(update_fields=["score"])
 
 
 class CertificationPath(models.Model):
     title = models.CharField(
-        max_length=200,
-        unique=True,
-        help_text=_("Titel des Zertifikatspfads")
+        max_length=200, unique=True, help_text=_("Titel des Zertifikatspfads")
     )
     description = models.TextField(
-        blank=True,
-        help_text=_("Kurze Beschreibung, was dieser Pfad abdeckt.")
+        blank=True, help_text=_("Kurze Beschreibung, was dieser Pfad abdeckt.")
     )
     exams = models.ManyToManyField(
         Exam,
         related_name="certification_paths",
         blank=True,
-        help_text=_("Die Abschlussprüfungen, die Teil dieses Pfades sind.")
+        help_text=_("Die Abschlussprüfungen, die Teil dieses Pfades sind."),
     )
     order = models.PositiveSmallIntegerField(
         default=0,
         db_index=True,
-        help_text=_("Reihenfolge für die Anzeige (kleinere Zahlen zuerst).")
+        help_text=_("Reihenfolge für die Anzeige (kleinere Zahlen zuerst)."),
     )
     icon_name = models.CharField(
         max_length=50,
         blank=True,
         null=True,
-        help_text=_("Name des Icons für das Frontend (z.B. IoCodeSlashOutline).")
+        help_text=_("Name des Icons für das Frontend (z.B. IoCodeSlashOutline)."),
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -279,4 +289,4 @@ class CertificationPath(models.Model):
         ordering = ["order", "title"]
 
     def __str__(self):
-        return self.title 
+        return self.title

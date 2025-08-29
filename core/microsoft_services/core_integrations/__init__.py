@@ -19,4 +19,4 @@ Version: 1.0.0
 # - token_manager: Tokenverwaltung für Azure AD
 # - mixins: GraphAPI-Integrationsmixins
 # - exceptions: Fehler- und Exception-Handling
-# - role_authentication: Rollen- und Berechtigungslogik 
+# - role_authentication: Rollen- und Berechtigungslogik

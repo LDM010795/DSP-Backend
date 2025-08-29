@@ -9,4 +9,4 @@ Version: 1.0.0
 """
 
 # Submodule:
-# - views: Test- und Diagnose-Endpoints für Graph API 
+# - views: Test- und Diagnose-Endpoints für Graph API

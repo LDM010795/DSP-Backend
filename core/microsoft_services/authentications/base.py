@@ -18,7 +18,7 @@ Version: 2.0.0 (Refactored)
 
 import logging
 import requests
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from urllib.parse import urlencode
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -37,8 +37,12 @@ class MicrosoftAuthClient:
     """
 
     OAUTH_SCOPE = "openid email profile User.Read"
-    TOKEN_URL_TEMPLATE = "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
-    AUTH_URL_TEMPLATE = "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize"
+    TOKEN_URL_TEMPLATE = (
+        "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+    )
+    AUTH_URL_TEMPLATE = (
+        "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize"
+    )
     GRAPH_USER_URL = "https://graph.microsoft.com/v1.0/me"
 
     def __init__(self):
@@ -82,7 +86,9 @@ class MicrosoftAuthClient:
 
         try:
             logger.debug("Exchanging authorization code for access token.")
-            response = requests.post(token_url, data=token_data, headers=headers, timeout=30)
+            response = requests.post(
+                token_url, data=token_data, headers=headers, timeout=30
+            )
             response.raise_for_status()  # Raises HTTPError for bad responses (4xx or 5xx)
 
             token_response = response.json()
@@ -97,7 +103,9 @@ class MicrosoftAuthClient:
         except requests.exceptions.HTTPError as e:
             error_data = e.response.json() if e.response.content else {}
             error_msg = error_data.get("error_description", str(e))
-            logger.error(f"Token exchange failed: {e.response.status_code} - {error_msg}")
+            logger.error(
+                f"Token exchange failed: {e.response.status_code} - {error_msg}"
+            )
             raise AzureAuthException(
                 f"Token exchange failed: {error_msg}", auth_step="token_exchange"
             ) from e
@@ -123,15 +131,19 @@ class MicrosoftAuthClient:
                 timeout=30,
             )
             response.raise_for_status()
-            
+
             user_data = response.json()
-            logger.debug(f"Retrieved user info for: {user_data.get('mail') or user_data.get('userPrincipalName')}")
+            logger.debug(
+                f"Retrieved user info for: {user_data.get('mail') or user_data.get('userPrincipalName')}"
+            )
             return user_data
 
         except requests.exceptions.HTTPError as e:
             error_data = e.response.json() if e.response.content else {}
             error_msg = error_data.get("error", {}).get("message", str(e))
-            logger.error(f"Failed to get user info: {e.response.status_code} - {error_msg}")
+            logger.error(
+                f"Failed to get user info: {e.response.status_code} - {error_msg}"
+            )
             raise MicrosoftGraphException(
                 f"Failed to retrieve user information: {error_msg}",
                 status_code=e.response.status_code,

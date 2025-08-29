@@ -19,15 +19,14 @@ Author: DSP Development Team
 Version: 1.0.0
 """
 
-from typing import Any, Dict, Optional
-from django.contrib.auth.models import User
+from typing import Any
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from djstripe.models import Customer
@@ -36,201 +35,208 @@ from djstripe.models import Customer
 from ..models import Profile
 from ..serializers import (
     CustomTokenObtainPairSerializer,
-    SetInitialPasswordSerializer, ExternalUserRegistrationSerializer)
+    SetInitialPasswordSerializer,
+    ExternalUserRegistrationSerializer,
+)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
     Enhanced JWT token authentication view.
-    
+
     Extends the default JWT token view to include additional user metadata
     in the token and response for improved frontend integration and
     user experience.
-    
+
     Features:
     - Enhanced token payload with user role information
     - Profile integration for force password change status
     - Comprehensive error handling for authentication failures
     """
-    
+
     serializer_class = CustomTokenObtainPairSerializer
-    
+
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Authenticate user and return enhanced JWT tokens.
-        
+
         Args:
             request: HTTP request containing authentication credentials
             *args: Additional positional arguments
             **kwargs: Additional keyword arguments
-            
+
         Returns:
             Response containing JWT tokens and user metadata
-            
+
         Raises:
             ValidationError: If authentication credentials are invalid
         """
         try:
             response = super().post(request, *args, **kwargs)
-            
+
             # Log successful authentication
-            if response.status_code == status.HTTP_200_OK and hasattr(self, 'user'):
+            if response.status_code == status.HTTP_200_OK and hasattr(self, "user"):
                 # Could add audit logging here
                 pass
-                
+
             return response
-            
-        except Exception as e:
+
+        except Exception:
             # Log authentication failure
             return Response(
-                {'detail': _('Authentication failed. Please check your credentials.')},
-                status=status.HTTP_401_UNAUTHORIZED
+                {"detail": _("Authentication failed. Please check your credentials.")},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
 
 class LogoutView(APIView):
     """
     Secure user logout view with token blacklisting.
-    
+
     Provides secure logout functionality by blacklisting the refresh token
     to prevent its reuse, ensuring proper session termination.
-    
+
     Security Features:
     - Token blacklisting to prevent reuse
     - Comprehensive error handling for invalid tokens
     - Proper HTTP status codes for different scenarios
     """
-    
+
     permission_classes = (IsAuthenticated,)
-    
+
     def post(self, request: Request) -> Response:
         """
         Logout user by blacklisting their refresh token.
-        
+
         Args:
             request: HTTP request containing refresh token (optional)
-            
+
         Returns:
             Response indicating logout success or failure
-            
+
         Expected Request Data:
             - refresh_token: JWT refresh token to blacklist (optional)
-            
+
         Note:
             If no refresh_token provided, logout still succeeds for UX.
             Frontend should handle token cleanup locally.
         """
         try:
             refresh_token = request.data.get("refresh_token")
-            
+
             if not refresh_token:
                 # Graceful logout even without refresh_token
                 # Frontend can handle local token cleanup
                 return Response(
-                    {'detail': _('Successfully logged out (client-side cleanup recommended).')},
-                    status=status.HTTP_205_RESET_CONTENT
+                    {
+                        "detail": _(
+                            "Successfully logged out (client-side cleanup recommended)."
+                        )
+                    },
+                    status=status.HTTP_205_RESET_CONTENT,
                 )
-            
+
             # Blacklist the refresh token if provided
             token = RefreshToken(refresh_token)
             token.blacklist()
-            
+
             # Log successful logout with token blacklisting
             # Could add audit logging here
-            
+
             return Response(
-                {'detail': _('Successfully logged out and token blacklisted.')},
-                status=status.HTTP_205_RESET_CONTENT
+                {"detail": _("Successfully logged out and token blacklisted.")},
+                status=status.HTTP_205_RESET_CONTENT,
             )
-            
-        except TokenError as e:
+
+        except TokenError:
             # Even if token is invalid, allow logout to succeed for UX
             return Response(
-                {'detail': _('Successfully logged out (token was invalid).')},
-                status=status.HTTP_205_RESET_CONTENT
+                {"detail": _("Successfully logged out (token was invalid).")},
+                status=status.HTTP_205_RESET_CONTENT,
             )
-        except Exception as e:
+        except Exception:
             # Fallback: allow logout to succeed even if blacklisting fails
             return Response(
-                {'detail': _('Successfully logged out (error during token blacklisting).')},
-                status=status.HTTP_205_RESET_CONTENT
+                {
+                    "detail": _(
+                        "Successfully logged out (error during token blacklisting)."
+                    )
+                },
+                status=status.HTTP_205_RESET_CONTENT,
             )
 
 
 class SetInitialPasswordView(APIView):
     """
     Secure initial password setting view for new users.
-    
+
     Handles the initial password setup process for users who are required
     to change their password on first login, ensuring security compliance
     and proper profile management.
-    
+
     Security Features:
     - Password strength validation
     - Confirmation matching validation
     - Profile-based access control
     - Automatic profile update after successful password change
     """
-    
+
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request: Request) -> Response:
         """
         Set initial password for authenticated user.
-        
+
         Args:
             request: HTTP request containing new password data
-            
+
         Returns:
             Response indicating password change success or failure
-            
+
         Expected Request Data:
             - password: New password (minimum 8 characters)
             - password_confirm: Password confirmation
-            
+
         Security Requirements:
             - User must be authenticated
             - User profile must have force_password_change=True
             - Password must meet Django's validation requirements
         """
         user = request.user
-        
+
         try:
             # Check if user is required to change password
             if not user.profile.force_password_change:
                 return Response(
-                    {'detail': _('Password has already been set.')},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"detail": _("Password has already been set.")},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
         except Profile.DoesNotExist:
             # Create missing profile
             Profile.objects.create(user=user, force_password_change=True)
-        
+
         # Validate and process password change
         serializer = SetInitialPasswordSerializer(data=request.data)
         if serializer.is_valid():
             try:
                 # Use serializer's save method for comprehensive handling
                 updated_user = serializer.save(user)
-                
+
                 # Log successful password change
                 # Could add audit logging here
-                
+
                 return Response(
-                    {'detail': _('Password successfully set.')},
-                    status=status.HTTP_200_OK
+                    {"detail": _("Password successfully set.")},
+                    status=status.HTTP_200_OK,
                 )
-                
-            except Exception as e:
+
+            except Exception:
                 return Response(
-                    {'detail': _('An error occurred while setting the password.')},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    {"detail": _("An error occurred while setting the password.")},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
-        
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ExternalUserRegistrationView(generics.CreateAPIView):
@@ -282,8 +288,6 @@ class ExternalUserRegistrationView(generics.CreateAPIView):
         # Initialize the serializer with the incoming data
         serializer = self.get_serializer(data=request.data)
 
-
-
         # Validate the data
         if serializer.is_valid():
             user = serializer.save()
@@ -291,9 +295,6 @@ class ExternalUserRegistrationView(generics.CreateAPIView):
             Customer.get_or_create(subscriber=user)
             return Response(
                 {"detail": _("Registration successful.")},
-                status=status.HTTP_201_CREATED
+                status=status.HTTP_201_CREATED,
             )
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -43,4 +43,4 @@ class ShiftScheduleSerializer(serializers.ModelSerializer):
             "hours",
             "activity",
             "groups",
-        ] 
+        ]

@@ -9,6 +9,5 @@ Created: 10.07.2025
 Version: 1.0.0
 """
 
-from django.shortcuts import render
 
 # Create your views here.

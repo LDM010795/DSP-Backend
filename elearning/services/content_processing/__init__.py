@@ -15,8 +15,8 @@ from .content_orchestration_service import ContentOrchestrationService, Processi
 from .article_processing_service import ArticleProcessingService, ProcessedArticleResult
 
 __all__ = [
-    'ContentOrchestrationService',
-    'ProcessingResult',
-    'ArticleProcessingService', 
-    'ProcessedArticleResult'
-] 
+    "ContentOrchestrationService",
+    "ProcessingResult",
+    "ArticleProcessingService",
+    "ProcessedArticleResult",
+]

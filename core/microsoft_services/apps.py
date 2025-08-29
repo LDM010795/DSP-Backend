@@ -21,9 +21,10 @@ from django.apps import AppConfig
 class MicrosoftServicesConfig(AppConfig):
     """
     Django AppConfig für das Microsoft Services Modul.
-    
+
     Initialisiert die App und stellt Metadaten bereit.
     """
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'core.microsoft_services'
-    label = 'microsoft_services'
+
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "core.microsoft_services"
+    label = "microsoft_services"

@@ -18,13 +18,16 @@ Created: 10.07.2025
 Version: 1.0.0
 """
 
-from django.shortcuts import render
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from .permissions import IsOwnerOrAdmin
 from core.employees.models import Employee
 from .models import Availability, ShiftSchedule
-from .serializers import EmployeeSerializer, AvailabilitySerializer, ShiftScheduleSerializer
+from .serializers import (
+    EmployeeSerializer,
+    AvailabilitySerializer,
+    ShiftScheduleSerializer,
+)
 
 
 class EmployeeListView(generics.ListAPIView):
@@ -34,7 +37,9 @@ class EmployeeListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]  # TODO: Auth integrieren
 
     def get_queryset(self):
-        qs = Employee.objects.filter(is_active=True).select_related("department", "position")
+        qs = Employee.objects.filter(is_active=True).select_related(
+            "department", "position"
+        )
         department_id = self.request.query_params.get("department")
         if department_id:
             qs = qs.filter(department_id=department_id)
@@ -63,12 +68,18 @@ class AvailabilityListCreateView(generics.ListCreateAPIView):
 
         # Basisvalidierung – fehlende Felder
         if not all([employee_id, date, status_val]):
-            return Response({"detail": "employee, date und status sind Pflichtfelder."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "employee, date und status sind Pflichtfelder."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             employee = Employee.objects.get(id=employee_id)
         except Employee.DoesNotExist:
-            return Response({"detail": "Employee nicht gefunden."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Employee nicht gefunden."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         obj, created = Availability.objects.update_or_create(
             employee=employee,
@@ -110,12 +121,18 @@ class ShiftScheduleListCreateView(generics.ListCreateAPIView):
         groups = request.data.get("groups", "")
 
         if not all([employee_id, date, shift_type, hours]):
-            return Response({"detail": "employee, date, shift_type und hours sind Pflichtfelder."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "employee, date, shift_type und hours sind Pflichtfelder."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             employee = Employee.objects.get(id=employee_id)
         except Employee.DoesNotExist:
-            return Response({"detail": "Employee nicht gefunden."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Employee nicht gefunden."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         obj, created = ShiftSchedule.objects.update_or_create(
             employee=employee,

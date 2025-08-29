@@ -12,9 +12,9 @@ components, adhering to the principle of separation of concerns.
 Author: DSP Development Team
 Version: 2.1.0 (Refactored & Corrected)
 """
+
 import logging
 import secrets
-from urllib.parse import urlencode
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -61,11 +61,11 @@ class MicrosoftLoginRedirectView(APIView):
         # We must ensure the redirect URI exactly matches what's configured in Azure.
         if "127.0.0.1" in redirect_uri:
             redirect_uri = redirect_uri.replace("127.0.0.1", "localhost")
-        
+
         auth_url = client.build_authorization_url(
             request, state=state, redirect_uri=redirect_uri
         )
-        
+
         return HttpResponseRedirect(auth_url)
 
 
@@ -83,23 +83,35 @@ class MicrosoftCallbackView(APIView):
         """
         state = request.GET.get("state")
         if not state:
-            return Response({"error": "No state found in callback. Cannot proceed."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "No state found in callback. Cannot proceed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         tool_slug = cache.get(f"oauth_state_{state}")
         if not tool_slug:
-            return Response({"error": "Invalid or expired state. Please try logging in again."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid or expired state. Please try logging in again."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             tool = Tool.objects.get(slug=tool_slug, is_active=True)
             # Forward all query params from Microsoft to the frontend
             query_params = request.GET.urlencode()
             redirect_url = f"{tool.frontend_url}?{query_params}"
-            logger.info(f"Redirecting user to frontend for tool '{tool_slug}': {redirect_url}")
+            logger.info(
+                f"Redirecting user to frontend for tool '{tool_slug}': {redirect_url}"
+            )
             return HttpResponseRedirect(redirect_url)
         except Tool.DoesNotExist:
-            logger.warning(f"Tool with slug '{tool_slug}' not found after Microsoft callback.")
-            return Response({"error": "Tool configured for this login does not exist."}, status=status.HTTP_404_NOT_FOUND)
-
+            logger.warning(
+                f"Tool with slug '{tool_slug}' not found after Microsoft callback."
+            )
+            return Response(
+                {"error": "Tool configured for this login does not exist."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
     def post(self, request, tool_slug: str, *args, **kwargs):
         """
@@ -108,22 +120,28 @@ class MicrosoftCallbackView(APIView):
         """
         auth_code = request.data.get("code")
         state = request.data.get("state")
-        
+
         if not all([auth_code, state]):
-            return Response({"error": "Missing 'code' or 'state' in request body."}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {"error": "Missing 'code' or 'state' in request body."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Verify that the tool from the URL matches the one stored in the state
         cached_tool_slug = cache.get(f"oauth_state_{state}")
         if not cached_tool_slug or cached_tool_slug != tool_slug:
-            return Response({"error": "State-Tool mismatch or expired state."}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {"error": "State-Tool mismatch or expired state."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         cache.delete(f"oauth_state_{state}")
 
         try:
             tool = Tool.objects.get(slug=tool_slug, is_active=True)
             client = MicrosoftAuthClient()
             redirect_uri = request.build_absolute_uri(CALLBACK_PATH)
-            
+
             # Ensure consistency for the token exchange redirect URI
             if "127.0.0.1" in redirect_uri:
                 redirect_uri = redirect_uri.replace("127.0.0.1", "localhost")
@@ -133,17 +151,32 @@ class MicrosoftCallbackView(APIView):
 
             handler = EmployeeAuthHandler()
             auth_response_data = handler.handle_authentication(user_info, tool)
-            
+
             return Response(auth_response_data)
 
-        except (AzureAuthException, MicrosoftGraphException, ValueError, PermissionError) as e:
+        except (
+            AzureAuthException,
+            MicrosoftGraphException,
+            ValueError,
+            PermissionError,
+        ) as e:
             logger.error(f"Authentication failed for tool '{tool_slug}': {e}")
-            return Response({"success": False, "error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"success": False, "error": str(e)}, status=status.HTTP_403_FORBIDDEN
+            )
         except Tool.DoesNotExist:
-             return Response({"error": f"Tool '{tool_slug}' not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": f"Tool '{tool_slug}' not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         except Exception as e:
-            logger.exception(f"An unexpected error occurred during authentication postback: {e}")
-            return Response({"error": "An unexpected server error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception(
+                f"An unexpected error occurred during authentication postback: {e}"
+            )
+            return Response(
+                {"error": "An unexpected server error occurred."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class MicrosoftLogoutView(APIView):
@@ -152,14 +185,19 @@ class MicrosoftLogoutView(APIView):
     def post(self, request, *args, **kwargs):
         refresh_token = request.data.get("refresh")
         if not refresh_token:
-            return Response({"error": "No refresh token provided."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "No refresh token provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
             token = RefreshToken(refresh_token)
             token.blacklist()
 
             # Prepare optional Azure logout URL
             azure_logout = "https://login.microsoftonline.com/common/oauth2/v2.0/logout"
-            post_logout = request.data.get("post_logout_redirect_uri") or settings.FRONTEND_URL
+            post_logout = (
+                request.data.get("post_logout_redirect_uri") or settings.FRONTEND_URL
+            )
             logout_url = f"{azure_logout}?post_logout_redirect_uri={post_logout}"
 
             response = Response({"success": True, "logout_url": logout_url})
@@ -168,4 +206,6 @@ class MicrosoftLogoutView(APIView):
             return response
         except Exception as e:
             logger.error(f"Logout failed: {e}")
-            return Response({"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Invalid token."}, status=status.HTTP_400_BAD_REQUEST
+            )

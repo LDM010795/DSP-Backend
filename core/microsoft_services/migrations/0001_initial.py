@@ -4,28 +4,64 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='OAuthState',
+            name="OAuthState",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('state', models.CharField(db_index=True, help_text='OAuth State Parameter für CSRF-Protection', max_length=255, unique=True)),
-                ('user_identifier', models.CharField(blank=True, help_text='Hash von IP+UserAgent für zusätzliche Sicherheit', max_length=255, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True, help_text='Wann wurde der State erstellt')),
-                ('expires_at', models.DateTimeField(db_index=True, help_text='Wann läuft der State ab (TTL)')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "state",
+                    models.CharField(
+                        db_index=True,
+                        help_text="OAuth State Parameter für CSRF-Protection",
+                        max_length=255,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "user_identifier",
+                    models.CharField(
+                        blank=True,
+                        help_text="Hash von IP+UserAgent für zusätzliche Sicherheit",
+                        max_length=255,
+                        null=True,
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        auto_now_add=True, help_text="Wann wurde der State erstellt"
+                    ),
+                ),
+                (
+                    "expires_at",
+                    models.DateTimeField(
+                        db_index=True, help_text="Wann läuft der State ab (TTL)"
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'OAuth State',
-                'verbose_name_plural': 'OAuth States',
-                'db_table': 'oauth_states',
-                'ordering': ['-created_at'],
-                'indexes': [models.Index(fields=['state'], name='oauth_state_idx'), models.Index(fields=['expires_at'], name='oauth_expires_idx'), models.Index(fields=['created_at'], name='oauth_created_idx')],
+                "verbose_name": "OAuth State",
+                "verbose_name_plural": "OAuth States",
+                "db_table": "oauth_states",
+                "ordering": ["-created_at"],
+                "indexes": [
+                    models.Index(fields=["state"], name="oauth_state_idx"),
+                    models.Index(fields=["expires_at"], name="oauth_expires_idx"),
+                    models.Index(fields=["created_at"], name="oauth_created_idx"),
+                ],
             },
         ),
     ]

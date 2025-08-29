@@ -5,34 +5,49 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('elearning', '0002_alter_profile_options_and_more'),
+        ("elearning", "0002_alter_profile_options_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ModuleCategory',
+            name="ModuleCategory",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, unique=True)),
             ],
             options={
-                'verbose_name': 'Module Category',
-                'verbose_name_plural': 'Module Categories',
-                'ordering': ['name'],
+                "verbose_name": "Module Category",
+                "verbose_name_plural": "Module Categories",
+                "ordering": ["name"],
             },
         ),
         migrations.RunPython(
-            code=lambda apps, schema_editor: convert_categories_forward(apps, schema_editor),
+            code=lambda apps, schema_editor: convert_categories_forward(
+                apps, schema_editor
+            ),
             reverse_code=lambda apps, schema_editor: None,
         ),
         migrations.AlterField(
-            model_name='module',
-            name='category',
-            field=models.ForeignKey(help_text='The category this module belongs to.', on_delete=django.db.models.deletion.PROTECT, related_name='modules', to='elearning.modulecategory'),
+            model_name="module",
+            name="category",
+            field=models.ForeignKey(
+                help_text="The category this module belongs to.",
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="modules",
+                to="elearning.modulecategory",
+            ),
         ),
     ]
+
 
 # --------------------- Hilfsfunktionen ---------------------
 
@@ -42,18 +57,16 @@ def convert_categories_forward(apps, schema_editor):
     und ersetzt den String im Modul mit der entsprechenden ID (als Text),
     sodass die nachfolgende AlterField-Operation valide FK-Werte vorfindet."""
 
-    Module = apps.get_model('elearning', 'Module')
-    ModuleCategory = apps.get_model('elearning', 'ModuleCategory')
+    Module = apps.get_model("elearning", "Module")
+    ModuleCategory = apps.get_model("elearning", "ModuleCategory")
 
     # Alle einzigartigen String-Kategorien sammeln
-    distinct_cats = (
-        Module.objects.values_list('category', flat=True).distinct()
-    )
+    distinct_cats = Module.objects.values_list("category", flat=True).distinct()
 
     cat_map = {}
     for cat_name in distinct_cats:
         # Fallback auf "Sonstiges" bei leerem/None
-        name = cat_name or 'Sonstiges'
+        name = cat_name or "Sonstiges"
         cat_obj, _ = ModuleCategory.objects.get_or_create(name=name)
         cat_map[cat_name] = cat_obj.id  # ID als int
 

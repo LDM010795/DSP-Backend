@@ -14,6 +14,7 @@ TOOLS = [
     },
 ]
 
+
 class Command(BaseCommand):
     help = "Erzeugt Standard-Tools und vergibt optional allen aktiven Employees Zugriff auf E-Learning."
 
@@ -26,7 +27,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for tool_data in TOOLS:
-            tool, created = Tool.objects.get_or_create(slug=tool_data["slug"], defaults=tool_data)
+            tool, created = Tool.objects.get_or_create(
+                slug=tool_data["slug"], defaults=tool_data
+            )
             if created:
                 self.stdout.write(self.style.SUCCESS(f"Tool {tool.slug} angelegt."))
         if options["grant_elearning_all"]:
@@ -34,7 +37,11 @@ class Command(BaseCommand):
             employees = Employee.objects.filter(is_active=True)
             count = 0
             for emp in employees:
-                _, created = EmployeeToolAccess.objects.get_or_create(employee=emp, tool=elearning)
+                _, created = EmployeeToolAccess.objects.get_or_create(
+                    employee=emp, tool=elearning
+                )
                 if created:
                     count += 1
-            self.stdout.write(self.style.SUCCESS(f"{count} Freigaben für E-Learning erstellt.")) 
+            self.stdout.write(
+                self.style.SUCCESS(f"{count} Freigaben für E-Learning erstellt.")
+            )

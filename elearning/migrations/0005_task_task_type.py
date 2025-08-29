@@ -4,15 +4,24 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('elearning', '0004_alter_article_options_alter_content_options_and_more'),
+        ("elearning", "0004_alter_article_options_alter_content_options_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='task',
-            name='task_type',
-            field=models.CharField(choices=[('none', 'None'), ('programming', 'Programming Exercise'), ('multiple_choice', 'Multiple Choice')], default='programming', help_text='Type of task', max_length=50, verbose_name='Task Type'),
+            model_name="task",
+            name="task_type",
+            field=models.CharField(
+                choices=[
+                    ("none", "None"),
+                    ("programming", "Programming Exercise"),
+                    ("multiple_choice", "Multiple Choice"),
+                ],
+                default="programming",
+                help_text="Type of task",
+                max_length=50,
+                verbose_name="Task Type",
+            ),
         ),
     ]

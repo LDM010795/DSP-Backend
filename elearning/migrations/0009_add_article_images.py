@@ -5,38 +5,104 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('elearning', '0008_content_content_json'),
+        ("elearning", "0008_content_content_json"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='content',
-            name='content_json',
+            model_name="content",
+            name="content_json",
         ),
         migrations.AlterField(
-            model_name='task',
-            name='task_type',
-            field=models.CharField(choices=[('none', 'None'), ('programming', 'Programming Exercise'), ('multiple_choice', 'Multiple Choice')], default='none', help_text='Type of task', max_length=50, verbose_name='Task Type'),
+            model_name="task",
+            name="task_type",
+            field=models.CharField(
+                choices=[
+                    ("none", "None"),
+                    ("programming", "Programming Exercise"),
+                    ("multiple_choice", "Multiple Choice"),
+                ],
+                default="none",
+                help_text="Type of task",
+                max_length=50,
+                verbose_name="Task Type",
+            ),
         ),
         migrations.CreateModel(
-            name='ArticleImage',
+            name="ArticleImage",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('image_name', models.CharField(help_text='Eindeutiger Name für automatische Frontend-Zuordnung', max_length=255, unique=True, verbose_name='Image Name')),
-                ('cloud_url', models.URLField(help_text='Vollständige Cloud-URL des Bildes', max_length=1000, verbose_name='Cloud URL')),
-                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Created At')),
-                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Updated At')),
-                ('article', models.ForeignKey(help_text='Artikel, zu dem das Bild gehört', on_delete=django.db.models.deletion.CASCADE, related_name='images', to='elearning.article', verbose_name='Article')),
-                ('module', models.ForeignKey(help_text='Modul, zu dem dieses Bild gehört', on_delete=django.db.models.deletion.CASCADE, related_name='article_images', to='elearning.module', verbose_name='Module')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "image_name",
+                    models.CharField(
+                        help_text="Eindeutiger Name für automatische Frontend-Zuordnung",
+                        max_length=255,
+                        unique=True,
+                        verbose_name="Image Name",
+                    ),
+                ),
+                (
+                    "cloud_url",
+                    models.URLField(
+                        help_text="Vollständige Cloud-URL des Bildes",
+                        max_length=1000,
+                        verbose_name="Cloud URL",
+                    ),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(auto_now_add=True, verbose_name="Created At"),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="Updated At"),
+                ),
+                (
+                    "article",
+                    models.ForeignKey(
+                        help_text="Artikel, zu dem das Bild gehört",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="images",
+                        to="elearning.article",
+                        verbose_name="Article",
+                    ),
+                ),
+                (
+                    "module",
+                    models.ForeignKey(
+                        help_text="Modul, zu dem dieses Bild gehört",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="article_images",
+                        to="elearning.module",
+                        verbose_name="Module",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Article Image',
-                'verbose_name_plural': 'Article Images',
-                'db_table': 'elearning_article_image',
-                'ordering': ['module', 'image_name'],
-                'indexes': [models.Index(fields=['module'], name='elearning_a_module__786078_idx'), models.Index(fields=['image_name'], name='elearning_a_image_n_101592_idx'), models.Index(fields=['article'], name='elearning_a_article_7b9fd3_idx')],
+                "verbose_name": "Article Image",
+                "verbose_name_plural": "Article Images",
+                "db_table": "elearning_article_image",
+                "ordering": ["module", "image_name"],
+                "indexes": [
+                    models.Index(
+                        fields=["module"], name="elearning_a_module__786078_idx"
+                    ),
+                    models.Index(
+                        fields=["image_name"], name="elearning_a_image_n_101592_idx"
+                    ),
+                    models.Index(
+                        fields=["article"], name="elearning_a_article_7b9fd3_idx"
+                    ),
+                ],
             },
         ),
     ]

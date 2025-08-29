@@ -5,25 +5,41 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('elearning', '0012_change_article_url_to_charfield'),
+        ("elearning", "0012_change_article_url_to_charfield"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='articleimage',
-            name='cloud_url',
-            field=models.CharField(help_text='Vollständige Cloud-URL des Bildes', max_length=1000, validators=[elearning.modules.models.validate_cloud_url], verbose_name='Cloud URL'),
+            model_name="articleimage",
+            name="cloud_url",
+            field=models.CharField(
+                help_text="Vollständige Cloud-URL des Bildes",
+                max_length=1000,
+                validators=[elearning.modules.models.validate_cloud_url],
+                verbose_name="Cloud URL",
+            ),
         ),
         migrations.AlterField(
-            model_name='content',
-            name='video_url',
-            field=models.CharField(blank=True, help_text='Optional URL to video content (YouTube, Vimeo, etc.)', max_length=500, null=True, validators=[elearning.modules.models.validate_cloud_url], verbose_name='Video URL'),
+            model_name="content",
+            name="video_url",
+            field=models.CharField(
+                blank=True,
+                help_text="Optional URL to video content (YouTube, Vimeo, etc.)",
+                max_length=500,
+                null=True,
+                validators=[elearning.modules.models.validate_cloud_url],
+                verbose_name="Video URL",
+            ),
         ),
         migrations.AlterField(
-            model_name='supplementarycontent',
-            name='url',
-            field=models.CharField(help_text='URL to the supplementary resource', max_length=500, validators=[elearning.modules.models.validate_cloud_url], verbose_name='Resource URL'),
+            model_name="supplementarycontent",
+            name="url",
+            field=models.CharField(
+                help_text="URL to the supplementary resource",
+                max_length=500,
+                validators=[elearning.modules.models.validate_cloud_url],
+                verbose_name="Resource URL",
+            ),
         ),
     ]

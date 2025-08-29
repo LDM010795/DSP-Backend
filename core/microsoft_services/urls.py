@@ -43,4 +43,4 @@ urlpatterns = [
         name="microsoft-callback-exchange",
     ),
     path("auth/logout/", MicrosoftLogoutView.as_view(), name="microsoft-logout"),
-] 
+]

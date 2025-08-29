@@ -1,5 +1,6 @@
 from rest_framework.permissions import BasePermission
-from core.employees.models import EmployeeToolAccess, Tool
+from core.employees.models import EmployeeToolAccess
+
 
 class HasToolAccess(BasePermission):
     """Erlaubt Zugriff nur, wenn der Employee für das Tool freigeschaltet ist."""
@@ -19,4 +20,4 @@ class HasToolAccess(BasePermission):
             tool__slug=self.tool_slug,
             expires_at__isnull=True,
             tool__is_active=True,
-        ).exists() 
+        ).exists()
