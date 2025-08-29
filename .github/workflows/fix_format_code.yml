@@ -1,0 +1,35 @@
+name: fix_format_code
+on:
+  push
+
+jobs:
+  fix-format-code:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Set up git for the current pull request/branch that is being changed. Needed to push back onto the pull request later.
+      - name: checkout project
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip
+      - name: install requirements
+        run: |
+          pip install -r requirements.txt
+      - name: collect static files
+        run: |
+          python3 manage.py collectstatic
+      - name: fix code
+        run: |
+          ruff check --fix
+      - name: format code
+        run: |
+          ruff format
+      - name: push to pull request
+        uses: stefanzweifel/git-auto-commit-action@v6
