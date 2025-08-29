@@ -22,9 +22,10 @@ from django.apps import AppConfig
 class ShiftPlannerConfig(AppConfig):
     """
     Django AppConfig für das Shift Planner Modul.
-    
+
     Initialisiert die App und stellt Metadaten bereit.
     """
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'shift_planner'
-    verbose_name = 'Shift Planner'
+
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "shift_planner"
+    verbose_name = "Shift Planner"

@@ -19,7 +19,6 @@ Version: 1.0.0
 """
 
 from django.db import models
-from django.conf import settings
 from core.employees.models import Employee  # type: ignore
 from django.core.validators import MinValueValidator, MaxValueValidator
 

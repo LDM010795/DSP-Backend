@@ -5,15 +5,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('elearning', '0011_alter_content_options_alter_task_options_and_more'),
+        ("elearning", "0011_alter_content_options_alter_task_options_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='article',
-            name='url',
-            field=models.CharField(help_text='URL to the external article or resource.', max_length=500, validators=[elearning.modules.models.validate_cloud_url], verbose_name='Article URL'),
+            model_name="article",
+            name="url",
+            field=models.CharField(
+                help_text="URL to the external article or resource.",
+                max_length=500,
+                validators=[elearning.modules.models.validate_cloud_url],
+                verbose_name="Article URL",
+            ),
         ),
     ]

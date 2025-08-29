@@ -17,10 +17,9 @@ Created: 10.07.2025
 Version: 1.0.0
 """
 
-from django.contrib import admin
 
 # Register your models here.
-# 
+#
 # Future admin registrations for:
 # - ShiftAdmin
 # - EmployeeAdmin
