@@ -124,7 +124,6 @@ class CreateCheckoutSessionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        # Expect { "price_id": "price_123", "course_id": 42 }
         price_id = request.data.get("price_id")
         course_id = request.data.get("course_id")
 
@@ -133,16 +132,39 @@ class CreateCheckoutSessionView(APIView):
 
         customer, _ = Customer.get_or_create(subscriber=request.user)
 
-        session = stripe.checkout.Session.create(
+        # Try to fetch the customer's default PaymentMethod from Stripe
+        # (so we can reuse it without asking for card details again).
+        default_pm_id = None
+        try:
+            cust = stripe.Customer.retrieve(customer.id)
+            inv = cust.get("invoice_settings") or {}
+            default_pm_id = inv.get("default_payment_method") or None
+        except Exception:
+            default_pm_id = None  # non-fatal
+
+        # Base params for Checkout
+        params = dict(
             mode="payment",
             customer=customer.id,
             line_items=[{"price": price_id, "quantity": 1}],
             success_url=f"{settings.FRONTEND_URL}/payments/checkout/success?session_id={{CHECKOUT_SESSION_ID}}&course={course_id}",
-            cancel_url = f"{settings.FRONTEND_URL}/payments/cancel?course={course_id}",
+            cancel_url=f"{settings.FRONTEND_URL}/payments/cancel?course={course_id}",
             allow_promotion_codes=True,
             metadata={"course_id": str(course_id), "user_id": str(request.user.id)},
         )
+
+        # If we have a default PM, tell Checkout's underlying PaymentIntent to use it.
+        # This lets the user complete without re-entering card details.
+        if default_pm_id:
+            params["payment_intent_data"] = {
+                "payment_method": default_pm_id,
+                # Optional but recommended to let Stripe handle 3DS if needed:
+                "setup_future_usage": "off_session",
+            }
+
+        session = stripe.checkout.Session.create(**params)
         return Response({"checkout_url": session.url, "id": session.id}, status=200)
+
 
 
 class GetStripeConfigView(APIView):
@@ -164,23 +186,31 @@ class ListPaymentMethodsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        customer, _= Customer.get_or_create(subscriber=request.user)
-        pms = PaymentMethod.objects.filter(customer=customer, type="card")
-        data = [
-            {
-                "id": pm.id,
-                "brand": pm.card.get("brand"),
-                "last4": pm.card.get("last4"),
-                "exp_month": pm.card.get("exp_month"),
-                "exp_year": pm.card.get("exp_year"),
-                "is_default": (
-                    customer.default_payment_method
-                    and customer.default_payment_method.id == pm.id
-                ),
-            }
-            for pm in pms
-        ]
-        return Response({"payment_methods": data}, status=200)
+        customer, _ = Customer.get_or_create(subscriber=request.user)
+
+        # Read directly from Stripe (fast, no dj-stripe lag)
+        stripe_pms = stripe.PaymentMethod.list(customer=customer.id, type="card")
+        cust = stripe.Customer.retrieve(customer.id)
+
+        inv = getattr(cust, "invoice_settings", None) or {}
+        default_pm_id = inv.get("default_payment_method")
+
+        data = []
+        for pm in stripe_pms.get("data", []):
+            card = pm.get("card") or {}
+            data.append({
+                "id": pm.get("id"),
+                "brand": card.get("brand"),
+                "last4": card.get("last4"),
+                "exp_month": card.get("exp_month"),
+                "exp_year": card.get("exp_year"),
+                "is_default": (pm.get("id") == default_pm_id),
+            })
+
+        resp = Response({"payment_methods": data}, status=200)
+        resp["Cache-Control"] = "no-store"  # avoid any caching confusion
+        return resp
+
 
 
 class SetDefaultPaymentMethodView(APIView):
@@ -193,15 +223,22 @@ class SetDefaultPaymentMethodView(APIView):
 
         customer, _ = Customer.get_or_create(subscriber=request.user)
 
-        # Attach & set default on Stripe (idempotent if already attached)
-        stripe.PaymentMethod.attach(pm_id, customer=customer.id)
+        # Attach safely (idempotent)
+        try:
+            stripe.PaymentMethod.attach(pm_id, customer=customer.id)
+        except stripe.error.InvalidRequestError as e:
+            # if it's already attached to this customer, ignore
+            if "already exists" not in str(e).lower():
+                raise
+
+        # Set as default for invoices (prevents “enter card again”)
         stripe.Customer.modify(
             customer.id,
             invoice_settings={"default_payment_method": pm_id},
         )
 
-        # (Optional) Let dj-stripe catch up via webhooks; or refresh later.
         return Response({"detail": "Default payment method set."}, status=200)
+
 
 
 
