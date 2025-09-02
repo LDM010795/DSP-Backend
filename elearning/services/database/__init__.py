@@ -13,6 +13,4 @@ Version: 1.0.0
 
 from .database_service import DatabaseService
 
-__all__ = [
-    'DatabaseService'
-] 
+__all__ = ["DatabaseService"]

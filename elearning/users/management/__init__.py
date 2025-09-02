@@ -12,4 +12,4 @@ Features:
 Author: DSP Development Team
 Created: 10.07.2025
 Version: 1.0.0
-""" 
+"""

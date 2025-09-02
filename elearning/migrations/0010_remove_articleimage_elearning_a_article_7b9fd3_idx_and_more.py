@@ -4,18 +4,17 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('elearning', '0009_add_article_images'),
+        ("elearning", "0009_add_article_images"),
     ]
 
     operations = [
         migrations.RemoveIndex(
-            model_name='articleimage',
-            name='elearning_a_article_7b9fd3_idx',
+            model_name="articleimage",
+            name="elearning_a_article_7b9fd3_idx",
         ),
         migrations.RemoveField(
-            model_name='articleimage',
-            name='article',
+            model_name="articleimage",
+            name="article",
         ),
     ]
