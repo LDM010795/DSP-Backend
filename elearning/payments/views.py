@@ -132,38 +132,40 @@ class CreateCheckoutSessionView(APIView):
 
         customer, _ = Customer.get_or_create(subscriber=request.user)
 
-        # Try to fetch the customer's default PaymentMethod from Stripe
-        # (so we can reuse it without asking for card details again).
-        default_pm_id = None
+        # (Optional) fetch default PM for diagnostics/logging; not pushed into params for mode="payment"
         try:
             cust = stripe.Customer.retrieve(customer.id)
             inv = cust.get("invoice_settings") or {}
             default_pm_id = inv.get("default_payment_method") or None
         except Exception:
-            default_pm_id = None  # non-fatal
+            default_pm_id = None
 
-        # Base params for Checkout
         params = dict(
             mode="payment",
             customer=customer.id,
             line_items=[{"price": price_id, "quantity": 1}],
-            success_url=f"{settings.FRONTEND_URL}/payments/checkout/success?session_id={{CHECKOUT_SESSION_ID}}&course={course_id}",
+            success_url=(
+                f"{settings.FRONTEND_URL}"
+                f"/payments/checkout/success?session_id={{CHECKOUT_SESSION_ID}}&course={course_id}"
+            ),
             cancel_url=f"{settings.FRONTEND_URL}/payments/cancel?course={course_id}",
             allow_promotion_codes=True,
             metadata={"course_id": str(course_id), "user_id": str(request.user.id)},
         )
 
-        # If we have a default PM, tell Checkout's underlying PaymentIntent to use it.
-        # This lets the user complete without re-entering card details.
-        if default_pm_id:
-            params["payment_intent_data"] = {
-                "payment_method": default_pm_id,
-                # Optional but recommended to let Stripe handle 3DS if needed:
-                "setup_future_usage": "off_session",
-            }
+        try:
+            session = stripe.checkout.Session.create(**params)
+            return Response({"checkout_url": session.url, "id": session.id}, status=200)
+        except stripe.error.StripeError as e:
+            return Response(
+                {
+                    "detail": "Stripe Checkout konnte nicht erstellt werden.",
+                    "stripe_error": getattr(e, "user_message", str(e)),
+                },
+                status=400,
+            )
 
-        session = stripe.checkout.Session.create(**params)
-        return Response({"checkout_url": session.url, "id": session.id}, status=200)
+
 
 
 
