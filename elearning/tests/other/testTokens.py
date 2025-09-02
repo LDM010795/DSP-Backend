@@ -7,15 +7,20 @@ from rest_framework import status
     Token werden für den Login benötigt.
 """
 
+
 class TokenTests(TestCase):
     @classmethod
     def setUp(cls):
-        cls.user = User.objects.create_user(username='testUser', password='testPassword')
-        response = cls.client.post("/api/elearning/token/", {"username": "testUser", "password": "testPassword"})
+        cls.user = User.objects.create_user(
+            username="testUser", password="testPassword"
+        )
+        response = cls.client.post(
+            "/api/elearning/token/",
+            {"username": "testUser", "password": "testPassword"},
+        )
         cls.access_token = response.cookies.get("access_token")
         cls.refresh_token = response.cookies.get("refresh_token")
         cls.body = response.json()
-
 
     def test_no_JWT(self):
         self.assertEqual(self.body, {})

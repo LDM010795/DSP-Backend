@@ -13,4 +13,4 @@ Version: 1.0.0
 # - base: Microsoft OAuth Client
 # - handlers: Business Logic für Authentifizierung
 # - state_manager: State-Management für OAuth
-# - views: API-Endpoints für Authentifizierung 
+# - views: API-Endpoints für Authentifizierung

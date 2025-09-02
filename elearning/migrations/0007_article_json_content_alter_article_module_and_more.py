@@ -5,35 +5,57 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('elearning', '0006_task_task_config_alter_task_description'),
+        ("elearning", "0006_task_task_config_alter_task_description"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='article',
-            name='json_content',
-            field=models.JSONField(blank=True, help_text='Optional extracted content in JSON format.', null=True, verbose_name='Extracted JSON'),
+            model_name="article",
+            name="json_content",
+            field=models.JSONField(
+                blank=True,
+                help_text="Optional extracted content in JSON format.",
+                null=True,
+                verbose_name="Extracted JSON",
+            ),
         ),
         migrations.AlterField(
-            model_name='article',
-            name='module',
-            field=models.ForeignKey(help_text='Module this article belongs to.', on_delete=django.db.models.deletion.CASCADE, related_name='articles', to='elearning.module', verbose_name='Module'),
+            model_name="article",
+            name="module",
+            field=models.ForeignKey(
+                help_text="Module this article belongs to.",
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="articles",
+                to="elearning.module",
+                verbose_name="Module",
+            ),
         ),
         migrations.AlterField(
-            model_name='article',
-            name='order',
-            field=models.PositiveIntegerField(default=0, help_text='Order of articles within the module.', verbose_name='Display Order'),
+            model_name="article",
+            name="order",
+            field=models.PositiveIntegerField(
+                default=0,
+                help_text="Order of articles within the module.",
+                verbose_name="Display Order",
+            ),
         ),
         migrations.AlterField(
-            model_name='article',
-            name='title',
-            field=models.CharField(help_text='Descriptive title for the article.', max_length=255, verbose_name='Article Title'),
+            model_name="article",
+            name="title",
+            field=models.CharField(
+                help_text="Descriptive title for the article.",
+                max_length=255,
+                verbose_name="Article Title",
+            ),
         ),
         migrations.AlterField(
-            model_name='article',
-            name='url',
-            field=models.URLField(help_text='URL to the external article or resource.', max_length=500, verbose_name='Article URL'),
+            model_name="article",
+            name="url",
+            field=models.URLField(
+                help_text="URL to the external article or resource.",
+                max_length=500,
+                verbose_name="Article URL",
+            ),
         ),
     ]

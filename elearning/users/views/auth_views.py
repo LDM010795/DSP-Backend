@@ -19,8 +19,6 @@ Author: DSP Development Team
 Version: 1.0.0
 """
 
-from typing import Any, Dict, Optional
-from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status, generics
@@ -28,7 +26,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -37,21 +35,23 @@ from djstripe.models import Customer
 
 from ..models import Profile
 from ..serializers import (
-    CustomTokenObtainPairSerializer,
-    SetInitialPasswordSerializer, ExternalUserRegistrationSerializer)
+    SetInitialPasswordSerializer,
+    ExternalUserRegistrationSerializer,
+)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
-Custom view extending SimpleJWT's TokenObtainPairView to store JWT tokens in secure HTTP-only cookies
-instead of returning them in the response body.
-- Calls the parent class's `post` method to get access/refresh tokens.
-- Removes tokens from the response payload to avoid exposing them in JSON.
-- Sets `refresh_token` and `access_token` cookies with secure flags:
- * httponly=True → prevents JavaScript access (mitigates XSS attacks)
- * secure=True → transmits cookies only over HTTPS
- * samesite="None" → required for cross-site requests; should be "Strict" or "Lax" in production
+    Custom view extending SimpleJWT's TokenObtainPairView to store JWT tokens in secure HTTP-only cookies
+    instead of returning them in the response body.
+    - Calls the parent class's `post` method to get access/refresh tokens.
+    - Removes tokens from the response payload to avoid exposing them in JSON.
+    - Sets `refresh_token` and `access_token` cookies with secure flags:
+     * httponly=True → prevents JavaScript access (mitigates XSS attacks)
+     * secure=True → transmits cookies only over HTTPS
+     * samesite="None" → required for cross-site requests; should be "Strict" or "Lax" in production
     """
+
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
@@ -61,56 +61,67 @@ instead of returning them in the response body.
 
             if refresh:
                 response.set_cookie(
-                    "refresh_token", refresh,
-                    httponly=True, secure=True, samesite="None"
+                    "refresh_token",
+                    refresh,
+                    httponly=True,
+                    secure=True,
+                    samesite="None",
                 )
             if access:
                 response.set_cookie(
-                    "access_token", access,
-                    httponly=True, secure=True, samesite="None" # TODO: Definitely change this to Strict on Prod!
+                    "access_token",
+                    access,
+                    httponly=True,
+                    secure=True,
+                    samesite="None",  # TODO: Definitely change this to Strict on Prod!
                 )
         return response
 
+
 class CustomTokenRefreshView(TokenRefreshView):
-        """
+    """
     Custom view extending SimpleJWT's TokenRefreshView to refresh JWT tokens and store them
     in secure HTTP-only cookies instead of returning them in the response body.
     - Calls the parent class's `post` method to generate new access/refresh tokens.
     - Removes tokens from the response payload.
     - Updates `refresh_token` and `access_token` cookies with secure flags.
-        """
+    """
 
-        def post(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.COOKIES.get("refresh_token")
+        if not refresh_token:
+            return Response(
+                {"detail": "Refresh token not provided"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-            refresh_token = request.COOKIES.get("refresh_token")
-            if not refresh_token:
-                return Response({"detail": "Refresh token not provided"}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = TokenRefreshSerializer(data={"refresh": refresh_token})
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-            serializer = TokenRefreshSerializer(data={"refresh": refresh_token})
-            try:
-                serializer.is_valid(raise_exception=True)
-            except TokenError as e:
-                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        data = serializer.validated_data
 
-            data = serializer.validated_data
+        refresh = data.pop("refresh", None)
+        access = data.pop("access", None)
 
-            refresh = data.pop("refresh", None)
-            access = data.pop("access", None)
+        response = Response(status=status.HTTP_200_OK)
 
-            response = Response(status=status.HTTP_200_OK)
+        if refresh:
+            response.set_cookie(
+                "refresh_token", refresh, httponly=True, secure=True, samesite="None"
+            )
+        if access:
+            response.set_cookie(
+                "access_token",
+                access,
+                httponly=True,
+                secure=True,
+                samesite="None",  # switch to Strict in prod
+            )
 
-            if refresh:
-                response.set_cookie(
-                    "refresh_token", refresh,
-                    httponly=True, secure=True, samesite="None"
-                )
-            if access:
-                response.set_cookie(
-                    "access_token", access,
-                    httponly=True, secure=True, samesite="None"  # switch to Strict in prod
-                )
-
-            return response
+        return response
 
 
 class LogoutView(APIView):
@@ -124,6 +135,7 @@ class LogoutView(APIView):
     - Always returns a 205 Reset Content response with a success message.
     - Deletes both "refresh_token" and "access_token" cookies from the client to complete logout.
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -143,77 +155,74 @@ class LogoutView(APIView):
 class SetInitialPasswordView(APIView):
     """
     Secure initial password setting view for new users.
-    
+
     Handles the initial password setup process for users who are required
     to change their password on first login, ensuring security compliance
     and proper profile management.
-    
+
     Security Features:
     - Password strength validation
     - Confirmation matching validation
     - Profile-based access control
     - Automatic profile update after successful password change
     """
-    
+
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request: Request) -> Response:
         """
         Set initial password for authenticated user.
-        
+
         Args:
             request: HTTP request containing new password data
-            
+
         Returns:
             Response indicating password change success or failure
-            
+
         Expected Request Data:
             - password: New password (minimum 8 characters)
             - password_confirm: Password confirmation
-            
+
         Security Requirements:
             - User must be authenticated
             - User profile must have force_password_change=True
             - Password must meet Django's validation requirements
         """
         user = request.user
-        
+
         try:
             # Check if user is required to change password
             if not user.profile.force_password_change:
                 return Response(
-                    {'detail': _('Password has already been set.')},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"detail": _("Password has already been set.")},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
         except Profile.DoesNotExist:
             # Create missing profile
             Profile.objects.create(user=user, force_password_change=True)
-        
+
         # Validate and process password change
         serializer = SetInitialPasswordSerializer(data=request.data)
         if serializer.is_valid():
             try:
                 # Use serializer's save method for comprehensive handling
                 updated_user = serializer.save(user)
-                
+
                 # Log successful password change
                 # Could add audit logging here
-                
+
                 return Response(
-                    {'detail': _('Password successfully set.')},
-                    status=status.HTTP_200_OK
+                    {"detail": _("Password successfully set.")},
+                    status=status.HTTP_200_OK,
                 )
-                
-            except Exception as e:
+
+            except Exception:
                 return Response(
-                    {'detail': _('An error occurred while setting the password.')},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    {"detail": _("An error occurred while setting the password.")},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
-        
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ExternalUserRegistrationView(generics.CreateAPIView):
@@ -265,8 +274,6 @@ class ExternalUserRegistrationView(generics.CreateAPIView):
         # Initialize the serializer with the incoming data
         serializer = self.get_serializer(data=request.data)
 
-
-
         # Validate the data
         if serializer.is_valid():
             user = serializer.save()
@@ -274,9 +281,6 @@ class ExternalUserRegistrationView(generics.CreateAPIView):
             Customer.get_or_create(subscriber=user)
             return Response(
                 {"detail": _("Registration successful.")},
-                status=status.HTTP_201_CREATED
+                status=status.HTTP_201_CREATED,
             )
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

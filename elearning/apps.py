@@ -14,38 +14,37 @@ Version: 1.0.0
 """
 
 from django.apps import AppConfig
-from typing import Any
 
 
 class ElearningConfig(AppConfig):
     """
     Configuration class for the E-Learning Django application.
-    
+
     This class defines the application's configuration including default field types,
     application name, and any initialization logic required for the E-Learning system.
-    
+
     Attributes:
         default_auto_field: Default primary key field type for models
         name: Application name for Django registration
         verbose_name: Human-readable application name for admin interface
     """
-    
-    default_auto_field: str = 'django.db.models.BigAutoField'
-    name: str = 'elearning'
-    verbose_name: str = 'E-Learning System'
-    
+
+    default_auto_field: str = "django.db.models.BigAutoField"
+    name: str = "elearning"
+    verbose_name: str = "E-Learning System"
+
     def ready(self) -> None:
         """
         Initialize the application when Django starts.
-        
+
         This method is called when the application is ready and can be used
         to perform any initialization logic such as signal registration,
         custom model validation, or other startup tasks.
-        
+
         Note: This method should be idempotent and safe to call multiple times
         during testing or application reloads.
         """
         super().ready()
-        
+
         # Import signals or perform other initialization logic here
         # Example: from . import signals  # noqa: F401
