@@ -14,6 +14,7 @@ Version: 2.1.0 (Refactored & Corrected)
 """
 import logging
 import secrets
+from http.cookiejar import Cookie
 from urllib.parse import urlencode
 
 from rest_framework.views import APIView
@@ -94,7 +95,7 @@ class MicrosoftCallbackView(APIView):
             # Forward all query params from Microsoft to the frontend
             query_params = request.GET.urlencode()
             redirect_url = f"{tool.frontend_url}?{query_params}"
-            logger.info(f"Redirecting user to frontend for tool '{tool_slug}': {redirect_url}")
+            logger.debug(f"Redirecting user to frontend for tool '{tool_slug}': {redirect_url}")
             return HttpResponseRedirect(redirect_url)
         except Tool.DoesNotExist:
             logger.warning(f"Tool with slug '{tool_slug}' not found after Microsoft callback.")
@@ -108,22 +109,22 @@ class MicrosoftCallbackView(APIView):
         """
         auth_code = request.data.get("code")
         state = request.data.get("state")
-        
+
         if not all([auth_code, state]):
             return Response({"error": "Missing 'code' or 'state' in request body."}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Verify that the tool from the URL matches the one stored in the state
         cached_tool_slug = cache.get(f"oauth_state_{state}")
         if not cached_tool_slug or cached_tool_slug != tool_slug:
             return Response({"error": "State-Tool mismatch or expired state."}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         cache.delete(f"oauth_state_{state}")
 
         try:
             tool = Tool.objects.get(slug=tool_slug, is_active=True)
             client = MicrosoftAuthClient()
             redirect_uri = request.build_absolute_uri(CALLBACK_PATH)
-            
+
             # Ensure consistency for the token exchange redirect URI
             if "127.0.0.1" in redirect_uri:
                 redirect_uri = redirect_uri.replace("127.0.0.1", "localhost")
@@ -133,8 +134,24 @@ class MicrosoftCallbackView(APIView):
 
             handler = EmployeeAuthHandler()
             auth_response_data = handler.handle_authentication(user_info, tool)
-            
-            return Response(auth_response_data)
+            access = auth_response_data["tokens"]["access"]
+            refresh = auth_response_data["tokens"]["refresh"]
+
+            response = Response(auth_response_data)
+
+            if access:
+                response.set_cookie(
+                    "access_token", access,
+                    httponly=True, secure=True, samesite="None"  # TODO: Definitely change this to Strict on Prod!
+                )
+            if refresh:
+                response.set_cookie(
+                    "refresh_token", access,
+                    httponly=True, secure=True, samesite="None"  # TODO: Definitely change this to Strict on Prod!
+                )
+
+            return response
+
 
         except (AzureAuthException, MicrosoftGraphException, ValueError, PermissionError) as e:
             logger.error(f"Authentication failed for tool '{tool_slug}': {e}")
