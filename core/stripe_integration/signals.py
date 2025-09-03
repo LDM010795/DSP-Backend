@@ -1,106 +1,60 @@
 """
-Stripe Webhook Signal Handlers for E‑Learning Payments (version‑agnostic)
-========================================================================
+Stripe Webhook Handlers (core.stripe_integration.signals)
+=========================================================
 
-Overview
---------
-This module contains **post‑processing handlers** for Stripe webhooks using
-`dj-stripe`. Unlike an earlier variant that listened to
-`djstripe.signals.webhook_event_processed` (not present in all versions),
-this module hooks into **Django’s stable `post_save` signal on
-`djstripe.models.Event`**. That means it runs **after dj‑stripe has verified
-the signature, de‑duplicated the event, and stored it in the database**,
-but without relying on a version‑specific signal. The handlers therefore
-only receive **trusted and idempotent** events and work across dj‑stripe versions.
+This module listens to Stripe webhook events via dj-stripe.
+We use Django’s stable `post_save` signal on `djstripe.models.Event`
+instead of version-specific signals. That guarantees compatibility
+and ensures we only process verified, de-duplicated events.
 
-What this module does
----------------------
-1) **One‑off Purchases (Checkout)**
-   - On `checkout.session.completed`, enroll the user into the purchased
-     course (using metadata `{ "user_id": ..., "course_id": ... }` set by the
-     backend when creating the Checkout Session).
-   - Optionally create a local `Payment` record for reporting/analytics.
+Responsibilities
+----------------
+1. One-off Purchases
+   - Event: checkout.session.completed
+   - Action: enroll user into course (via metadata) and optionally
+     record a local Payment object.
 
-2) **Direct Charges / Saved Cards**
-   - On `payment_intent.succeeded`, if the backend later charges saved cards
-     (PaymentIntents created server‑side), this handler can also enroll users
-     (when metadata contains course/user) and persist payment details.
+2. Saved Card Charges
+   - Event: payment_intent.succeeded
+   - Action: enroll user (if metadata is present), record payment.
 
-3) **Subscriptions (Future‑proof)**
-   - On `invoice.payment_succeeded`, if subscriptions are added, grant access
-     accordingly and record the payment.
+3. Subscriptions (future extension)
+   - Event: invoice.payment_succeeded
+   - Action: grant subscription access, record payment.
 
-4) **Refunds**
-   - On `charge.refunded` or `charge.refund.updated`, mark local payment
-     records as refunded and (optionally) revoke access.
+4. Refunds
+   - Events: charge.refunded, charge.refund.updated
+   - Action: mark local Payment as refunded.
 
-Event Handling Matrix
----------------------
-- `checkout.session.completed`  → enroll user, record payment
-- `payment_intent.succeeded`    → enroll (if metadata present), record payment
-- `invoice.payment_succeeded`   → grant access for subscriptions, record payment
-- `charge.refunded/*updated*`   → mark local payments as refunded
+5. SetupIntents
+   - Event: setup_intent.succeeded
+   - Action: attach the card to the Customer and mark as default.
 
-Data Flow (Happy Path)
-----------------------
-Stripe → Webhook → **dj‑stripe verifies & saves `Event`** → this module receives
-**`post_save(Event)`** and:
-  1. Reads `event.type` and extracts the payload from `event.data` safely.
-  2. Reads `metadata.user_id` & `metadata.course_id` when applicable.
-  3. Loads `User` and `Course` from the DB.
-  4. **Idempotently** creates an `Enrollment` (via `get_or_create`).
-  5. Optionally persists a local `Payment` row for analytics/reporting.
+Event Flow
+----------
+Stripe → Webhook → dj-stripe verifies & saves Event →
+post_save(Event) → this module processes the payload.
 
-Assumptions & Model Integration
--------------------------------
-- **User**: standard Django user (`get_user_model()`).
-- **Course**: a model named `Course` in `elearning` or `elearning.modules`.
-- **Enrollment**: a model named `CourseEnrollment` or `Enrollment` with fields
-  `user`, `course` (plus optional `source`, `reference`).
-- **Payment** (optional): a model in `elearning` / `elearning.payments` /
-  `payments` with fields like:
-  `user`, `course`, `stripe_payment_intent_id`, `amount`, `currency`, `status`,
-  `checkout_session_id`.
-
-If your actual model names/fields differ, adjust the `_get_model(...)` lookups
-and the writes in `_enroll_user_in_course(...)` and `_record_payment(...)`.
-
-Why `post_save(Event)` instead of `webhook_event_processed`
------------------------------------------------------------
-- **Compatibility:** Some dj‑stripe versions don’t expose `webhook_event_processed`.
-- **Reliability:** `post_save(Event)` still fires **after** signature verification
-  and persistence, so events are de‑duplicated and trustworthy.
-- **Simplicity:** One unified, version‑agnostic entrypoint reduces breakage risk.
-
-Idempotency & Safety
+Safety & Idempotency
 --------------------
-- Handlers never re‑raise exceptions out of the signal; failures are logged to
-  avoid webhook retry storms.
-- Enrollment uses `get_or_create` to prevent duplicates on Stripe retries.
-- Writes are wrapped in short `transaction.atomic()` blocks.
+- Enrollments use `get_or_create` to avoid duplicates.
+- Payment creation is atomic and logged.
+- Failures are logged but never re-raised (to avoid retry storms).
 
-Security Considerations
------------------------
-- Events are processed **after** dj‑stripe signature verification.
-- Never trust client‑side metadata for access control unless it was set by the
-  backend (here we rely on metadata we add when creating Checkout Sessions).
+Extensibility
+-------------
+- Works with Course/Enrollment/Payment models if present.
+- Can be extended to handle invoices, subscriptions, or other products.
 
-Local Payment Recording (Optional)
----------------------------------
-- If a `Payment` model exists, payments are recorded. If not, the module logs
-  that local recording was skipped. This keeps reporting optional and decoupled.
-
-Logging
--------
-- Success paths and decisions (enrollment created/already exists) are logged at
-  `INFO` level.
-- Missing models or objects are logged with enough context for debugging.
-- Exceptions are logged with stack traces; processing continues to keep webhook
-  delivery healthy.
+Security
+--------
+- Events are handled only after dj-stripe signature verification.
+- Metadata is trusted only when set server-side (e.g., by Checkout creation).
 
 Author: DSP Development Team
-Date: [2025-08-21]
+Date: 2025-08-21
 """
+
 
 from __future__ import annotations
 

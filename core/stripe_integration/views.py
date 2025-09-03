@@ -1,98 +1,74 @@
 """
+Stripe Integration Views (core.stripe_integration)
+==================================================
 
-Payments Views for Stripe Integration
-=====================================
+This module exposes REST API endpoints for handling payments with Stripe.
+It is now located in the core/stripe_integration package for easier extension to other products
+beyond courses.
 
-This module provides API endpoints for handling payments through Stripe.
-It contains endpoints for both saving a customer’s payment method (via SetupIntent)
-and creating a Checkout Session for purchasing courses.
-
-Endpoints:
-----------
+Endpoints
+---------
 
 1. CreateSetupIntentView
    - URL: /api/payments/stripe/setup-intent/
    - Method: POST
-   - Auth: Required (user must be logged in)
+   - Auth: Required
    - Purpose:
-       Creates a Stripe SetupIntent so that the frontend can securely collect
-       and save a payment method (e.g., a credit card) for future use.
-   - Typical Flow:
-       1. Frontend calls this endpoint to get a client secret.
-       2. Frontend uses Stripe.js to collect card details.
-       3. Payment method is attached to the Stripe customer for later charges.
+       Creates a Stripe SetupIntent so the frontend can securely collect
+       and save a card payment method for future use.
 
 2. CreateCheckoutSessionView
    - URL: /api/payments/stripe/checkout-session/
    - Method: POST
-   - Auth: Required (user must be logged in)
-   - Expected Body:
-       {
-           "price_id": "price_123",
-           "course_id": 42
-       }
+   - Body: {"price_id": "...", "course_id": 42}
    - Purpose:
-       Creates a Stripe Checkout Session that allows the user to pay for
-       a specific course. After successful payment, the user will be redirected
-       back to the frontend with course and session details.
-   - Typical Flow:
-       1. Frontend sends `price_id` (from Stripe) and `course_id` (internal ID).
-       2. Backend creates a Stripe Checkout Session with this info.
-       3. Stripe redirects the user to success or cancel URLs depending on outcome.
-       4. Payment metadata ensures we can associate the payment with the course/user.
+       Creates a Stripe Checkout Session for one-off course purchases.
+       Metadata ensures that we can associate payments with courses/users.
 
 3. GetStripeConfigView
    - URL: /api/payments/stripe/config/
    - Method: GET
-   - Auth: Public (AllowAny)
+   - Auth: None
    - Purpose:
-       Returns the correct publishable key (test/live) so the frontend
-       can safely initialize Stripe.js without exposing secret keys.
+       Returns the correct publishable key so the frontend can
+       initialize Stripe.js safely.
 
 4. ListPaymentMethodsView
    - URL: /api/payments/stripe/payment-methods/
    - Method: GET
    - Auth: Required
    - Purpose:
-       Returns a list of the user’s saved card payment methods,
-       including brand, last4 digits, expiry, and whether each is
-       the default method.
+       Lists all saved card payment methods of the authenticated user.
 
 5. SetDefaultPaymentMethodView
    - URL: /api/payments/stripe/payment-methods/default/
    - Method: POST
-   - Auth: Required
-   - Expected Body:
-       {
-           "payment_method_id": "pm_abc123"
-       }
+   - Body: {"payment_method_id": "pm_123"}
    - Purpose:
-       Attaches a given card (if not already attached) and sets it as
-       the default payment method for the user’s Stripe Customer record.
+       Attaches a given card (if needed) and marks it as the default.
 
-Features:
----------
-- Ensures every user has a Stripe `Customer` object.
-- Secure handling of payment methods and sessions.
-- Redirect integration with frontend URLs for success and cancel flows.
-- Designed for extensibility (additional endpoints like invoices, subscriptions
-  can be added later).
+Features
+--------
+- Ensures each user has a Stripe Customer object (via dj-stripe).
+- Safe handling of payment methods (card details never touch our backend).
+- Redirect integration with frontend success/cancel flows.
+- Designed for extensibility: subscriptions, invoices, refunds can be added.
 
-Security:
----------
-- Requires authentication: Only logged-in users can initiate a SetupIntent.
-- Sensitive data (e.g., card details) is **never** handled by our backend.
-  Instead, it is collected directly by Stripe via the client_secret returned here.
+Security
+--------
+- Only authenticated users can save or charge cards.
+- Card data is handled exclusively by Stripe; backend only stores metadata.
 
-Dependencies:
--------------
-- Django REST Framework for API endpoints.
-- dj-stripe for managing Customer and syncing Stripe objects into the database.
-- stripe (official Stripe Python library) for creating SetupIntents.
+Dependencies
+------------
+- Django REST Framework (API endpoints)
+- dj-stripe (customer syncing, event persistence)
+- stripe (official Python SDK)
 
 Author: DSP Development Team
-Date: [2025-08-21]
+Date: 2025-08-21
 """
+
 
 
 from rest_framework.views import APIView

@@ -46,8 +46,9 @@ INSTALLED_APPS = [
     'db_overview.apps.DbOverviewConfig',
     'core.employees.apps.EmployeesConfig',
     'shift_planner.apps.ShiftPlannerConfig',
+    'core.stripe_integration.apps.StripeIntegrationConfig',
 
-    # Stripe App
+    # Stripe
     "djstripe",
 ]
 

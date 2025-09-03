@@ -46,10 +46,4 @@ class ElearningConfig(AppConfig):
         during testing or application reloads.
         """
         super().ready()
-
-        # --- Register payments (Stripe) signals ---
-        try:
-            from .payments import signals  # noqa: F401  (imported for side effects: receivers get connected)
-        except Exception as exc:
-            # Raising here helps surface misconfiguration during development.
-            raise RuntimeError("Failed to import payments signals") from exc
+        return
