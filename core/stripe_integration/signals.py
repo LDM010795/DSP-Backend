@@ -1,58 +1,31 @@
 """
-Stripe Webhook Handlers (core.stripe_integration.signals)
-=========================================================
+Stripe Webhook Signal Handlers for E-Learning Payments (version-agnostic)
+=========================================================================
 
-This module listens to Stripe webhook events via dj-stripe.
-We use Django’s stable `post_save` signal on `djstripe.models.Event`
-instead of version-specific signals. That guarantees compatibility
-and ensures we only process verified, de-duplicated events.
+This module processes verified Stripe events that dj-stripe has already
+validated and stored. We do not talk to Stripe directly from signals.
+Instead, we react to persisted `djstripe.models.Event` rows using Django’s
+`post_save` signal, which is stable across dj-stripe versions.
 
-Responsibilities
-----------------
-1. One-off Purchases
-   - Event: checkout.session.completed
-   - Action: enroll user into course (via metadata) and optionally
-     record a local Payment object.
+Handled event types (idempotent):
+- `checkout.session.completed`  → enroll the user to the purchased course; record payment (optional)
+- `payment_intent.succeeded`    → enroll (if metadata present); record payment (optional)
+- `invoice.payment_succeeded`   → grant access (subscriptions, future-proof); record payment (optional)
+- `charge.refunded` / `charge.refund.updated` → mark local payment(s) as refunded
 
-2. Saved Card Charges
-   - Event: payment_intent.succeeded
-   - Action: enroll user (if metadata is present), record payment.
+Assumptions:
+- A `Course` model exists under `elearning` or `elearning.modules`.
+- An `Enrollment`/`CourseEnrollment` model exists that links `user` to `course`.
+- An optional local `Payment` model can be present for analytics/reporting.
+  If missing, we log and skip recording.
 
-3. Subscriptions (future extension)
-   - Event: invoice.payment_succeeded
-   - Action: grant subscription access, record payment.
-
-4. Refunds
-   - Events: charge.refunded, charge.refund.updated
-   - Action: mark local Payment as refunded.
-
-5. SetupIntents
-   - Event: setup_intent.succeeded
-   - Action: attach the card to the Customer and mark as default.
-
-Event Flow
-----------
-Stripe → Webhook → dj-stripe verifies & saves Event →
-post_save(Event) → this module processes the payload.
-
-Safety & Idempotency
---------------------
-- Enrollments use `get_or_create` to avoid duplicates.
-- Payment creation is atomic and logged.
-- Failures are logged but never re-raised (to avoid retry storms).
-
-Extensibility
--------------
-- Works with Course/Enrollment/Payment models if present.
-- Can be extended to handle invoices, subscriptions, or other products.
-
-Security
---------
-- Events are handled only after dj-stripe signature verification.
-- Metadata is trusted only when set server-side (e.g., by Checkout creation).
+Safety:
+- Never re-raise from signal handler (prevents webhook retry storms).
+- Enrollment is idempotent via `get_or_create`.
+- All writes occur inside small `transaction.atomic()` blocks.
 
 Author: DSP Development Team
-Date: 2025-08-21
+Date: 2025-09-03
 """
 
 
@@ -80,6 +53,12 @@ User = get_user_model()
 # ---------- helpers ----------
 
 def _get_model(app_label: str, model_name: str) -> Optional[Type]:
+    """
+    Safely resolve a model by app label and model name.
+
+    Returns:
+        The Django model class if found, otherwise None.
+    """
     try:
         return apps.get_model(app_label, model_name)
     except (LookupError, ValueError):
@@ -88,16 +67,18 @@ def _get_model(app_label: str, model_name: str) -> Optional[Type]:
 
 def _extract_data_object(event: Event) -> Dict[str, Any]:
     """
-    dj-stripe stores the raw Stripe JSON in `event.data`. Depending on
-    dj-stripe version and event type, the payload shape can vary a bit.
+    Extract the Stripe event's `data.object` payload from a dj-stripe Event.
 
-    Preferred shape:
-      event.data == {"object":"event", "data":{"object":{...}}}
-    Fallbacks supported here.
+    dj-stripe stores the raw Stripe JSON in `event.data`. Depending on the
+    Stripe event and dj-stripe version, the shape may vary. This function
+    normalizes access to the inner object.
+
+    Returns:
+        A dict representing the `data.object` (or `{}` if not found).
     """
     try:
         data = event.data or {}
-        # Standard Stripe event shape
+        # Standard Stripe event shape: {"data": {"object": {...}}}
         if isinstance(data, dict) and "data" in data and isinstance(data["data"], dict):
             obj = data["data"].get("object")
             if isinstance(obj, dict):
@@ -111,6 +92,16 @@ def _extract_data_object(event: Event) -> Dict[str, Any]:
 
 
 def _get_user_and_course(user_id: str | int | None, course_id: str | int | None) -> Tuple[Optional[User], Optional[object]]:
+    """
+    Resolve the Django user and course instances from ids.
+
+    Tries both `elearning.Course` and `elearning.modules.Course` to remain
+    resilient to project structure.
+
+    Returns:
+         (user, course) — either or both can be None if not found.
+    """
+
     if not user_id or not course_id:
         logger.warning("Missing user_id or course_id in metadata. Skipping.")
         return None, None
@@ -138,8 +129,19 @@ def _get_user_and_course(user_id: str | int | None, course_id: str | int | None)
 
 def _enroll_user_in_course(user: User, course: object, *, source: str, reference: Optional[str]) -> bool:
     """
-    Idempotently enroll a user into a course. Adjust model/fields if needed.
-    Returns True if created, False if it already existed.
+    Idempotently enroll a user into a course.
+
+    Looks for a model named CourseEnrollment/Enrollment under `elearning` or
+    `elearning.modules`. If found, ensures `(user, course)` exists.
+
+    Args:
+        user: Django user instance.
+        course: Course instance.
+        source: String flag describing the origin ("stripe_checkout", ...).
+        reference: External reference (e.g., session id, PI id).
+
+    Returns:
+        True if a new enrollment was created, False if it already existed.
     """
     Enrollment = (
         _get_model("elearning", "CourseEnrollment")
@@ -212,8 +214,11 @@ def _record_payment(
 @receiver(post_save, sender=Event)
 def on_djstripe_event_created(sender, instance: Event, created: bool, **kwargs):
     """
-    Runs as soon as dj-stripe saves a new Event (after signature verification & de-dup).
-    Only trusted events reach here. We keep processing idempotent.
+    Post-save hook for dj-stripe Event.
+
+    Runs once for each *new* event saved by dj-stripe (after signature
+    verification and de-dup). Dispatches to small, typed handlers per event.
+    Never re-raises to avoid webhook retry storms.
     """
     if not created:
         return
@@ -240,6 +245,7 @@ def on_djstripe_event_created(sender, instance: Event, created: bool, **kwargs):
             _handle_charge_refund(obj)
 
         else:
+            # Not an error: we simply don’t need to act on every event type.
             logger.debug("Unhandled event type: %s", event_type)
 
     except Exception as exc:
@@ -250,6 +256,13 @@ def on_djstripe_event_created(sender, instance: Event, created: bool, **kwargs):
 # ---------- concrete handlers ----------
 
 def _handle_checkout_session_completed(session: Dict[str, Any]) -> None:
+    """
+    Handle `checkout.session.completed`.
+
+    - Extracts `user_id` and `course_id` from metadata.
+    - Enrolls the user to the course (idempotent).
+    - Records a local payment row, if the Payment model exists.
+    """
     metadata = session.get("metadata") or {}
     course_id = metadata.get("course_id")
     user_id = metadata.get("user_id")
@@ -279,6 +292,12 @@ def _handle_checkout_session_completed(session: Dict[str, Any]) -> None:
 
 
 def _handle_payment_intent_succeeded(payment_intent: Dict[str, Any]) -> None:
+    """
+    Handle `payment_intent.succeeded`.
+
+    If metadata contains `user_id` and `course_id`, enroll the user and
+    record a payment row.
+    """
     pi_id = payment_intent.get("id")
     amount_received = payment_intent.get("amount_received")
     currency = payment_intent.get("currency")
@@ -305,6 +324,11 @@ def _handle_payment_intent_succeeded(payment_intent: Dict[str, Any]) -> None:
 
 
 def _handle_invoice_payment_succeeded(invoice: Dict[str, Any]) -> None:
+    """
+    Handle `invoice.payment_succeeded` (subscriptions).
+
+    If metadata carries `user_id` / `course_id`, grant access and record payment.
+    """
     subscription_id = invoice.get("subscription")
     amount_paid = invoice.get("amount_paid")
     currency = invoice.get("currency")
@@ -330,6 +354,12 @@ def _handle_invoice_payment_succeeded(invoice: Dict[str, Any]) -> None:
 
 
 def _handle_charge_refund(charge_or_refund: Dict[str, Any]) -> None:
+    """
+    Handle `charge.refunded` or `charge.refund.updated`.
+
+    Marks local payments as refunded where we can correlate by identifier.
+    Adjust the filter if the Payment model stores a different Stripe id.
+    """
     charge_id = charge_or_refund.get("charge") or charge_or_refund.get("id")
     refunded = charge_or_refund.get("refunded") or charge_or_refund.get("status") == "succeeded"
 
@@ -345,7 +375,7 @@ def _handle_charge_refund(charge_or_refund: Dict[str, Any]) -> None:
 
     try:
         with transaction.atomic():
-            # If your Payment stores charge_id separately, adjust this filter.
+            # If the Payment stores charge_id separately, adjust this filter.
             qs = Payment.objects.filter(stripe_payment_intent_id=charge_id)
             if qs.exists():
                 qs.update(status="refunded")

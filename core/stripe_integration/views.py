@@ -66,7 +66,7 @@ Dependencies
 - stripe (official Python SDK)
 
 Author: DSP Development Team
-Date: 2025-08-21
+Date: 2025-09-03
 """
 
 
@@ -82,9 +82,39 @@ from djstripe.models import Customer, PaymentMethod
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class CreateSetupIntentView(APIView):
+    """
+    API endpoint to create a Stripe SetupIntent.
+
+    A SetupIntent is used to save a customer's payment method (e.g., credit card)
+    for future payments without charging immediately. This ensures that the
+    application can later perform off-session charges (automatic billing) securely.
+
+    Permissions
+    -----------
+    - Requires authentication (`IsAuthenticated`).
+    - Each request is tied to the currently logged-in user (request.user).
+
+    Workflow
+    --------
+    1. Ensures that a Stripe `Customer` object exists for the authenticated user.
+    2. Creates a new Stripe `SetupIntent` configured for `off_session` usage.
+    3. Returns the `client_secret` of the SetupIntent, which the frontend uses
+       with Stripe.js to complete payment method setup.
+    """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        """
+        POST: Create and return a SetupIntent client secret.
+
+        Returns
+        -------
+        Response
+            {
+                "client_secret": "<secret>"
+            }
+        """
         # Ensure a Stripe Customer exists for this user
         customer, _ = Customer.get_or_create(subscriber=request.user)
         # Create SetupIntent so frontend can collect and attach a payment method
@@ -97,9 +127,21 @@ class CreateSetupIntentView(APIView):
 
 
 class CreateCheckoutSessionView(APIView):
+    """
+    API endpoint to start a Stripe Checkout Session for a course purchase.
+
+    Ensures a Stripe Customer exists, validates input (price_id, course_id),
+    and returns a checkout URL for the frontend.
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        """
+        Handle POST request:
+        - Validate request data
+        - Create Stripe Checkout Session
+        - Return checkout URL + session ID
+        """
         price_id = request.data.get("price_id")
         course_id = request.data.get("course_id")
 
@@ -147,7 +189,10 @@ class CreateCheckoutSessionView(APIView):
 
 class GetStripeConfigView(APIView):
     """
-    endpoint so the frontend can initialize Stripe.js
+    Public endpoint to provide the Stripe publishable key.
+
+    Used by the frontend to initialize Stripe.js.
+    Returns the live or test key depending on settings.
     """
     permission_classes = [AllowAny]
 
@@ -161,6 +206,12 @@ class GetStripeConfigView(APIView):
 
 
 class ListPaymentMethodsView(APIView):
+    """
+    Returns the authenticated user's saved card payment methods.
+
+    Fetches directly from Stripe to avoid sync delays.
+    Marks the default card based on invoice settings.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -192,6 +243,13 @@ class ListPaymentMethodsView(APIView):
 
 
 class SetDefaultPaymentMethodView(APIView):
+    """
+    Sets a user's default payment method in Stripe.
+
+    - Ensures the given payment method is attached to the customer.
+    - Updates invoice settings so future charges use this card automatically.
+    - Returns 400 if no payment_method_id is provided.
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):

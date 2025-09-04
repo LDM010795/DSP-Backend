@@ -4,7 +4,7 @@ Stripe Integration Package - DSP
 
 This package centralizes all Stripe-related logic for the DSP backend.
 It replaces earlier ad-hoc payment code (e.g. elearning/payments) and
-serves as the **core integration point** for billing.
+serves as the core integration point for billing.
 
 Current Scope
 --------------------
