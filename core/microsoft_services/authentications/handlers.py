@@ -13,6 +13,7 @@ authentication flow easily extensible for new user types (e.g., customers).
 Author: DSP Development Team
 Version: 2.0.0 (Refactored)
 """
+
 import logging
 from typing import Dict, Any, Tuple
 from abc import ABC, abstractmethod
@@ -134,7 +135,7 @@ class EmployeeAuthHandler(BaseAuthHandler):
         now = timezone.now()
         return EmployeeToolAccess.objects.filter(
             Q(employee=employee, tool=tool),
-            Q(expires_at__isnull=True) | Q(expires_at__gt=now)
+            Q(expires_at__isnull=True) | Q(expires_at__gt=now),
         ).exists()
 
     def _create_or_update_django_user(

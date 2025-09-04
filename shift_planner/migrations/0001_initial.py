@@ -6,50 +6,135 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('employees', '0003_tool_alter_employee_email_attendance_and_more'),
+        ("employees", "0003_tool_alter_employee_email_attendance_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Availability',
+            name="Availability",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField(verbose_name='Datum')),
-                ('status', models.CharField(choices=[('available', 'Verfügbar'), ('unavailable', 'Nicht verfügbar')], default='available', max_length=12, verbose_name='Status')),
-                ('note', models.CharField(blank=True, help_text='Optionale Anmerkung (z. B. Urlaub, Arzttermin).', max_length=255, verbose_name='Notiz')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('employee', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='availabilities', to='employees.employee', verbose_name='Mitarbeiter')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date", models.DateField(verbose_name="Datum")),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("available", "Verfügbar"),
+                            ("unavailable", "Nicht verfügbar"),
+                        ],
+                        default="available",
+                        max_length=12,
+                        verbose_name="Status",
+                    ),
+                ),
+                (
+                    "note",
+                    models.CharField(
+                        blank=True,
+                        help_text="Optionale Anmerkung (z. B. Urlaub, Arzttermin).",
+                        max_length=255,
+                        verbose_name="Notiz",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "employee",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="availabilities",
+                        to="employees.employee",
+                        verbose_name="Mitarbeiter",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Verfügbarkeit',
-                'verbose_name_plural': 'Verfügbarkeiten',
-                'ordering': ['-date'],
-                'indexes': [models.Index(fields=['employee', 'date'], name='shift_plann_employe_12b17b_idx')],
-                'unique_together': {('employee', 'date')},
+                "verbose_name": "Verfügbarkeit",
+                "verbose_name_plural": "Verfügbarkeiten",
+                "ordering": ["-date"],
+                "indexes": [
+                    models.Index(
+                        fields=["employee", "date"],
+                        name="shift_plann_employe_12b17b_idx",
+                    )
+                ],
+                "unique_together": {("employee", "date")},
             },
         ),
         migrations.CreateModel(
-            name='ShiftSchedule',
+            name="ShiftSchedule",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateField(verbose_name='Datum')),
-                ('shift_type', models.CharField(choices=[('morning', 'Frühschicht'), ('evening', 'Spätschicht'), ('off', 'Frei'), ('holiday', 'Feiertag'), ('custom', 'Individuell')], max_length=10, verbose_name='Schichtart')),
-                ('hours', models.DecimalField(decimal_places=2, help_text='Geplante Arbeitsstunden (z. B. 7.5)', max_digits=4, validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(24)], verbose_name='Geplante Stunden')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('employee', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='shift_schedules', to='employees.employee', verbose_name='Mitarbeiter')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date", models.DateField(verbose_name="Datum")),
+                (
+                    "shift_type",
+                    models.CharField(
+                        choices=[
+                            ("morning", "Frühschicht"),
+                            ("evening", "Spätschicht"),
+                            ("off", "Frei"),
+                            ("holiday", "Feiertag"),
+                            ("custom", "Individuell"),
+                        ],
+                        max_length=10,
+                        verbose_name="Schichtart",
+                    ),
+                ),
+                (
+                    "hours",
+                    models.DecimalField(
+                        decimal_places=2,
+                        help_text="Geplante Arbeitsstunden (z. B. 7.5)",
+                        max_digits=4,
+                        validators=[
+                            django.core.validators.MinValueValidator(0),
+                            django.core.validators.MaxValueValidator(24),
+                        ],
+                        verbose_name="Geplante Stunden",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "employee",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="shift_schedules",
+                        to="employees.employee",
+                        verbose_name="Mitarbeiter",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Schichtplan-Eintrag',
-                'verbose_name_plural': 'Schichtplan-Einträge',
-                'ordering': ['-date'],
-                'indexes': [models.Index(fields=['employee', 'date'], name='shift_plann_employe_9969e9_idx')],
-                'unique_together': {('employee', 'date')},
+                "verbose_name": "Schichtplan-Eintrag",
+                "verbose_name_plural": "Schichtplan-Einträge",
+                "ordering": ["-date"],
+                "indexes": [
+                    models.Index(
+                        fields=["employee", "date"],
+                        name="shift_plann_employe_9969e9_idx",
+                    )
+                ],
+                "unique_together": {("employee", "date")},
             },
         ),
     ]

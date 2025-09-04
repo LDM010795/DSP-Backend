@@ -5,47 +5,68 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='SchemaSnapshot',
+            name="SchemaSnapshot",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('total_models', models.IntegerField(default=0)),
-                ('total_tables', models.IntegerField(default=0)),
-                ('total_relationships', models.IntegerField(default=0)),
-                ('schema_hash', models.CharField(max_length=64, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("total_models", models.IntegerField(default=0)),
+                ("total_tables", models.IntegerField(default=0)),
+                ("total_relationships", models.IntegerField(default=0)),
+                ("schema_hash", models.CharField(max_length=64, unique=True)),
             ],
             options={
-                'verbose_name': 'Schema Snapshot',
-                'verbose_name_plural': 'Schema Snapshots',
-                'ordering': ['-created_at'],
+                "verbose_name": "Schema Snapshot",
+                "verbose_name_plural": "Schema Snapshots",
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='ModelAnalysis',
+            name="ModelAnalysis",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('app_label', models.CharField(max_length=100)),
-                ('model_name', models.CharField(max_length=100)),
-                ('table_name', models.CharField(max_length=100)),
-                ('field_count', models.IntegerField(default=0)),
-                ('relationship_count', models.IntegerField(default=0)),
-                ('record_count', models.IntegerField(default=0)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('snapshot', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='model_analyses', to='db_overview.schemasnapshot')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("app_label", models.CharField(max_length=100)),
+                ("model_name", models.CharField(max_length=100)),
+                ("table_name", models.CharField(max_length=100)),
+                ("field_count", models.IntegerField(default=0)),
+                ("relationship_count", models.IntegerField(default=0)),
+                ("record_count", models.IntegerField(default=0)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "snapshot",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="model_analyses",
+                        to="db_overview.schemasnapshot",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Model Analysis',
-                'verbose_name_plural': 'Model Analyses',
-                'ordering': ['app_label', 'model_name'],
-                'unique_together': {('snapshot', 'app_label', 'model_name')},
+                "verbose_name": "Model Analysis",
+                "verbose_name_plural": "Model Analyses",
+                "ordering": ["app_label", "model_name"],
+                "unique_together": {("snapshot", "app_label", "model_name")},
             },
         ),
     ]

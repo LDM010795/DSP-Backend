@@ -14,8 +14,4 @@ Version: 1.0.0
 from .word_processing_service import WordProcessingService, ProcessedArticle
 from .word_extraction import WordExtraction
 
-__all__ = [
-    'WordProcessingService',
-    'ProcessedArticle',
-    'WordExtraction'
-] 
+__all__ = ["WordProcessingService", "ProcessedArticle", "WordExtraction"]

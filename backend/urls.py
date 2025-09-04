@@ -14,17 +14,17 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/elearning/', include('elearning.urls')),
-    path('api/microsoft/', include('core.microsoft_services.urls')),
-    path('api/db-overview/', include('db_overview.urls')),
-    path('api/employees/', include('core.employees.urls')),
-    path('api/shift-planner/', include('shift_planner.urls')),
-
+    path("admin/", admin.site.urls),
+    path("api/elearning/", include("elearning.urls")),
+    path("api/microsoft/", include("core.microsoft_services.urls")),
+    path("api/db-overview/", include("db_overview.urls")),
+    path("api/employees/", include("core.employees.urls")),
+    path("api/shift-planner/", include("shift_planner.urls")),
     # ---- Stripe / dj-stripe ----
     path('api/payments/stripe/', include('djstripe.urls')),   # dj-stripe webhook + admin
     path('api/payments/', include('core.stripe_integration.urls')), # Custom endpoints

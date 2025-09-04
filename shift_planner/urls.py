@@ -13,9 +13,19 @@ urlpatterns = [
     # Mitarbeiter
     path("employees/", EmployeeListView.as_view(), name="employee-list"),
     # Verfügbarkeiten
-    path("availabilities/", AvailabilityListCreateView.as_view(), name="availability-list"),
-    path("availabilities/<int:pk>/", AvailabilityDetailView.as_view(), name="availability-detail"),
+    path(
+        "availabilities/",
+        AvailabilityListCreateView.as_view(),
+        name="availability-list",
+    ),
+    path(
+        "availabilities/<int:pk>/",
+        AvailabilityDetailView.as_view(),
+        name="availability-detail",
+    ),
     # Schichtpläne
     path("schedules/", ShiftScheduleListCreateView.as_view(), name="schedule-list"),
-    path("schedules/<int:pk>/", ShiftScheduleDetailView.as_view(), name="schedule-detail"),
-] 
+    path(
+        "schedules/<int:pk>/", ShiftScheduleDetailView.as_view(), name="schedule-detail"
+    ),
+]

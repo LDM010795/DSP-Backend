@@ -10,7 +10,7 @@ Django app namespace for the E-Learning functionality.
 
 Architecture:
 - users/: User management and authentication models
-- modules/: Learning content and module management models  
+- modules/: Learning content and module management models
 - final_exam/: Examination system and certification models
 
 Author: DSP Development Team

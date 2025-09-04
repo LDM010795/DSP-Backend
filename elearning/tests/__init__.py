@@ -1,1 +1,1 @@
-#required for folder to be found by django
+# required for folder to be found by django

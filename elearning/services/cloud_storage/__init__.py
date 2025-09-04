@@ -13,8 +13,4 @@ Version: 1.0.0
 
 from .cloud_storage_service import CloudStorageService, CloudFile, ModuleContent
 
-__all__ = [
-    'CloudStorageService',
-    'CloudFile', 
-    'ModuleContent'
-] 
+__all__ = ["CloudStorageService", "CloudFile", "ModuleContent"]

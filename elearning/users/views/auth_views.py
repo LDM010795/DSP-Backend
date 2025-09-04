@@ -19,15 +19,14 @@ Author: DSP Development Team
 Version: 1.0.0
 """
 
-from typing import Any, Dict, Optional
-from django.contrib.auth.models import User
+from typing import Any
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -35,7 +34,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from ..models import Profile
 from ..serializers import (
     CustomTokenObtainPairSerializer,
-    SetInitialPasswordSerializer, ExternalUserRegistrationSerializer)
+    SetInitialPasswordSerializer,
+    ExternalUserRegistrationSerializer,
+)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -73,7 +74,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             response = super().post(request, *args, **kwargs)
 
             # Log successful authentication
-            if response.status_code == status.HTTP_200_OK and hasattr(self, 'user'):
+            if response.status_code == status.HTTP_200_OK and hasattr(self, "user"):
                 # Could add audit logging here
                 pass
 
@@ -82,8 +83,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         except Exception as e:
             # Log authentication failure
             return Response(
-                {'detail': _('Authentication failed. Please check your credentials.')},
-                status=status.HTTP_401_UNAUTHORIZED
+                {"detail": _("Authentication failed. Please check your credentials.")},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
 
@@ -126,8 +127,12 @@ class LogoutView(APIView):
                 # Graceful logout even without refresh_token
                 # Frontend can handle local token cleanup
                 return Response(
-                    {'detail': _('Successfully logged out (client-side cleanup recommended).')},
-                    status=status.HTTP_205_RESET_CONTENT
+                    {
+                        "detail": _(
+                            "Successfully logged out (client-side cleanup recommended)."
+                        )
+                    },
+                    status=status.HTTP_205_RESET_CONTENT,
                 )
 
             # Blacklist the refresh token if provided
@@ -138,21 +143,25 @@ class LogoutView(APIView):
             # Could add audit logging here
 
             return Response(
-                {'detail': _('Successfully logged out and token blacklisted.')},
-                status=status.HTTP_205_RESET_CONTENT
+                {"detail": _("Successfully logged out and token blacklisted.")},
+                status=status.HTTP_205_RESET_CONTENT,
             )
 
         except TokenError as e:
             # Even if token is invalid, allow logout to succeed for UX
             return Response(
-                {'detail': _('Successfully logged out (token was invalid).')},
-                status=status.HTTP_205_RESET_CONTENT
+                {"detail": _("Successfully logged out (token was invalid).")},
+                status=status.HTTP_205_RESET_CONTENT,
             )
-        except Exception as e:
+        except Exception:
             # Fallback: allow logout to succeed even if blacklisting fails
             return Response(
-                {'detail': _('Successfully logged out (error during token blacklisting).')},
-                status=status.HTTP_205_RESET_CONTENT
+                {
+                    "detail": _(
+                        "Successfully logged out (error during token blacklisting)."
+                    )
+                },
+                status=status.HTTP_205_RESET_CONTENT,
             )
 
 
@@ -198,8 +207,8 @@ class SetInitialPasswordView(APIView):
             # Check if user is required to change password
             if not user.profile.force_password_change:
                 return Response(
-                    {'detail': _('Password has already been set.')},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"detail": _("Password has already been set.")},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
         except Profile.DoesNotExist:
             # Create missing profile
@@ -216,14 +225,14 @@ class SetInitialPasswordView(APIView):
                 # Could add audit logging here
 
                 return Response(
-                    {'detail': _('Password successfully set.')},
-                    status=status.HTTP_200_OK
+                    {"detail": _("Password successfully set.")},
+                    status=status.HTTP_200_OK,
                 )
 
             except Exception as e:
                 return Response(
-                    {'detail': _('An error occurred while setting the password.')},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    {"detail": _("An error occurred while setting the password.")},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
         return Response(
@@ -285,7 +294,7 @@ class ExternalUserRegistrationView(generics.CreateAPIView):
             user = serializer.save()
             return Response(
                 {"detail": _("Registration successful.")},
-                status=status.HTTP_201_CREATED
+                status=status.HTTP_201_CREATED,
             )
         return Response(
             serializer.errors,

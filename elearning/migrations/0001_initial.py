@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -16,222 +15,620 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Exam',
+            name="Exam",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=255, unique=True)),
-                ('duration_weeks', models.PositiveSmallIntegerField(help_text='Bearbeitungszeit ab Start in vollen Wochen.', validators=[django.core.validators.MinValueValidator(1)])),
-                ('difficulty', models.CharField(choices=[('easy', 'Einfach'), ('medium', 'Mittel'), ('hard', 'Schwer')], default='medium', max_length=10)),
-                ('description', models.TextField()),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("title", models.CharField(max_length=255, unique=True)),
+                (
+                    "duration_weeks",
+                    models.PositiveSmallIntegerField(
+                        help_text="Bearbeitungszeit ab Start in vollen Wochen.",
+                        validators=[django.core.validators.MinValueValidator(1)],
+                    ),
+                ),
+                (
+                    "difficulty",
+                    models.CharField(
+                        choices=[
+                            ("easy", "Einfach"),
+                            ("medium", "Mittel"),
+                            ("hard", "Schwer"),
+                        ],
+                        default="medium",
+                        max_length=10,
+                    ),
+                ),
+                ("description", models.TextField()),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'verbose_name': 'Exam',
-                'verbose_name_plural': 'Exams',
-                'ordering': ['title'],
+                "verbose_name": "Exam",
+                "verbose_name_plural": "Exams",
+                "ordering": ["title"],
             },
         ),
         migrations.CreateModel(
-            name='Module',
+            name="Module",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(help_text='The unique title of the module.', max_length=200, unique=True)),
-                ('category', models.CharField(choices=[('Python', 'Python'), ('Web Development', 'Web Development'), ('Data Science', 'Data Science'), ('DevOps & Tools', 'DevOps & Tools'), ('Sonstiges', 'Sonstiges')], default='Sonstiges', help_text='The category this module belongs to.', max_length=50)),
-                ('is_public', models.BooleanField(default=True, help_text='If True, the module is accessible to all authenticated users. If False, access is restricted based on ModuleAccess entries.')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "title",
+                    models.CharField(
+                        help_text="The unique title of the module.",
+                        max_length=200,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "category",
+                    models.CharField(
+                        choices=[
+                            ("Python", "Python"),
+                            ("Web Development", "Web Development"),
+                            ("Data Science", "Data Science"),
+                            ("DevOps & Tools", "DevOps & Tools"),
+                            ("Sonstiges", "Sonstiges"),
+                        ],
+                        default="Sonstiges",
+                        help_text="The category this module belongs to.",
+                        max_length=50,
+                    ),
+                ),
+                (
+                    "is_public",
+                    models.BooleanField(
+                        default=True,
+                        help_text="If True, the module is accessible to all authenticated users. If False, access is restricted based on ModuleAccess entries.",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Module',
-                'verbose_name_plural': 'Modules',
-                'ordering': ['title'],
+                "verbose_name": "Module",
+                "verbose_name_plural": "Modules",
+                "ordering": ["title"],
             },
         ),
         migrations.CreateModel(
-            name='CertificationPath',
+            name="CertificationPath",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(help_text='Titel des Zertifikatspfads', max_length=200, unique=True)),
-                ('description', models.TextField(blank=True, help_text='Kurze Beschreibung, was dieser Pfad abdeckt.')),
-                ('order', models.PositiveSmallIntegerField(db_index=True, default=0, help_text='Reihenfolge für die Anzeige (kleinere Zahlen zuerst).')),
-                ('icon_name', models.CharField(blank=True, help_text='Name des Icons für das Frontend (z.B. IoCodeSlashOutline).', max_length=50, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('exams', models.ManyToManyField(blank=True, help_text='Die Abschlussprüfungen, die Teil dieses Pfades sind.', related_name='certification_paths', to='elearning.exam')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "title",
+                    models.CharField(
+                        help_text="Titel des Zertifikatspfads",
+                        max_length=200,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "description",
+                    models.TextField(
+                        blank=True,
+                        help_text="Kurze Beschreibung, was dieser Pfad abdeckt.",
+                    ),
+                ),
+                (
+                    "order",
+                    models.PositiveSmallIntegerField(
+                        db_index=True,
+                        default=0,
+                        help_text="Reihenfolge für die Anzeige (kleinere Zahlen zuerst).",
+                    ),
+                ),
+                (
+                    "icon_name",
+                    models.CharField(
+                        blank=True,
+                        help_text="Name des Icons für das Frontend (z.B. IoCodeSlashOutline).",
+                        max_length=50,
+                        null=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "exams",
+                    models.ManyToManyField(
+                        blank=True,
+                        help_text="Die Abschlussprüfungen, die Teil dieses Pfades sind.",
+                        related_name="certification_paths",
+                        to="elearning.exam",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Certification Path',
-                'verbose_name_plural': 'Certification Paths',
-                'ordering': ['order', 'title'],
+                "verbose_name": "Certification Path",
+                "verbose_name_plural": "Certification Paths",
+                "ordering": ["order", "title"],
             },
         ),
         migrations.CreateModel(
-            name='ExamAttempt',
+            name="ExamAttempt",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('status', models.CharField(choices=[('started', 'Gestartet'), ('submitted', 'Abgegeben'), ('graded', 'Bewertet')], default='started', max_length=15)),
-                ('started_at', models.DateTimeField(auto_now_add=True)),
-                ('submitted_at', models.DateTimeField(blank=True, null=True)),
-                ('graded_at', models.DateTimeField(blank=True, null=True)),
-                ('score', models.DecimalField(blank=True, decimal_places=2, help_text='Gesamtpunktzahl. Wird automatisch berechnet.', max_digits=7, null=True)),
-                ('feedback', models.TextField(blank=True, null=True)),
-                ('exam', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='attempts', to='elearning.exam')),
-                ('graded_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='graded_exam_attempts', to=settings.AUTH_USER_MODEL)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='exam_attempts', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("started", "Gestartet"),
+                            ("submitted", "Abgegeben"),
+                            ("graded", "Bewertet"),
+                        ],
+                        default="started",
+                        max_length=15,
+                    ),
+                ),
+                ("started_at", models.DateTimeField(auto_now_add=True)),
+                ("submitted_at", models.DateTimeField(blank=True, null=True)),
+                ("graded_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "score",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=2,
+                        help_text="Gesamtpunktzahl. Wird automatisch berechnet.",
+                        max_digits=7,
+                        null=True,
+                    ),
+                ),
+                ("feedback", models.TextField(blank=True, null=True)),
+                (
+                    "exam",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="attempts",
+                        to="elearning.exam",
+                    ),
+                ),
+                (
+                    "graded_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="graded_exam_attempts",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="exam_attempts",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ExamAttachment',
+            name="ExamAttachment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('file', models.FileField(upload_to='exam_uploads/%Y/%m/%d')),
-                ('uploaded_at', models.DateTimeField(auto_now_add=True)),
-                ('attempt', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='attachments', to='elearning.examattempt')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("file", models.FileField(upload_to="exam_uploads/%Y/%m/%d")),
+                ("uploaded_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "attempt",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="attachments",
+                        to="elearning.examattempt",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Exam Attachment',
-                'verbose_name_plural': 'Exam Attachments',
-                'ordering': ['uploaded_at'],
+                "verbose_name": "Exam Attachment",
+                "verbose_name_plural": "Exam Attachments",
+                "ordering": ["uploaded_at"],
             },
         ),
         migrations.CreateModel(
-            name='ExamCriterion',
+            name="ExamCriterion",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=120)),
-                ('description', models.TextField(blank=True)),
-                ('max_points', models.PositiveIntegerField(help_text='Maximale Punktzahl für dieses Kriterium.')),
-                ('exam', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='criteria', to='elearning.exam')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("title", models.CharField(max_length=120)),
+                ("description", models.TextField(blank=True)),
+                (
+                    "max_points",
+                    models.PositiveIntegerField(
+                        help_text="Maximale Punktzahl für dieses Kriterium."
+                    ),
+                ),
+                (
+                    "exam",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="criteria",
+                        to="elearning.exam",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Exam Criterion',
-                'verbose_name_plural': 'Exam Criteria',
-                'ordering': ['exam', 'title'],
-                'unique_together': {('exam', 'title')},
+                "verbose_name": "Exam Criterion",
+                "verbose_name_plural": "Exam Criteria",
+                "ordering": ["exam", "title"],
+                "unique_together": {("exam", "title")},
             },
         ),
         migrations.CreateModel(
-            name='ExamRequirement',
+            name="ExamRequirement",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('description', models.TextField(help_text='Beschreibung der Anforderung.')),
-                ('order', models.PositiveSmallIntegerField(default=0)),
-                ('exam', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='requirements', to='elearning.exam')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "description",
+                    models.TextField(help_text="Beschreibung der Anforderung."),
+                ),
+                ("order", models.PositiveSmallIntegerField(default=0)),
+                (
+                    "exam",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="requirements",
+                        to="elearning.exam",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Exam Requirement',
-                'verbose_name_plural': 'Exam Requirements',
-                'ordering': ['exam', 'order'],
+                "verbose_name": "Exam Requirement",
+                "verbose_name_plural": "Exam Requirements",
+                "ordering": ["exam", "order"],
             },
         ),
         migrations.AddField(
-            model_name='exam',
-            name='modules',
-            field=models.ManyToManyField(blank=True, help_text='Module, die vor Start dieser Prüfung absolviert sein müssen (optional).', related_name='exams', to='elearning.module'),
+            model_name="exam",
+            name="modules",
+            field=models.ManyToManyField(
+                blank=True,
+                help_text="Module, die vor Start dieser Prüfung absolviert sein müssen (optional).",
+                related_name="exams",
+                to="elearning.module",
+            ),
         ),
         migrations.CreateModel(
-            name='Content',
+            name="Content",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('video_url', models.URLField(blank=True, max_length=500, null=True)),
-                ('title', models.CharField(max_length=255)),
-                ('description', models.TextField(blank=True)),
-                ('supplementary_title', models.CharField(blank=True, max_length=200, null=True)),
-                ('order', models.PositiveIntegerField(default=0, help_text='Optional field to define the order of content within a module.')),
-                ('module', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='contents', to='elearning.module')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("video_url", models.URLField(blank=True, max_length=500, null=True)),
+                ("title", models.CharField(max_length=255)),
+                ("description", models.TextField(blank=True)),
+                (
+                    "supplementary_title",
+                    models.CharField(blank=True, max_length=200, null=True),
+                ),
+                (
+                    "order",
+                    models.PositiveIntegerField(
+                        default=0,
+                        help_text="Optional field to define the order of content within a module.",
+                    ),
+                ),
+                (
+                    "module",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="contents",
+                        to="elearning.module",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Content',
-                'verbose_name_plural': 'Contents',
-                'ordering': ['module', 'order', 'title'],
-                'unique_together': {('module', 'title')},
+                "verbose_name": "Content",
+                "verbose_name_plural": "Contents",
+                "ordering": ["module", "order", "title"],
+                "unique_together": {("module", "title")},
             },
         ),
         migrations.CreateModel(
-            name='Profile',
+            name="Profile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('force_password_change', models.BooleanField(default=True)),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='profile', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("force_password_change", models.BooleanField(default=True)),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="profile",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='SupplementaryContent',
+            name="SupplementaryContent",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('label', models.CharField(max_length=200)),
-                ('url', models.URLField(max_length=500)),
-                ('order', models.PositiveIntegerField(default=0, help_text='Optional field to define the order of supplementary links.')),
-                ('content', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='supplementary_contents', to='elearning.content')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("label", models.CharField(max_length=200)),
+                ("url", models.URLField(max_length=500)),
+                (
+                    "order",
+                    models.PositiveIntegerField(
+                        default=0,
+                        help_text="Optional field to define the order of supplementary links.",
+                    ),
+                ),
+                (
+                    "content",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="supplementary_contents",
+                        to="elearning.content",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Supplementary Content',
-                'verbose_name_plural': 'Supplementary Contents',
-                'ordering': ['content', 'order', 'label'],
+                "verbose_name": "Supplementary Content",
+                "verbose_name_plural": "Supplementary Contents",
+                "ordering": ["content", "order", "label"],
             },
         ),
         migrations.CreateModel(
-            name='Task',
+            name="Task",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=255)),
-                ('description', models.TextField()),
-                ('difficulty', models.CharField(choices=[('Einfach', 'Easy'), ('Mittel', 'Medium'), ('Schwer', 'Hard')], default='Mittel', max_length=10)),
-                ('hint', models.TextField(blank=True, null=True)),
-                ('test_file_path', models.CharField(blank=True, help_text="Relative path from the 'elearning' app directory to the python file containing unittest cases. E.g., 'task_tests/module1/task10_tests.py'", max_length=255)),
-                ('order', models.PositiveIntegerField(default=0, help_text='Optional field to define the order of tasks within a module.')),
-                ('module', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tasks', to='elearning.module')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("title", models.CharField(max_length=255)),
+                ("description", models.TextField()),
+                (
+                    "difficulty",
+                    models.CharField(
+                        choices=[
+                            ("Einfach", "Easy"),
+                            ("Mittel", "Medium"),
+                            ("Schwer", "Hard"),
+                        ],
+                        default="Mittel",
+                        max_length=10,
+                    ),
+                ),
+                ("hint", models.TextField(blank=True, null=True)),
+                (
+                    "test_file_path",
+                    models.CharField(
+                        blank=True,
+                        help_text="Relative path from the 'elearning' app directory to the python file containing unittest cases. E.g., 'task_tests/module1/task10_tests.py'",
+                        max_length=255,
+                    ),
+                ),
+                (
+                    "order",
+                    models.PositiveIntegerField(
+                        default=0,
+                        help_text="Optional field to define the order of tasks within a module.",
+                    ),
+                ),
+                (
+                    "module",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="tasks",
+                        to="elearning.module",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Task',
-                'verbose_name_plural': 'Tasks',
-                'ordering': ['module', 'order', 'title'],
-                'unique_together': {('module', 'title')},
+                "verbose_name": "Task",
+                "verbose_name_plural": "Tasks",
+                "ordering": ["module", "order", "title"],
+                "unique_together": {("module", "title")},
             },
         ),
         migrations.CreateModel(
-            name='CriterionScore',
+            name="CriterionScore",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('achieved_points', models.DecimalField(decimal_places=2, help_text='Erreichte Punkte für dieses Kriterium.', max_digits=5, validators=[django.core.validators.MinValueValidator(0)])),
-                ('attempt', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='criterion_scores', to='elearning.examattempt')),
-                ('criterion', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='scores', to='elearning.examcriterion')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "achieved_points",
+                    models.DecimalField(
+                        decimal_places=2,
+                        help_text="Erreichte Punkte für dieses Kriterium.",
+                        max_digits=5,
+                        validators=[django.core.validators.MinValueValidator(0)],
+                    ),
+                ),
+                (
+                    "attempt",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="criterion_scores",
+                        to="elearning.examattempt",
+                    ),
+                ),
+                (
+                    "criterion",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="scores",
+                        to="elearning.examcriterion",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Criterion Score',
-                'verbose_name_plural': 'Criterion Scores',
-                'ordering': ['attempt', 'criterion'],
-                'unique_together': {('attempt', 'criterion')},
+                "verbose_name": "Criterion Score",
+                "verbose_name_plural": "Criterion Scores",
+                "ordering": ["attempt", "criterion"],
+                "unique_together": {("attempt", "criterion")},
             },
         ),
         migrations.CreateModel(
-            name='ModuleAccess',
+            name="ModuleAccess",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('granted_at', models.DateTimeField(auto_now_add=True, help_text='Timestamp when access was granted')),
-                ('module', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='access_permissions', to='elearning.module')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='module_access_entries', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "granted_at",
+                    models.DateTimeField(
+                        auto_now_add=True, help_text="Timestamp when access was granted"
+                    ),
+                ),
+                (
+                    "module",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="access_permissions",
+                        to="elearning.module",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="module_access_entries",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Module Access Permission',
-                'verbose_name_plural': 'Module Access Permissions',
-                'ordering': ['user', 'module'],
-                'unique_together': {('user', 'module')},
+                "verbose_name": "Module Access Permission",
+                "verbose_name_plural": "Module Access Permissions",
+                "ordering": ["user", "module"],
+                "unique_together": {("user", "module")},
             },
         ),
         migrations.CreateModel(
-            name='UserTaskProgress',
+            name="UserTaskProgress",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('completed', models.BooleanField(default=False)),
-                ('completed_at', models.DateTimeField(blank=True, help_text='Timestamp when the task was marked as completed', null=True)),
-                ('task', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='user_progress', to='elearning.task')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='task_progress', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("completed", models.BooleanField(default=False)),
+                (
+                    "completed_at",
+                    models.DateTimeField(
+                        blank=True,
+                        help_text="Timestamp when the task was marked as completed",
+                        null=True,
+                    ),
+                ),
+                (
+                    "task",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="user_progress",
+                        to="elearning.task",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="task_progress",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'User Task Progress',
-                'verbose_name_plural': 'User Task Progresses',
-                'ordering': ['user', 'task'],
-                'unique_together': {('user', 'task')},
+                "verbose_name": "User Task Progress",
+                "verbose_name_plural": "User Task Progresses",
+                "ordering": ["user", "task"],
+                "unique_together": {("user", "task")},
             },
         ),
     ]

@@ -4,20 +4,27 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('elearning', '0005_task_task_type'),
+        ("elearning", "0005_task_task_type"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='task',
-            name='task_config',
-            field=models.JSONField(blank=True, help_text='JSON configuration for task-specific settings. For multiple choice: options, correct_answer, explanation. For programming: test configuration.', null=True, verbose_name='Task Configuration'),
+            model_name="task",
+            name="task_config",
+            field=models.JSONField(
+                blank=True,
+                help_text="JSON configuration for task-specific settings. For multiple choice: options, correct_answer, explanation. For programming: test configuration.",
+                null=True,
+                verbose_name="Task Configuration",
+            ),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='description',
-            field=models.TextField(help_text='To describe how to use the task type element', verbose_name='Task Description'),
+            model_name="task",
+            name="description",
+            field=models.TextField(
+                help_text="To describe how to use the task type element",
+                verbose_name="Task Description",
+            ),
         ),
     ]
