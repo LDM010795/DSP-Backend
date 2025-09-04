@@ -69,17 +69,16 @@ Author: DSP Development Team
 Date: 2025-09-03
 """
 
-
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 import stripe
 from django.conf import settings
-from djstripe.models import Customer, PaymentMethod
+from djstripe.models import Customer
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
+
 
 class CreateSetupIntentView(APIView):
     """
@@ -121,7 +120,7 @@ class CreateSetupIntentView(APIView):
         si = stripe.SetupIntent.create(
             customer=customer.id,
             usage="off_session",  # ensure future automatic charges work
-            payment_method_types=["card"]
+            payment_method_types=["card"],
         )
         return Response({"client_secret": si.client_secret}, status=status.HTTP_200_OK)
 
@@ -133,6 +132,7 @@ class CreateCheckoutSessionView(APIView):
     Ensures a Stripe Customer exists, validates input (price_id, course_id),
     and returns a checkout URL for the frontend.
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -146,7 +146,9 @@ class CreateCheckoutSessionView(APIView):
         course_id = request.data.get("course_id")
 
         if not price_id or not course_id:
-            return Response({"detail": "price_id and course_id are required."}, status=400)
+            return Response(
+                {"detail": "price_id and course_id are required."}, status=400
+            )
 
         customer, _ = Customer.get_or_create(subscriber=request.user)
 
@@ -184,9 +186,6 @@ class CreateCheckoutSessionView(APIView):
             )
 
 
-
-
-
 class GetStripeConfigView(APIView):
     """
     Public endpoint to provide the Stripe publishable key.
@@ -194,6 +193,7 @@ class GetStripeConfigView(APIView):
     Used by the frontend to initialize Stripe.js.
     Returns the live or test key depending on settings.
     """
+
     permission_classes = [AllowAny]
 
     def get(self, request):
@@ -212,6 +212,7 @@ class ListPaymentMethodsView(APIView):
     Fetches directly from Stripe to avoid sync delays.
     Marks the default card based on invoice settings.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -227,19 +228,20 @@ class ListPaymentMethodsView(APIView):
         data = []
         for pm in stripe_pms.get("data", []):
             card = pm.get("card") or {}
-            data.append({
-                "id": pm.get("id"),
-                "brand": card.get("brand"),
-                "last4": card.get("last4"),
-                "exp_month": card.get("exp_month"),
-                "exp_year": card.get("exp_year"),
-                "is_default": (pm.get("id") == default_pm_id),
-            })
+            data.append(
+                {
+                    "id": pm.get("id"),
+                    "brand": card.get("brand"),
+                    "last4": card.get("last4"),
+                    "exp_month": card.get("exp_month"),
+                    "exp_year": card.get("exp_year"),
+                    "is_default": (pm.get("id") == default_pm_id),
+                }
+            )
 
         resp = Response({"payment_methods": data}, status=200)
         resp["Cache-Control"] = "no-store"  # avoid any caching confusion
         return resp
-
 
 
 class SetDefaultPaymentMethodView(APIView):
@@ -250,6 +252,7 @@ class SetDefaultPaymentMethodView(APIView):
     - Updates invoice settings so future charges use this card automatically.
     - Returns 400 if no payment_method_id is provided.
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -274,7 +277,3 @@ class SetDefaultPaymentMethodView(APIView):
         )
 
         return Response({"detail": "Default payment method set."}, status=200)
-
-
-
-

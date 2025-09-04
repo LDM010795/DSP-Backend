@@ -28,7 +28,6 @@ Author: DSP Development Team
 Date: 2025-09-03
 """
 
-
 from __future__ import annotations
 
 import logging
@@ -51,6 +50,7 @@ User = get_user_model()
 
 
 # ---------- helpers ----------
+
 
 def _get_model(app_label: str, model_name: str) -> Optional[Type]:
     """
@@ -84,14 +84,20 @@ def _extract_data_object(event: Event) -> Dict[str, Any]:
             if isinstance(obj, dict):
                 return obj
         # Fallback: sometimes `object` is top-level
-        if isinstance(data, dict) and "object" in data and isinstance(data["object"], dict):
+        if (
+            isinstance(data, dict)
+            and "object" in data
+            and isinstance(data["object"], dict)
+        ):
             return data["object"]
     except Exception:
         logger.exception("Failed to parse Event.data")
     return {}
 
 
-def _get_user_and_course(user_id: str | int | None, course_id: str | int | None) -> Tuple[Optional[User], Optional[object]]:
+def _get_user_and_course(
+    user_id: str | int | None, course_id: str | int | None
+) -> Tuple[Optional[User], Optional[object]]:
     """
     Resolve the Django user and course instances from ids.
 
@@ -114,10 +120,14 @@ def _get_user_and_course(user_id: str | int | None, course_id: str | int | None)
         user = None
 
     # course (try a couple of likely locations)
-    Course = _get_model("elearning", "Course") or _get_model("elearning.modules", "Course")
+    Course = _get_model("elearning", "Course") or _get_model(
+        "elearning.modules", "Course"
+    )
     course = None
     if Course is None:
-        logger.warning("Course model not found. Expected elearning.Course or elearning.modules.Course.")
+        logger.warning(
+            "Course model not found. Expected elearning.Course or elearning.modules.Course."
+        )
     else:
         try:
             course = Course.objects.get(id=course_id)
@@ -127,7 +137,9 @@ def _get_user_and_course(user_id: str | int | None, course_id: str | int | None)
     return user, course
 
 
-def _enroll_user_in_course(user: User, course: object, *, source: str, reference: Optional[str]) -> bool:
+def _enroll_user_in_course(
+    user: User, course: object, *, source: str, reference: Optional[str]
+) -> bool:
     """
     Idempotently enroll a user into a course.
 
@@ -150,7 +162,9 @@ def _enroll_user_in_course(user: User, course: object, *, source: str, reference
         or _get_model("elearning.modules", "Enrollment")
     )
     if Enrollment is None:
-        logger.warning("Enrollment model not found. Please create one (e.g. CourseEnrollment) and update signals.")
+        logger.warning(
+            "Enrollment model not found. Please create one (e.g. CourseEnrollment) and update signals."
+        )
         return False
 
     with transaction.atomic():
@@ -160,9 +174,19 @@ def _enroll_user_in_course(user: User, course: object, *, source: str, reference
             defaults={"source": source, "reference": reference},
         )
         if created:
-            logger.info("Enrolled user %s into course %s (source=%s, ref=%s).", user.id, course.id, source, reference)
+            logger.info(
+                "Enrolled user %s into course %s (source=%s, ref=%s).",
+                user.id,
+                course.id,
+                source,
+                reference,
+            )
         else:
-            logger.info("Enrollment already exists for user %s and course %s.", user.id, course.id)
+            logger.info(
+                "Enrollment already exists for user %s and course %s.",
+                user.id,
+                course.id,
+            )
         return created
 
 
@@ -189,7 +213,11 @@ def _record_payment(
         logger.info(
             "Payment model not found. Skipping local record. "
             "PI=%s, amount=%s %s, status=%s, session=%s",
-            stripe_payment_intent_id, amount, currency, status, checkout_session_id
+            stripe_payment_intent_id,
+            amount,
+            currency,
+            status,
+            checkout_session_id,
         )
         return
 
@@ -204,12 +232,15 @@ def _record_payment(
                 status=status,
                 checkout_session_id=checkout_session_id,
             )
-            logger.info("Recorded payment (PI=%s, status=%s).", stripe_payment_intent_id, status)
+            logger.info(
+                "Recorded payment (PI=%s, status=%s).", stripe_payment_intent_id, status
+            )
     except Exception as exc:
         logger.exception("Failed to record payment locally: %s", exc)
 
 
 # ---------- signal entrypoint (version-agnostic) ----------
+
 
 @receiver(post_save, sender=Event)
 def on_djstripe_event_created(sender, instance: Event, created: bool, **kwargs):
@@ -255,6 +286,7 @@ def on_djstripe_event_created(sender, instance: Event, created: bool, **kwargs):
 
 # ---------- concrete handlers ----------
 
+
 def _handle_checkout_session_completed(session: Dict[str, Any]) -> None:
     """
     Handle `checkout.session.completed`.
@@ -268,17 +300,24 @@ def _handle_checkout_session_completed(session: Dict[str, Any]) -> None:
     user_id = metadata.get("user_id")
     checkout_session_id = session.get("id")
     payment_intent_id = session.get("payment_intent")
-    amount_total = session.get("amount_total")          # cents
-    currency = session.get("currency")                  # "eur"/"usd"
-    payment_status = session.get("payment_status")      # "paid"
+    amount_total = session.get("amount_total")  # cents
+    currency = session.get("currency")  # "eur"/"usd"
+    payment_status = session.get("payment_status")  # "paid"
 
-    logger.info("checkout.session.completed session=%s user=%s course=%s", checkout_session_id, user_id, course_id)
+    logger.info(
+        "checkout.session.completed session=%s user=%s course=%s",
+        checkout_session_id,
+        user_id,
+        course_id,
+    )
 
     user, course = _get_user_and_course(user_id, course_id)
     if not user or not course:
         return
 
-    _enroll_user_in_course(user, course, source="stripe_checkout", reference=checkout_session_id)
+    _enroll_user_in_course(
+        user, course, source="stripe_checkout", reference=checkout_session_id
+    )
 
     _record_payment(
         user=user,
@@ -311,7 +350,9 @@ def _handle_payment_intent_succeeded(payment_intent: Dict[str, Any]) -> None:
 
     user, course = _get_user_and_course(user_id, course_id)
     if user and course:
-        _enroll_user_in_course(user, course, source="stripe_payment_intent", reference=pi_id)
+        _enroll_user_in_course(
+            user, course, source="stripe_payment_intent", reference=pi_id
+        )
 
     _record_payment(
         user=user,
@@ -341,7 +382,9 @@ def _handle_invoice_payment_succeeded(invoice: Dict[str, Any]) -> None:
 
     user, course = _get_user_and_course(user_id, course_id)
     if user and course:
-        _enroll_user_in_course(user, course, source="stripe_subscription", reference=subscription_id)
+        _enroll_user_in_course(
+            user, course, source="stripe_subscription", reference=subscription_id
+        )
 
     _record_payment(
         user=user,
@@ -361,7 +404,10 @@ def _handle_charge_refund(charge_or_refund: Dict[str, Any]) -> None:
     Adjust the filter if the Payment model stores a different Stripe id.
     """
     charge_id = charge_or_refund.get("charge") or charge_or_refund.get("id")
-    refunded = charge_or_refund.get("refunded") or charge_or_refund.get("status") == "succeeded"
+    refunded = (
+        charge_or_refund.get("refunded")
+        or charge_or_refund.get("status") == "succeeded"
+    )
 
     logger.info("refund event charge=%s refunded=%s", charge_id, refunded)
 
@@ -379,16 +425,20 @@ def _handle_charge_refund(charge_or_refund: Dict[str, Any]) -> None:
             qs = Payment.objects.filter(stripe_payment_intent_id=charge_id)
             if qs.exists():
                 qs.update(status="refunded")
-                logger.info("Marked %s local payment(s) as refunded for charge=%s.", qs.count(), charge_id)
+                logger.info(
+                    "Marked %s local payment(s) as refunded for charge=%s.",
+                    qs.count(),
+                    charge_id,
+                )
     except Exception as exc:
         logger.exception("Failed to mark payment refunded: %s", exc)
 
 
 def _handle_setup_intent_succeeded(setup_intent: Dict[str, Any]) -> None:
     """
-       On `setup_intent.succeeded`, attach the PaymentMethod to the Customer
-       and set it as the default for future invoices. Ensures saved cards are
-       usable without re-entering details. Idempotent and logs errors.
+    On `setup_intent.succeeded`, attach the PaymentMethod to the Customer
+    and set it as the default for future invoices. Ensures saved cards are
+    usable without re-entering details. Idempotent and logs errors.
     """
 
     customer_id = setup_intent.get("customer")

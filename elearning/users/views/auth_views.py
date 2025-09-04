@@ -80,7 +80,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
             return response
 
-        except Exception as e:
+        except Exception:
             # Log authentication failure
             return Response(
                 {"detail": _("Authentication failed. Please check your credentials.")},
@@ -147,7 +147,7 @@ class LogoutView(APIView):
                 status=status.HTTP_205_RESET_CONTENT,
             )
 
-        except TokenError as e:
+        except TokenError:
             # Even if token is invalid, allow logout to succeed for UX
             return Response(
                 {"detail": _("Successfully logged out (token was invalid).")},
@@ -229,16 +229,13 @@ class SetInitialPasswordView(APIView):
                     status=status.HTTP_200_OK,
                 )
 
-            except Exception as e:
+            except Exception:
                 return Response(
                     {"detail": _("An error occurred while setting the password.")},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ExternalUserRegistrationView(generics.CreateAPIView):
@@ -296,7 +293,4 @@ class ExternalUserRegistrationView(generics.CreateAPIView):
                 {"detail": _("Registration successful.")},
                 status=status.HTTP_201_CREATED,
             )
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

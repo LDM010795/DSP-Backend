@@ -46,4 +46,3 @@ class ElearningConfig(AppConfig):
         """
         super().ready()
         return
-

@@ -26,6 +26,6 @@ urlpatterns = [
     path("api/employees/", include("core.employees.urls")),
     path("api/shift-planner/", include("shift_planner.urls")),
     # ---- Stripe / dj-stripe ----
-    path('api/payments/stripe/', include('djstripe.urls')),   # dj-stripe webhook + admin
-    path('api/payments/', include('core.stripe_integration.urls')), # Custom endpoints
+    path("api/payments/stripe/", include("djstripe.urls")),  # dj-stripe webhook + admin
+    path("api/payments/", include("core.stripe_integration.urls")),  # Custom endpoints
 ]

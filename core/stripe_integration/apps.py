@@ -25,13 +25,14 @@ Author: DSP Development Team
 Date: 2025-09-03
 """
 
-
 from django.apps import AppConfig
+
 
 class StripeIntegrationConfig(AppConfig):
     """
     App configuration for the `core.stripe_integration` package.
     """
+
     default_auto_field = "django.db.models.BigAutoField"
     name = "core.stripe_integration"
     verbose_name = "Stripe Integration"
