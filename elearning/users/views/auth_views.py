@@ -32,7 +32,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
-
 from backend.settings import SIMPLE_JWT
 from ..models import Profile
 from ..serializers import (
