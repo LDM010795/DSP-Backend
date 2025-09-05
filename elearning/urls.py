@@ -24,7 +24,7 @@ Version: 1.0.0
 from typing import List
 from django.urls import path, include, URLPattern
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
+from rest_framework_simplejwt.views import TokenVerifyView
 
 # Import der Views
 from .users import views as user_views
@@ -33,6 +33,7 @@ from .modules.views import article_processing_views as article_views
 from .modules.views import content_processing_views as content_views
 from .modules.views import video_url_views as video_views
 from .final_exam import views as exam_views
+from .users.views.auth_views import CustomTokenRefreshView
 
 app_name = "elearning"
 
@@ -65,6 +66,7 @@ users_urlpatterns: List[URLPattern] = [
         user_views.SetInitialPasswordView.as_view(),
         name="set_initial_password",
     ),
+    path("me/", user_views.CurrentUserView.as_view(), name="current_user"),
     # External user registration (public endpoint)
     path(
         "register/",
@@ -290,7 +292,7 @@ urlpatterns: List[URLPattern] = [
         user_views.CustomTokenObtainPairView.as_view(),
         name="token_obtain_pair",
     ),
-    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("token/refresh/", CustomTokenRefreshView.as_view(), name="token_refresh"),
     path("token/verify/", TokenVerifyView.as_view(), name="token_verify"),
     # Functional area URL includes with proper namespacing
     path("users/", include((users_urlpatterns, "users"))),

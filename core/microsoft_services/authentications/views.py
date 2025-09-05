@@ -24,6 +24,7 @@ from django.core.cache import cache
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 
+from backend.settings import SIMPLE_JWT
 from core.employees.models import Tool
 from .base import MicrosoftAuthClient
 from .handlers import EmployeeAuthHandler
@@ -100,7 +101,7 @@ class MicrosoftCallbackView(APIView):
             # Forward all query params from Microsoft to the frontend
             query_params = request.GET.urlencode()
             redirect_url = f"{tool.frontend_url}?{query_params}"
-            logger.info(
+            logger.debug(
                 f"Redirecting user to frontend for tool '{tool_slug}': {redirect_url}"
             )
             return HttpResponseRedirect(redirect_url)
@@ -151,8 +152,33 @@ class MicrosoftCallbackView(APIView):
 
             handler = EmployeeAuthHandler()
             auth_response_data = handler.handle_authentication(user_info, tool)
+            access = auth_response_data["tokens"]["access"]
+            refresh = auth_response_data["tokens"]["refresh"]
 
-            return Response(auth_response_data)
+            response = Response(auth_response_data)
+
+            if access:
+                response.set_cookie(
+                    "access_token",
+                    access,
+                    httponly=True,
+                    secure=True,
+                    samesite="None",  # TODO: Definitely change this to Strict on Prod!
+                    path="/",
+                    max_age=SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"],
+                )
+            if refresh:
+                response.set_cookie(
+                    "refresh_token",
+                    refresh,
+                    httponly=True,
+                    secure=True,
+                    path="/",
+                    samesite="None",  # TODO: Definitely change this to Strict on Prod!
+                    max_age=SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"],
+                )
+
+            return response
 
         except (
             AzureAuthException,
