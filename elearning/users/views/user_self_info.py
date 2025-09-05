@@ -13,7 +13,7 @@ Author: Christian Litke
 Version: 1.0.0
 """
 
-from rest_framework import status
+from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -21,9 +21,10 @@ from elearning.users.serializers import UserSerializer
 
 
 class CurrentUserView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
     def get(self, request):
         try:
             serializer = UserSerializer(request.user)
             return Response(serializer.data)
-        finally:
+        except:
             return Response(status=status.HTTP_400_BAD_REQUEST)
