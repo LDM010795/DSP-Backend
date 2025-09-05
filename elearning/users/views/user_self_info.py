@@ -22,6 +22,7 @@ from elearning.users.serializers import UserSerializer
 
 class CurrentUserView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
         try:
             serializer = UserSerializer(request.user)
