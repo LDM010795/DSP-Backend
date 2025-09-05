@@ -18,7 +18,6 @@ Features:
 Author: DSP Development Team
 Version: 1.0.0
 """
-from datetime import timedelta
 
 from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
@@ -78,7 +77,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     secure=True,
                     samesite="None",  # TODO: Definitely change this to Strict on Prod!
                     path="/",
-                    max_age= SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"],
+                    max_age=SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"],
                 )
         return response
 
