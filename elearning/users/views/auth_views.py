@@ -18,6 +18,7 @@ Features:
 Author: DSP Development Team
 Version: 1.0.0
 """
+from datetime import timedelta
 
 from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
@@ -32,7 +33,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from djstripe.models import Customer
 
-
+from backend.settings import SIMPLE_JWT
 from ..models import Profile
 from ..serializers import (
     SetInitialPasswordSerializer,
@@ -66,6 +67,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     httponly=True,
                     secure=True,
                     samesite="None",
+                    path="/",
+                    max_age=SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"],
                 )
             if access:
                 response.set_cookie(
@@ -74,6 +77,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     httponly=True,
                     secure=True,
                     samesite="None",  # TODO: Definitely change this to Strict on Prod!
+                    path="/",
+                    max_age= SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"],
                 )
         return response
 
@@ -135,8 +140,6 @@ class LogoutView(APIView):
     - Always returns a 205 Reset Content response with a success message.
     - Deletes both "refresh_token" and "access_token" cookies from the client to complete logout.
     """
-
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:

@@ -24,6 +24,7 @@ from django.core.cache import cache
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 
+from backend.settings import SIMPLE_JWT
 from core.employees.models import Tool
 from .base import MicrosoftAuthClient
 from .handlers import EmployeeAuthHandler
@@ -163,14 +164,18 @@ class MicrosoftCallbackView(APIView):
                     httponly=True,
                     secure=True,
                     samesite="None",  # TODO: Definitely change this to Strict on Prod!
+                    path="/",
+                    max_age=SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"],
                 )
             if refresh:
                 response.set_cookie(
                     "refresh_token",
-                    access,
+                    refresh,
                     httponly=True,
                     secure=True,
+                    path="/",
                     samesite="None",  # TODO: Definitely change this to Strict on Prod!
+                    max_age=SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"],
                 )
 
             return response
