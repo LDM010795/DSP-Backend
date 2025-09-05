@@ -17,7 +17,6 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from elearning.users.models import Profile
 from elearning.users.serializers import UserSerializer
 
 
@@ -26,5 +25,5 @@ class CurrentUserView(APIView):
         try:
             serializer = UserSerializer(request.user)
             return Response(serializer.data)
-        except Profile.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        finally:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
