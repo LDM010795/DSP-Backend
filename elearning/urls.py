@@ -282,6 +282,7 @@ exams_urlpatterns: List[URLPattern] = [
     ),
 ]
 
+
 # --- Main URL Configuration for E-Learning Application ---
 
 urlpatterns: List[URLPattern] = [

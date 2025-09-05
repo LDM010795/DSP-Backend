@@ -59,4 +59,5 @@ botocore==1.34.0
 ruff==0.12.11
 
 # Stripe Integration
+stripe==12.4.0
 dj-stripe==2.10.*

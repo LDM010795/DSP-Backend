@@ -22,7 +22,7 @@ Version: 1.0.0
 from django.http import JsonResponse
 from django.utils.translation import gettext_lazy as _
 from rest_framework import status, generics
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -30,7 +30,8 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from djstripe.models import Customer
+
+
 
 from backend.settings import SIMPLE_JWT
 from ..models import Profile
@@ -247,7 +248,6 @@ class ExternalUserRegistrationView(generics.CreateAPIView):
     """
 
     serializer_class = ExternalUserRegistrationSerializer
-    permission_classes = [AllowAny]  # <-- make public
 
     def post(self, request, *args, **kwargs):
         """
@@ -279,8 +279,6 @@ class ExternalUserRegistrationView(generics.CreateAPIView):
         # Validate the data
         if serializer.is_valid():
             user = serializer.save()
-
-            Customer.get_or_create(subscriber=user)
             return Response(
                 {"detail": _("Registration successful.")},
                 status=status.HTTP_201_CREATED,

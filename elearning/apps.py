@@ -45,6 +45,4 @@ class ElearningConfig(AppConfig):
         during testing or application reloads.
         """
         super().ready()
-
-        # Import signals or perform other initialization logic here
-        # Example: from . import signals  # noqa: F401
+        return
