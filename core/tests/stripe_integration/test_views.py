@@ -1,11 +1,11 @@
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from types import SimpleNamespace
-import stripe
 
 User = get_user_model()
+
 
 class StripeViewsTestCase(TestCase):
     def setUp(self):
