@@ -45,11 +45,17 @@ class StripeViewsTestCase(TestCase):
         self, mock_session_create, mock_customer_retrieve, mock_cust_get_or_create
     ):
         mock_cust_get_or_create.return_value = (SimpleNamespace(id="cus_123"), True)
-        mock_customer_retrieve.return_value = {"invoice_settings": {"default_payment_method": "pm_def"}}
-        mock_session_create.return_value = SimpleNamespace(url="https://chk", id="cs_123")
+        mock_customer_retrieve.return_value = {
+            "invoice_settings": {"default_payment_method": "pm_def"}
+        }
+        mock_session_create.return_value = SimpleNamespace(
+            url="https://chk", id="cs_123"
+        )
 
         payload = {"price_id": "price_abc", "course_id": 42}
-        resp = self.client.post("/api/payments/stripe/checkout-session/", data=payload, format="json")
+        resp = self.client.post(
+            "/api/payments/stripe/checkout-session/", data=payload, format="json"
+        )
 
         self.assertEqual(resp.status_code, 200)
         body = resp.json()
@@ -60,10 +66,14 @@ class StripeViewsTestCase(TestCase):
         called_kwargs = mock_session_create.call_args.kwargs
         self.assertEqual(called_kwargs["mode"], "payment")
         self.assertEqual(called_kwargs["customer"], "cus_123")
-        self.assertEqual(called_kwargs["line_items"], [{"price": "price_abc", "quantity": 1}])
+        self.assertEqual(
+            called_kwargs["line_items"], [{"price": "price_abc", "quantity": 1}]
+        )
         self.assertIn("success_url", called_kwargs)
         self.assertTrue(
-            called_kwargs["success_url"].startswith("https://fe.example.com/payments/checkout/success")
+            called_kwargs["success_url"].startswith(
+                "https://fe.example.com/payments/checkout/success"
+            )
         )
         self.assertEqual(
             called_kwargs["metadata"],
@@ -72,21 +82,29 @@ class StripeViewsTestCase(TestCase):
 
     @patch("core.stripe_integration.views.Customer.get_or_create")
     @patch("core.stripe_integration.views.stripe.checkout.Session.create")
-    def test_create_checkout_session_stripe_error(self, mock_session_create, mock_cust_get_or_create):
+    def test_create_checkout_session_stripe_error(
+        self, mock_session_create, mock_cust_get_or_create
+    ):
         mock_cust_get_or_create.return_value = (SimpleNamespace(id="cus_123"), True)
         # Raise a Stripe API error
         mock_session_create.side_effect = stripe.error.StripeError(message="boom")
 
         payload = {"price_id": "price_abc", "course_id": 42}
-        resp = self.client.post("/api/payments/stripe/checkout-session/", data=payload, format="json")
+        resp = self.client.post(
+            "/api/payments/stripe/checkout-session/", data=payload, format="json"
+        )
         self.assertEqual(resp.status_code, 400)
-        self.assertIn("Stripe Checkout konnte nicht erstellt werden", resp.json()["detail"])
+        self.assertIn(
+            "Stripe Checkout konnte nicht erstellt werden", resp.json()["detail"]
+        )
 
     # ------------ 3) GetStripeConfigView ----------
 
-    @override_settings(STRIPE_LIVE_MODE=False, STRIPE_TEST_PUBLISHABLE_KEY="pk_test_123")
+    @override_settings(
+        STRIPE_LIVE_MODE=False, STRIPE_TEST_PUBLISHABLE_KEY="pk_test_123"
+    )
     def test_get_config_returns_test_key_when_not_live(self):
-        anon = APIClient() # public endpoint, no auth
+        anon = APIClient()  # public endpoint, no auth
         resp = anon.get("/api/payments/stripe/config/")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["publishableKey"], "pk_test_123")
@@ -104,13 +122,29 @@ class StripeViewsTestCase(TestCase):
     @patch("core.stripe_integration.views.stripe.PaymentMethod.list")
     @patch("core.stripe_integration.views.stripe.Customer.retrieve")
     def test_list_payment_methods_marks_default(
-            self, mock_customer_retrieve, mock_pm_list, mock_cust_get_or_create
+        self, mock_customer_retrieve, mock_pm_list, mock_cust_get_or_create
     ):
         mock_cust_get_or_create.return_value = (SimpleNamespace(id="cus_123"), True)
         mock_pm_list.return_value = {
             "data": [
-                {"id": "pm_1", "card": {"brand": "visa", "last4": "1111", "exp_month": 1, "exp_year": 2030}},
-                {"id": "pm_2", "card": {"brand": "mc", "last4": "2222", "exp_month": 2, "exp_year": 2031}},
+                {
+                    "id": "pm_1",
+                    "card": {
+                        "brand": "visa",
+                        "last4": "1111",
+                        "exp_month": 1,
+                        "exp_year": 2030,
+                    },
+                },
+                {
+                    "id": "pm_2",
+                    "card": {
+                        "brand": "mc",
+                        "last4": "2222",
+                        "exp_month": 2,
+                        "exp_year": 2031,
+                    },
+                },
             ]
         }
         mock_customer_retrieve.return_value = SimpleNamespace(
@@ -129,7 +163,9 @@ class StripeViewsTestCase(TestCase):
 
     @patch("core.stripe_integration.views.Customer.get_or_create")
     def test_set_default_payment_method_missing_param(self, mock_cust_get_or_create):
-        resp = self.client.post("/api/payments/stripe/payment-methods/default/", data={}, format="json")
+        resp = self.client.post(
+            "/api/payments/stripe/payment-methods/default/", data={}, format="json"
+        )
         self.assertEqual(resp.status_code, 400)
         self.assertIn("payment_method_id", resp.json()["detail"])
 
@@ -137,21 +173,25 @@ class StripeViewsTestCase(TestCase):
     @patch("core.stripe_integration.views.stripe.Customer.modify")
     @patch("core.stripe_integration.views.stripe.PaymentMethod.attach")
     def test_set_default_payment_method_ok(
-            self, mock_attach, mock_modify, mock_cust_get_or_create
+        self, mock_attach, mock_modify, mock_cust_get_or_create
     ):
         mock_cust_get_or_create.return_value = (SimpleNamespace(id="cus_123"), True)
         payload = {"payment_method_id": "pm_123"}
-        resp = self.client.post("/api/payments/stripe/payment-methods/default/", data=payload, format="json")
+        resp = self.client.post(
+            "/api/payments/stripe/payment-methods/default/", data=payload, format="json"
+        )
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Default payment method set", resp.json()["detail"])
         mock_attach.assert_called_once_with("pm_123", customer="cus_123")
-        mock_modify.assert_called_once_with("cus_123", invoice_settings={"default_payment_method": "pm_123"})
+        mock_modify.assert_called_once_with(
+            "cus_123", invoice_settings={"default_payment_method": "pm_123"}
+        )
 
     @patch("core.stripe_integration.views.Customer.get_or_create")
     @patch("core.stripe_integration.views.stripe.Customer.modify")
     @patch("core.stripe_integration.views.stripe.PaymentMethod.attach")
     def test_set_default_payment_method_already_attached_is_ok(
-            self, mock_attach, mock_modify, mock_cust_get_or_create
+        self, mock_attach, mock_modify, mock_cust_get_or_create
     ):
         mock_cust_get_or_create.return_value = (SimpleNamespace(id="cus_123"), True)
 
@@ -162,8 +202,10 @@ class StripeViewsTestCase(TestCase):
         )
 
         payload = {"payment_method_id": "pm_123"}
-        resp = self.client.post("/api/payments/stripe/payment-methods/default/", data=payload, format="json")
+        resp = self.client.post(
+            "/api/payments/stripe/payment-methods/default/", data=payload, format="json"
+        )
         self.assertEqual(resp.status_code, 200)
-        mock_modify.assert_called_once_with("cus_123", invoice_settings={"default_payment_method": "pm_123"})
-
-
+        mock_modify.assert_called_once_with(
+            "cus_123", invoice_settings={"default_payment_method": "pm_123"}
+        )
