@@ -42,7 +42,6 @@ Author: DSP Development Team
 Date: 2025-09-09
 """
 
-
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
@@ -50,9 +49,17 @@ from datetime import date
 from unittest import skip
 from decimal import Decimal
 
-from core.employees.models import Department, Position, Employee, Attendance, Tool, EmployeeToolAccess
+from core.employees.models import (
+    Department,
+    Position,
+    Employee,
+    Attendance,
+    Tool,
+    EmployeeToolAccess,
+)
 
 User = get_user_model()
+
 
 class EmployeeViewTests(TestCase):
     """
@@ -70,8 +77,8 @@ class EmployeeViewTests(TestCase):
         # Users
         # We could add users also if the Employee model has a user field. (need to discuss it)
         cls.user = User.objects.create_user("u1", "u1@example.com", "pass")
-        #cls.user2 = User.objects.create_user("u2", "u2@example.com", "pass")
-        #cls.user3 = User.objects.create_user("u3", "u3@example.com", "pass")
+        # cls.user2 = User.objects.create_user("u2", "u2@example.com", "pass")
+        # cls.user3 = User.objects.create_user("u3", "u3@example.com", "pass")
 
         # Departments
         cls.dept_a = Department.objects.create(name="A", is_active=True)
@@ -90,7 +97,7 @@ class EmployeeViewTests(TestCase):
             department=cls.dept_a,
             position=cls.pos_dev,
             is_active=True,
-            max_working_hours=30
+            max_working_hours=30,
         )
         cls.emp2 = Employee.objects.create(
             # user=cls.user2,
@@ -115,13 +122,22 @@ class EmployeeViewTests(TestCase):
 
         # Attendance (two for self, one for others)
         Attendance.objects.create(
-            employee=cls.emp_self, department=cls.dept_a, date=date(2025, 5, 10), hours=Decimal("6")
+            employee=cls.emp_self,
+            department=cls.dept_a,
+            date=date(2025, 5, 10),
+            hours=Decimal("6"),
         )
         Attendance.objects.create(
-            employee=cls.emp_self, department=cls.dept_a, date=date(2025, 6, 1), hours=Decimal("4")
+            employee=cls.emp_self,
+            department=cls.dept_a,
+            date=date(2025, 6, 1),
+            hours=Decimal("4"),
         )
         Attendance.objects.create(
-            employee=cls.emp2, department=cls.dept_a, date=date(2025, 6, 2), hours=Decimal("3")
+            employee=cls.emp2,
+            department=cls.dept_a,
+            date=date(2025, 6, 2),
+            hours=Decimal("3"),
         )
 
     def setUp(self):
@@ -151,11 +167,11 @@ class EmployeeViewTests(TestCase):
 
         resp = self.client.get("/api/employees/departments/?is_active=false")
         self.assertEqual(len(resp.json()), 1)
-        self.assertEqual(resp.json()[0]['name'], "HR")
+        self.assertEqual(resp.json()[0]["name"], "HR")
 
         resp = self.client.get("/api/employees/departments/?search=help")
         self.assertEqual(len(resp.json()), 1)
-        self.assertEqual(resp.json()[0]['name'], "Helpdesk")
+        self.assertEqual(resp.json()[0]["name"], "Helpdesk")
 
         resp = self.client.get("/api/employees/departments/active/")
         self.assertEqual(resp.status_code, 200)
@@ -175,7 +191,7 @@ class EmployeeViewTests(TestCase):
 
         resp = self.client.get("/api/employees/positions/?is_active=false")
         self.assertEqual(len(resp.json()), 1)
-        self.assertEqual(resp.json()[0]['title'], "Recruiter")
+        self.assertEqual(resp.json()[0]["title"], "Recruiter")
 
         resp = self.client.get("/api/employees/positions/?search=dev")
         # "Dev" appears in Dev + Devops
@@ -211,7 +227,7 @@ class EmployeeViewTests(TestCase):
         self.assertEqual(len(resp.json()), 2)
 
     def test_employees_by_department_action(self):
-        resp = self.client.get(f"/api/employees/employees/by_department/")
+        resp = self.client.get("/api/employees/employees/by_department/")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         # Only active employees are grouped
@@ -261,7 +277,9 @@ class EmployeeViewTests(TestCase):
         EmployeeToolAccess.objects.create(employee=self.emp_self, tool=tool1)
         EmployeeToolAccess.objects.create(employee=self.emp_self, tool=tool2)
 
-        resp = self.client.get(f"/api/employees/tool-access/?employee={self.emp_self.id}")
+        resp = self.client.get(
+            f"/api/employees/tool-access/?employee={self.emp_self.id}"
+        )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(resp.json()), 2)
 
@@ -291,14 +309,3 @@ class EmployeeViewTests(TestCase):
         resp = self.client.get("/api/employees/attendances/?month=6&year=2025")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(resp.json()), 2)  # June 1 (emp_self) + June 2 (emp2)
-
-
-
-
-
-
-
-
-
-
-
