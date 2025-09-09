@@ -164,7 +164,9 @@ class StripeViewsTestCase(TestCase):
 
     @patch("core.stripe_integration.views.Customer.get_or_create")
     def test_set_default_payment_method_missing_param(self):
-        resp = self.client.post("/api/payments/stripe/payment-methods/default/", data={}, format="json")
+        resp = self.client.post(
+            "/api/payments/stripe/payment-methods/default/", data={}, format="json"
+        )
         self.assertEqual(resp.status_code, 400)
         self.assertIn("payment_method_id", resp.json()["detail"])
 
