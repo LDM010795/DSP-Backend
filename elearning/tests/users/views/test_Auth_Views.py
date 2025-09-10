@@ -1,6 +1,6 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -60,7 +60,9 @@ class TokenTests(TestCase):
         # fmt:on
 
     def test_refresh_token_expired_manual(self):
-        token = RefreshToken.for_user(self.user) #generate a new refresh token, since the expiration date set inside the token is checked
+        token = RefreshToken.for_user(
+            self.user
+        )  # generate a new refresh token, since the expiration date set inside the token is checked
         # Force expiration in the past
         token.payload["exp"] = datetime(1970, 1, 1)
 
@@ -76,6 +78,8 @@ class TokenTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertNotIn("access_token", response.cookies)
         self.assertNotIn("refresh_token", response.cookies)
+
+
 class PasswordTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -91,13 +95,17 @@ class PasswordTests(TestCase):
 
     def test_weak_password_rejected(self):
         payload = {"password": "123", "password_confirm": "123"}  # too weak
-        response = self.client.post("/api/elearning/users/set-initial-password/", payload)
+        response = self.client.post(
+            "/api/elearning/users/set-initial-password/", payload
+        )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_set_initial_password_success(self):
         payload = {"password": "NewPass456!", "password_confirm": "NewPass456!"}
-        response = self.client.post("/api/elearning/users/set-initial-password/", payload)
+        response = self.client.post(
+            "/api/elearning/users/set-initial-password/", payload
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["detail"], "Password successfully set.")
         self.user.refresh_from_db()
@@ -108,15 +116,20 @@ class PasswordTests(TestCase):
         profile.force_password_change = False
         profile.save()
         payload = {"password": "whatever123!", "password_confirm": "whatever123!"}
-        response = self.client.post("/api/elearning/users/set-initial-password/", payload)
+        response = self.client.post(
+            "/api/elearning/users/set-initial-password/", payload
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Password has already been set.", response.json()["detail"])
 
     def test_set_initial_password_mismatch(self):
         payload = {"password": "OnePass123!", "password_confirm": "OtherPass123!"}
-        response = self.client.post("/api/elearning/users/set-initial-password/", payload)
+        response = self.client.post(
+            "/api/elearning/users/set-initial-password/", payload
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("password_confirm", response.json())
+
 
 class ExternalRegistrationTests(TestCase):
     def test_registration_success(self):
@@ -132,7 +145,9 @@ class ExternalRegistrationTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_registration_failure(self):
-        User.objects.create_user(username="dup", email="dup@example.com", password="abc123!")
+        User.objects.create_user(
+            username="dup", email="dup@example.com", password="abc123!"
+        )
         payload = {
             "username": "dup",
             "email": "dup@example.com",
