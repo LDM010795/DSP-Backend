@@ -94,6 +94,7 @@ class TokenTests(TestCase):
         self.assertTrue(response.cookies["refresh_token"]["httponly"])
         self.assertTrue(response.cookies["refresh_token"]["secure"])
 
+
 """
     def test_tokens_have_httponly_flag_on_logout(self):
         response = self.client.post("/api/elearning/users/logout/")
@@ -102,6 +103,7 @@ class TokenTests(TestCase):
         self.assertTrue(response.cookies["refresh_token"]["httponly"])
         self.assertTrue(response.cookies["refresh_token"]["secure"])
 """
+
 
 class PasswordTests(TestCase):
     def setUp(self):
