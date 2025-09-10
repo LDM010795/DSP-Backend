@@ -23,6 +23,7 @@ class TokenTests(TestCase):
             "/api/elearning/token/",
             {"username": "testUser", "password": "testPassword"},
         )
+        self.cookies = response.cookies
         self.access_token = response.cookies["access_token"].value
         self.refresh_token = response.cookies["refresh_token"].value
         self.body = response.json()
@@ -76,6 +77,30 @@ class TokenTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertNotIn("access_token", response.cookies)
         self.assertNotIn("refresh_token", response.cookies)
+
+    def test_tokens_have_correct_flags_on_login(self):
+        self.assertTrue(self.cookies["access_token"]["httponly"])
+        self.assertTrue(self.cookies["access_token"]["secure"])
+        self.assertTrue(self.cookies["refresh_token"]["httponly"])
+        self.assertTrue(self.cookies["refresh_token"]["secure"])
+
+    def test_tokens_have_correct_flags_on_refresh(self):
+        self.client.cookies["refresh_token"] = self.refresh_token
+        response = self.client.post("/api/elearning/token/refresh/")
+        self.assertTrue(response.cookies["access_token"]["httponly"])
+        self.assertTrue(response.cookies["access_token"]["secure"])
+        self.assertTrue(response.cookies["refresh_token"]["httponly"])
+        self.assertTrue(response.cookies["refresh_token"]["secure"])
+
+"""
+    def test_tokens_have_httponly_flag_on_logout(self):
+        response = self.client.post("/api/elearning/users/logout/")
+        self.assertTrue(response.cookies["access_token"]["httponly"])
+        self.assertTrue(response.cookies["access_token"]["secure"])
+        self.assertTrue(response.cookies["refresh_token"]["httponly"])
+        self.assertTrue(response.cookies["refresh_token"]["secure"])
+"""
+
 class PasswordTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
