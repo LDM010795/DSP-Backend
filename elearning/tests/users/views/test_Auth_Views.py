@@ -14,20 +14,24 @@ from elearning.users.models import Profile
 
 
 class TokenTests(TestCase):
-    @classmethod
-    def setUp(cls):
-        cls.user = User.objects.create_user(
+    # can't be classmethod, client is only available if it runs every time
+    def setUp(self):
+        self.user = User.objects.create_user(
             username="testUser", password="testPassword"
         )
-        response = cls.client.post(
+        response = self.client.post(
             "/api/elearning/token/",
             {"username": "testUser", "password": "testPassword"},
         )
-        cls.access_token = response.cookies.get("access_token")
-        cls.refresh_token = response.cookies.get("refresh_token")
-        cls.body = response.json()
+        self.access_token = response.cookies["access_token"].value
+        self.refresh_token = response.cookies["refresh_token"].value
+        self.body = response.json()
+
+        if response.status_code != status.HTTP_200_OK:
+            raise Exception(response.json())
 
     def test_no_JWT(self):
+        # wir haben keine JWT mehr
         self.assertEqual(self.body, {})
 
     def test_refresh_token_success(self):
@@ -64,19 +68,26 @@ class TokenTests(TestCase):
         response = self.client.post("/api/elearning/token/refresh/")
         self.assertEqual(response.status_code, 400)
 
+    def test_wrong_login_rejected(self):
+        response = self.client.post(
+            "/api/elearning/token/",
+            {"username": "testUser", "password": "wrongPassword"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertNotIn("access_token", response.cookies)
+        self.assertNotIn("refresh_token", response.cookies)
 class PasswordTests(TestCase):
-    @classmethod
-    def setUp(cls):
-        cls.user = User.objects.create_user(
+    def setUp(self):
+        self.user = User.objects.create_user(
             username="testUser", password="testPassword"
         )
-        response = cls.client.post(
+        response = self.client.post(
             "/api/elearning/token/",
             {"username": "testUser", "password": "testPassword"},
         )
-        cls.access_token = response.cookies.get("access_token")
-        cls.refresh_token = response.cookies.get("refresh_token")
-        cls.body = response.json()
+        self.access_token = response.cookies["access_token"].value
+        self.refresh_token = response.cookies["refresh_token"].value
+        self.body = response.json()
 
     def test_weak_password_rejected(self):
         payload = {"password": "123", "password_confirm": "123"}  # too weak
