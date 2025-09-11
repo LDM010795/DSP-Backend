@@ -209,7 +209,7 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
     "ALGORITHM": "HS256",
-    "SIGNING_KEY": SECRET_KEY,
+    "SIGNING_KEY": SECRET_KEY,  # TODO: Change this to be more secure
     "VERIFYING_KEY": None,
     "AUDIENCE": None,
     "ISSUER": None,
