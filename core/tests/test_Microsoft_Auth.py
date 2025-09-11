@@ -18,19 +18,30 @@ class TestMicrosoftLoginRedirectView(TestCase):
         )
 
     def test_redirect_for_valid_tool(self):
-        response = self.client.get(f"/api/microsoft/auth/login/{self.tool.slug}/")
-        self.assertIsInstance(response, HttpResponseRedirect)
+        with (
+            mock.patch(
+                "core.microsoft_services.authentications.views.MicrosoftAuthClient"
+            ) as mock_client_class,
+        ):
+            mock_client = mock_client_class.return_value
+            mock_client.exchange_code_for_token.return_value = {
+                "access_token": "access123"
+            }
+            mock_client.get_user_info.return_value = {"email": "user@example.com"}
 
-        # Parse state from redirect URL
-        redirect_url = response.url
-        from urllib.parse import urlparse, parse_qs
+            response = self.client.get(f"/api/microsoft/auth/login/{self.tool.slug}/")
+            self.assertIsInstance(response, HttpResponseRedirect)
 
-        query = parse_qs(urlparse(redirect_url).query)
-        state = query["state"][0]
+            # Parse state from redirect URL
+            redirect_url = response.url
+            from urllib.parse import urlparse, parse_qs
 
-        # Now check cache
-        cached_tool = cache.get(f"oauth_state_{state}")
-        self.assertEqual(cached_tool, self.tool.slug)
+            query = parse_qs(urlparse(redirect_url).query)
+            state = query["state"][0]
+
+            # Now check cache
+            cached_tool = cache.get(f"oauth_state_{state}")
+            self.assertEqual(cached_tool, self.tool.slug)
 
     def test_invalid_tool_returns_404(self):
         response = self.client.get("/api/microsoft/auth/login/")
