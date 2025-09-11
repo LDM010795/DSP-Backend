@@ -6,7 +6,6 @@ from rest_framework import status
 
 
 class TestCurrentUserView(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(

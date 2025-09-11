@@ -17,7 +17,6 @@ from elearning.users.serializers import SetInitialPasswordSerializer
 
 
 class TestLogoutView(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
@@ -147,7 +146,6 @@ class TestLogoutView(TestCase):
 
 
 class TestSetInitialPasswordView(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
@@ -187,7 +185,7 @@ class TestSetInitialPasswordView(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_weak_password_rejected(self):
-        response = self.post_initial_password_request("123", "123") # too weak
+        response = self.post_initial_password_request("123", "123")  # too weak
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_passwords_dont_match(self):
@@ -231,7 +229,7 @@ class TestSetInitialPasswordView(TestCase):
         profile = Profile.objects.get(user=self.user)
         profile.force_password_change = False
         profile.save()
-        response = self.post_initial_password_request("whatever123!", "whatever123!")        
+        response = self.post_initial_password_request("whatever123!", "whatever123!")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Password has already been set.", response.json()["detail"])
 
@@ -258,7 +256,6 @@ class TestSetInitialPasswordView(TestCase):
 
 
 class TestExternalUserRegistrationView(TestCase):
-
     def post_register_request(
         self,
         username="testUser",
@@ -383,7 +380,6 @@ class TestExternalUserRegistrationView(TestCase):
 
 
 class TokenTests(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(

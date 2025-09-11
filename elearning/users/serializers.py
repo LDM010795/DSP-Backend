@@ -373,7 +373,7 @@ class ExternalUserRegistrationSerializer(serializers.ModelSerializer):
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("A user with this email already exists.")
         return value
-    
+
     def validate_password(self, value: str) -> str:
         """
         Validate password strength using Django validators.

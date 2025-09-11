@@ -152,7 +152,7 @@ class LogoutView(APIView):
 
         # response.delete_cookie setzt kein httponly=True
         # -> Das ist aber wichtig, dass der Browser den Cookie
-        # auch tatsächlich löscht (im Produktivsystem) 
+        # auch tatsächlich löscht (im Produktivsystem)
         response.set_cookie(
             "refresh_token",
             max_age=0,
