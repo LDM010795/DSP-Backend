@@ -31,6 +31,7 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
 class DepartmentSerializer(serializers.ModelSerializer):
     """
     Serializer für Department Model

@@ -42,12 +42,10 @@ Author: DSP Development Team
 Date: 2025-09-09
 """
 
-
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from datetime import date
-from unittest import skip
 from decimal import Decimal
 
 from core.employees.models import (
@@ -228,7 +226,7 @@ class EmployeeViewTests(TestCase):
         self.assertEqual(len(resp.json()), 2)
 
     def test_employees_by_department_action(self):
-        resp = self.client.get(f"/api/employees/employees/by_department/")
+        resp = self.client.get("/api/employees/employees/by_department/")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         # Only active employees are grouped
@@ -278,7 +276,9 @@ class EmployeeViewTests(TestCase):
         EmployeeToolAccess.objects.create(employee=self.emp_self, tool=tool1)
         EmployeeToolAccess.objects.create(employee=self.emp_self, tool=tool2)
 
-        resp = self.client.get(f"/api/employees/tool-access/?employee={self.emp_self.id}")
+        resp = self.client.get(
+            f"/api/employees/tool-access/?employee={self.emp_self.id}"
+        )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(resp.json()), 2)
 
@@ -314,14 +314,3 @@ class EmployeeViewTests(TestCase):
         resp = self.client.get("/api/employees/attendances/?month=6&year=2025")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(resp.json()), 2)  # June 1 (emp_self) + June 2 (emp2)
-
-
-
-
-
-
-
-
-
-
-

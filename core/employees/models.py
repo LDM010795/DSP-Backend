@@ -53,7 +53,8 @@ class Employee(models.Model):
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         on_delete=models.SET_NULL,
         related_name="employee_profile",
     )
