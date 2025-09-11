@@ -42,6 +42,7 @@ Author: DSP Development Team
 Date: 2025-09-09
 """
 
+
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
@@ -77,8 +78,8 @@ class EmployeeViewTests(TestCase):
         # Users
         # We could add users also if the Employee model has a user field. (need to discuss it)
         cls.user = User.objects.create_user("u1", "u1@example.com", "pass")
-        # cls.user2 = User.objects.create_user("u2", "u2@example.com", "pass")
-        # cls.user3 = User.objects.create_user("u3", "u3@example.com", "pass")
+        cls.user2 = User.objects.create_user("u2", "u2@example.com", "pass")
+        cls.user3 = User.objects.create_user("u3", "u3@example.com", "pass")
 
         # Departments
         cls.dept_a = Department.objects.create(name="A", is_active=True)
@@ -90,7 +91,7 @@ class EmployeeViewTests(TestCase):
 
         # Employees
         cls.emp_self = Employee.objects.create(
-            # user=cls.user
+            user=cls.user,
             first_name="Alpha",
             last_name="Tester",
             email="u1@example.com",
@@ -100,7 +101,7 @@ class EmployeeViewTests(TestCase):
             max_working_hours=30,
         )
         cls.emp2 = Employee.objects.create(
-            # user=cls.user2,
+            user=cls.user2,
             first_name="Beta",
             last_name="Inactive",
             email="u2@example.com",
@@ -227,7 +228,7 @@ class EmployeeViewTests(TestCase):
         self.assertEqual(len(resp.json()), 2)
 
     def test_employees_by_department_action(self):
-        resp = self.client.get("/api/employees/employees/by_department/")
+        resp = self.client.get(f"/api/employees/employees/by_department/")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         # Only active employees are grouped
@@ -277,9 +278,7 @@ class EmployeeViewTests(TestCase):
         EmployeeToolAccess.objects.create(employee=self.emp_self, tool=tool1)
         EmployeeToolAccess.objects.create(employee=self.emp_self, tool=tool2)
 
-        resp = self.client.get(
-            f"/api/employees/tool-access/?employee={self.emp_self.id}"
-        )
+        resp = self.client.get(f"/api/employees/tool-access/?employee={self.emp_self.id}")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(resp.json()), 2)
 
@@ -292,9 +291,15 @@ class EmployeeViewTests(TestCase):
 
     # ----------------- Attendance -----------------
 
-    @skip("Pending Employee.user relation; non-staff scoping not testable yet.")
     def test_attendance_non_staff_sees_only_own(self):
-        pass
+        # self.user is authenticated & non-staff in setUp()
+        resp = self.client.get("/api/employees/attendances/")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        # Only the two records of emp_self should be visible
+        self.assertEqual(len(data), 2)
+        # 'employee' is a PK in AttendanceSerializer, so compare integers
+        self.assertTrue(all(item["employee"] == self.emp_self.id for item in data))
 
     def test_attendance_staff_sees_everyone(self):
         self.user.is_staff = True
@@ -309,3 +314,14 @@ class EmployeeViewTests(TestCase):
         resp = self.client.get("/api/employees/attendances/?month=6&year=2025")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(resp.json()), 2)  # June 1 (emp_self) + June 2 (emp2)
+
+
+
+
+
+
+
+
+
+
+

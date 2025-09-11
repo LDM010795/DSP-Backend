@@ -27,7 +27,9 @@ Version: 1.0.0
 
 from rest_framework import serializers
 from .models import Attendance, Department, Position, Employee, Tool, EmployeeToolAccess
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
 class DepartmentSerializer(serializers.ModelSerializer):
     """
@@ -108,6 +110,10 @@ class EmployeeSerializer(serializers.ModelSerializer):
     department_detail = DepartmentSerializer(source="department", read_only=True)
     position_detail = PositionSerializer(source="position", read_only=True)
 
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), allow_null=True, required=False
+    )
+
     class Meta:
         model = Employee
         fields = [
@@ -126,6 +132,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "position_title",
             "department_detail",
             "position_detail",
+            "user",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "full_name"]
 

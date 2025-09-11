@@ -51,6 +51,13 @@ class Employee(models.Model):
     Model für Mitarbeiterdaten
     """
 
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="employee_profile",
+    )
+
     first_name = models.CharField(max_length=50, verbose_name="Vorname")
     last_name = models.CharField(max_length=50, verbose_name="Nachname")
     email = models.EmailField(
