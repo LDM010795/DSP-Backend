@@ -22,12 +22,21 @@ class TestMicrosoftLoginRedirectView(TestCase):
             mock.patch(
                 "core.microsoft_services.authentications.views.MicrosoftAuthClient"
             ) as mock_client_class,
+            mock.patch(
+                "core.microsoft_services.authentications.views.EmployeeAuthHandler"
+            ) as mock_handler_class,
         ):
             mock_client = mock_client_class.return_value
             mock_client.exchange_code_for_token.return_value = {
                 "access_token": "access123"
             }
             mock_client.get_user_info.return_value = {"email": "user@example.com"}
+
+            mock_handler = mock_handler_class.return_value
+            mock_handler.handle_authentication.return_value = {
+                "user": {"email": "user@example.com"},
+                "tokens": {"access": "jwt_access", "refresh": "jwt_refresh"},
+            }
 
             response = self.client.get(f"/api/microsoft/auth/login/{self.tool.slug}/")
             self.assertIsInstance(response, HttpResponseRedirect)
