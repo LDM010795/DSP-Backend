@@ -149,8 +149,29 @@ class LogoutView(APIView):
         except Exception:
             pass
         response = JsonResponse({"detail": "Successfully logged out."}, status=205)
-        response.delete_cookie("refresh_token")
-        response.delete_cookie("access_token")
+
+        # response.delete_cookie setzt kein httponly=True
+        # -> Das ist aber wichtig, dass der Browser den Cookie
+        # auch tatsächlich löscht (im Produktivsystem) 
+        response.set_cookie(
+            "refresh_token",
+            max_age=0,
+            domain=None,
+            httponly=True,
+            secure=True,
+            expires="Thu, 01 Jan 1970 00:00:00 GMT",
+            samesite="None",
+        )
+
+        response.set_cookie(
+            "access_token",
+            max_age=0,
+            domain=None,
+            httponly=True,
+            secure=True,
+            expires="Thu, 01 Jan 1970 00:00:00 GMT",
+            samesite="None",
+        )
         return response
 
 
