@@ -204,7 +204,7 @@ class SetInitialPasswordView(APIView):
             Profile.objects.create(user=user, force_password_change=True)
 
         # Validate and process password change
-        serializer = SetInitialPasswordSerializer(data=request.data)
+        serializer = SetInitialPasswordSerializer(data=request.data, user=user)
         if serializer.is_valid():
             try:
                 # Use serializer's save method for comprehensive handling

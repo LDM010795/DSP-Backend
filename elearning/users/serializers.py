@@ -242,6 +242,11 @@ class SetInitialPasswordSerializer(serializers.Serializer):
         help_text=_("Enter the same password for confirmation"),
     )
 
+    # der Serializer braucht den User, damit UserAttributeSimilarityValidator funktioniert
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
     def validate_password(self, value: str) -> str:
         """
         Validate password strength using Django validators.
@@ -256,7 +261,7 @@ class SetInitialPasswordSerializer(serializers.Serializer):
             ValidationError: If password doesn't meet security requirements
         """
         try:
-            validate_password(value)
+            validate_password(value, self.user)
         except DjangoValidationError as e:
             raise serializers.ValidationError(list(e.messages))
         return value
