@@ -17,11 +17,11 @@ class TeacherSubmissionsListView(generics.ListAPIView):
 
     def get_queryset(self):
         return (
-            ExamAttempt.objects
-            .filter(status=ExamAttempt.Status.SUBMITTED)
+            ExamAttempt.objects.filter(status=ExamAttempt.Status.SUBMITTED)
             .select_related("user", "exam")
             .order_by("submitted_at")
         )
+
 
 class TeacherGradeAttemptView(APIView):
     permission_classes = [permissions.IsAdminUser]
@@ -35,7 +35,8 @@ class TeacherGradeAttemptView(APIView):
         if isinstance(scores, dict):
             # convert {"12": 9, "13": 4} -> [{"criterion_id": 12, "achieved_points": 9}, ...]
             data["scores"] = [
-                {"criterion_id": int(k), "achieved_points": v} for k, v in scores.items()
+                {"criterion_id": int(k), "achieved_points": v}
+                for k, v in scores.items()
             ]
 
         serializer = TeacherGradingSerializer(
@@ -51,7 +52,9 @@ class TeacherGradeAttemptView(APIView):
         for item in scores_data:
             criterion_id = item["criterion_id"]
             points = item["achieved_points"]
-            criterion = get_object_or_404(ExamCriterion, pk=criterion_id, exam=attempt.exam)
+            criterion = get_object_or_404(
+                ExamCriterion, pk=criterion_id, exam=attempt.exam
+            )
             CriterionScore.objects.update_or_create(
                 attempt=attempt,
                 criterion=criterion,
@@ -64,7 +67,10 @@ class TeacherGradeAttemptView(APIView):
         attempt.graded_at = timezone.now()
         attempt.save(update_fields=["feedback", "graded_by", "status", "graded_at"])
 
-        return Response({"message": "Bewertung erfolgreich gespeichert."}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "Bewertung erfolgreich gespeichert."}, status=status.HTTP_200_OK
+        )
+
 
 class AllExamsListView(generics.ListAPIView):
     queryset = Exam.objects.all()

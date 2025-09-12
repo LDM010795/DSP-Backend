@@ -16,61 +16,86 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from django.utils import timezone
 
-from elearning.final_exam.models import (
-    Exam, ExamAttempt, ExamCriterion, CriterionScore
-)
+from elearning.final_exam.models import Exam, ExamAttempt, ExamCriterion, CriterionScore
 
 User = get_user_model()
+
 
 class TeacherExamViewsTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         # Users
-        cls.student = User.objects.create_user(username="student", email="s@example.com", password="pass")
-        cls.teacher_admin = User.objects.create_user(username="admin", email="a@example.com", password="pass")
+        cls.student = User.objects.create_user(
+            username="student", email="s@example.com", password="pass"
+        )
+        cls.teacher_admin = User.objects.create_user(
+            username="admin", email="a@example.com", password="pass"
+        )
         cls.teacher_admin.is_staff = True
         cls.teacher_admin.save()
 
         # Exam
-        cls.exam = Exam.objects.create(title="Python Basics", duration_weeks=8, description="Intro to Python")
-        cls.other_exam = Exam.objects.create(title="Data Science Intro", duration_weeks=6, description="Basics of Data Science")
+        cls.exam = Exam.objects.create(
+            title="Python Basics", duration_weeks=8, description="Intro to Python"
+        )
+        cls.other_exam = Exam.objects.create(
+            title="Data Science Intro",
+            duration_weeks=6,
+            description="Basics of Data Science",
+        )
 
         # Criteria
         cls.crit_1 = ExamCriterion.objects.create(
-            exam=cls.exam, title="Correctness", description="Korrektheit bewerten", max_points=10
+            exam=cls.exam,
+            title="Correctness",
+            description="Korrektheit bewerten",
+            max_points=10,
         )
         cls.crit_2 = ExamCriterion.objects.create(
             exam=cls.exam, title="Style", description="Code-Stil bewerten", max_points=5
         )
 
         # Criterion for a different exam (used to test 404 on cross-exam scoring)
-        cls.other_exam_crit = ExamCriterion.objects.create(exam=cls.other_exam, title="Irrelevant", description="Falsches Exam", max_points=3)
+        cls.other_exam_crit = ExamCriterion.objects.create(
+            exam=cls.other_exam,
+            title="Irrelevant",
+            description="Falsches Exam",
+            max_points=3,
+        )
 
         # Attempts (SUBMITTED) – order by submitted_at
         cls.attempt_early = ExamAttempt.objects.create(
-            user=cls.student, exam=cls.exam,
+            user=cls.student,
+            exam=cls.exam,
             status=ExamAttempt.Status.SUBMITTED,
             submitted_at=timezone.now() - timezone.timedelta(hours=2),
         )
         cls.attempt_late = ExamAttempt.objects.create(
-            user=cls.student, exam=cls.exam,
+            user=cls.student,
+            exam=cls.exam,
             status=ExamAttempt.Status.SUBMITTED,
             submitted_at=timezone.now() - timezone.timedelta(hours=1),
         )
 
         # A graded attempt (should NOT appear in submissions list)
-        ExamAttempt.objects.bulk_create([
-            ExamAttempt(
-                user=cls.student,
-                exam=cls.exam,
-                status=ExamAttempt.Status.GRADED,
-                submitted_at=timezone.now() - timezone.timedelta(hours=3),
-            )
-        ])
+        ExamAttempt.objects.bulk_create(
+            [
+                ExamAttempt(
+                    user=cls.student,
+                    exam=cls.exam,
+                    status=ExamAttempt.Status.GRADED,
+                    submitted_at=timezone.now() - timezone.timedelta(hours=3),
+                )
+            ]
+        )
         # get a handle to the created object (optional, but handy)
-        cls.attempt_graded = ExamAttempt.objects.filter(
-            user=cls.student, exam=cls.exam, status=ExamAttempt.Status.GRADED
-        ).order_by("id").first()
+        cls.attempt_graded = (
+            ExamAttempt.objects.filter(
+                user=cls.student, exam=cls.exam, status=ExamAttempt.Status.GRADED
+            )
+            .order_by("id")
+            .first()
+        )
 
     def setUp(self):
         self.client = APIClient()
@@ -81,7 +106,9 @@ class TeacherExamViewsTests(TestCase):
         return reverse("elearning:exams:teacher-submissions")
 
     def _grade_url(self, attempt_id):
-        return reverse("elearning:exams:teacher-grade-attempt", kwargs={"attempt_id": attempt_id})
+        return reverse(
+            "elearning:exams:teacher-grade-attempt", kwargs={"attempt_id": attempt_id}
+        )
 
     def _exams_list_url(self):
         return reverse("elearning:exams:all-exams-list")
@@ -137,7 +164,7 @@ class TeacherExamViewsTests(TestCase):
                 str(self.crit_1.id): 9.0,
                 str(self.crit_2.id): 4.0,
             },
-            "feedback": "Good job overall."
+            "feedback": "Good job overall.",
         }
 
         resp = self.client.post(url, data=payload, format="json")
@@ -150,8 +177,12 @@ class TeacherExamViewsTests(TestCase):
         self.assertEqual(self.attempt_early.graded_by, self.teacher_admin)
 
         # CriterionScores should be created
-        cs1 = CriterionScore.objects.get(attempt=self.attempt_early, criterion=self.crit_1)
-        cs2 = CriterionScore.objects.get(attempt=self.attempt_early, criterion=self.crit_2)
+        cs1 = CriterionScore.objects.get(
+            attempt=self.attempt_early, criterion=self.crit_1
+        )
+        cs2 = CriterionScore.objects.get(
+            attempt=self.attempt_early, criterion=self.crit_2
+        )
         self.assertEqual(cs1.achieved_points, 9.0)
         self.assertEqual(cs2.achieved_points, 4.0)
 
@@ -160,17 +191,27 @@ class TeacherExamViewsTests(TestCase):
         self.client.force_authenticate(self.teacher_admin)
         url = self._grade_url(self.attempt_late.id)
 
-        payload1 = {"scores": {str(self.crit_1.id): "8.0", str(self.crit_2.id): "5.0"}, "feedback": "v1"}
+        payload1 = {
+            "scores": {str(self.crit_1.id): "8.0", str(self.crit_2.id): "5.0"},
+            "feedback": "v1",
+        }
         resp = self.client.post(url, data=payload1, format="json")
         self.assertEqual(resp.status_code, 200)
 
         # Second grade (update values)
-        payload2 = {"scores": {str(self.crit_1.id): "10.0", str(self.crit_2.id): "3.0"}, "feedback": "v2"}
+        payload2 = {
+            "scores": {str(self.crit_1.id): "10.0", str(self.crit_2.id): "3.0"},
+            "feedback": "v2",
+        }
         resp = self.client.post(url, data=payload2, format="json")
         self.assertEqual(resp.status_code, 200)
 
-        cs1 = CriterionScore.objects.get(attempt=self.attempt_late, criterion=self.crit_1)
-        cs2 = CriterionScore.objects.get(attempt=self.attempt_late, criterion=self.crit_2)
+        cs1 = CriterionScore.objects.get(
+            attempt=self.attempt_late, criterion=self.crit_1
+        )
+        cs2 = CriterionScore.objects.get(
+            attempt=self.attempt_late, criterion=self.crit_2
+        )
         self.assertEqual(cs1.achieved_points, 10.0)
         self.assertEqual(cs2.achieved_points, 3.0)
 
@@ -213,5 +254,3 @@ class TeacherExamViewsTests(TestCase):
         resp = self.client.get(self._exams_list_url())
         self.assertEqual(resp.status_code, 200)
         self.assertGreaterEqual(len(resp.json()), 2)  # exam + other_exam exist
-
-
