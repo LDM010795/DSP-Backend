@@ -16,7 +16,8 @@ jobs:
           ref: ${{ github.head_ref }}
       - name: merge develop
         run: |
-          git checkout develop
+          git fetch origin
+          git checkout origin/develop
           git checkout ${{ github.head_ref }}
           git merge origin/develop
       - uses: actions/cache@v4
