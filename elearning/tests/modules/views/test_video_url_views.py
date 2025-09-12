@@ -176,7 +176,7 @@ class GetVideoPresignedUrlByKeyTest(TestCase):
     def test_not_authenticated(self):
         self.client.cookies.clear()
         response = self.send_get_presigned_url_by_key_request(0)
-        
+
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_empty_key(self):
