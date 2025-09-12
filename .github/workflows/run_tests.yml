@@ -19,7 +19,7 @@ jobs:
           git fetch origin
           git checkout origin/develop
           git checkout ${{ github.head_ref }}
-          git merge origin/develop
+          git merge origin/develop --allow-unrelated-histories
       - uses: actions/cache@v4
         with:
           path: ~/.cache/pip
