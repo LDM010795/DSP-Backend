@@ -16,7 +16,9 @@ jobs:
           ref: ${{ github.head_ref }}
       - name: merge develop
         run: |
-          git merge origin/develop --allow-unrelated-histories
+          git checkout develop
+          git checkout ${{ github.head_ref }}
+          git merge origin/develop
       - uses: actions/cache@v4
         with:
           path: ~/.cache/pip
