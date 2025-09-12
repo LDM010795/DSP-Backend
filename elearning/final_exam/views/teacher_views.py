@@ -2,37 +2,14 @@ from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-
-# Angepasste Importe
-from ..models import ExamAttempt, ExamCriterion, CriterionScore
-from ..serializers import TeacherSubmissionSerializer, GradeSubmissionSerializer, TeacherGradingSerializer
-
-
-class TeacherSubmissionsListView(generics.ListAPIView):
-    serializer_class = TeacherSubmissionSerializer
-    permission_classes = [permissions.IsAdminUser]
-
-    def get_queryset(self):
-        return (
-            ExamAttempt.objects.filter(status=ExamAttempt.Status.SUBMITTED)
-            .select_related("user", "exam")
-            .order_by("submitted_at")
-        )
-
-
-# elearning/final_exam/views/teacher_views.py
-from rest_framework import generics, permissions, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
-
 from ..models import ExamAttempt, ExamCriterion, CriterionScore, Exam
 from ..serializers import (
     TeacherSubmissionSerializer,
-    TeacherGradingSerializer,   # <- this is your GradeSubmissionSerializer alias
+    TeacherGradingSerializer,
     ExamListSerializer,
 )
+
 
 class TeacherSubmissionsListView(generics.ListAPIView):
     serializer_class = TeacherSubmissionSerializer
