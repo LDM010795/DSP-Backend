@@ -23,9 +23,9 @@ from elearning.final_exam.models import Exam, ExamAttempt
 User = get_user_model()
 
 AVAILABLE_URL = "/api/elearning/exams/my-exams/available/"
-ACTIVE_URL    = "/api/elearning/exams/my-exams/active/"
+ACTIVE_URL = "/api/elearning/exams/my-exams/active/"
 COMPLETED_URL = "/api/elearning/exams/my-exams/completed/"
-START_URL_TMPL  = "/api/elearning/exams/{exam_id}/start/"
+START_URL_TMPL = "/api/elearning/exams/{exam_id}/start/"
 SUBMIT_URL_TMPL = "/api/elearning/exams/attempts/{attempt_id}/submit/"
 
 
@@ -33,46 +33,62 @@ class StudentExamViewsTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         # Users
-        cls.student = User.objects.create_user(username='s1', email='s1@example.com', password='pass')
-        cls.other = User.objects.create_user(username='s2', email='s2@example.com', password='pass')
+        cls.student = User.objects.create_user(
+            username="s1", email="s1@example.com", password="pass"
+        )
+        cls.other = User.objects.create_user(
+            username="s2", email="s2@example.com", password="pass"
+        )
 
         # Exams (titles used by availability monkeypatch)
-        cls.exam_open_1 = Exam.objects.create(title="Open - Python", duration_weeks=6, description="desc")
-        cls.exam_open_2 = Exam.objects.create(title="Open - DS", duration_weeks=8, description="desc")
-        cls.exam_locked = Exam.objects.create(title="Locked - Python", duration_weeks=4, description="desc")
+        cls.exam_open_1 = Exam.objects.create(
+            title="Open - Python", duration_weeks=6, description="desc"
+        )
+        cls.exam_open_2 = Exam.objects.create(
+            title="Open - DS", duration_weeks=8, description="desc"
+        )
+        cls.exam_locked = Exam.objects.create(
+            title="Locked - Python", duration_weeks=4, description="desc"
+        )
 
         # Attempts (use bulk_create so ExamAttempt.save() doesn't run during creation)
         now = timezone.now()
         attempts = [
             # STARTED (for ACTIVE)
             ExamAttempt(
-                user=cls.student, exam=cls.exam_open_1,
+                user=cls.student,
+                exam=cls.exam_open_1,
                 status=ExamAttempt.Status.STARTED,
                 started_at=now - timezone.timedelta(hours=2),
             ),
             ExamAttempt(
-                user=cls.student, exam=cls.exam_open_2,
+                user=cls.student,
+                exam=cls.exam_open_2,
                 status=ExamAttempt.Status.STARTED,
                 started_at=now - timezone.timedelta(hours=1),
             ),
             # Another user's started attempt (should not appear for s1)
             ExamAttempt(
-                user=cls.other, exam=cls.exam_open_1,
+                user=cls.other,
+                exam=cls.exam_open_1,
                 status=ExamAttempt.Status.STARTED,
                 started_at=now - timezone.timedelta(minutes=30),
             ),
             # COMPLETED (submitted/graded) for current user
             ExamAttempt(
-                user=cls.student, exam=cls.exam_open_1,
+                user=cls.student,
+                exam=cls.exam_open_1,
                 status=ExamAttempt.Status.SUBMITTED,
                 started_at=now - timezone.timedelta(days=3),
                 submitted_at=now - timezone.timedelta(days=2, hours=1),
             ),
             ExamAttempt(
-                user=cls.student, exam=cls.exam_open_2,
+                user=cls.student,
+                exam=cls.exam_open_2,
                 status=ExamAttempt.Status.GRADED,
                 started_at=now - timezone.timedelta(days=4),
-                submitted_at=now - timezone.timedelta(days=2),  # newer submitted -> should be first
+                submitted_at=now
+                - timezone.timedelta(days=2),  # newer submitted -> should be first
                 graded_at=now - timezone.timedelta(days=1, hours=20),
             ),
         ]
@@ -80,8 +96,9 @@ class StudentExamViewsTests(TestCase):
 
         # Reattach handles for assertions
         started_list = list(
-            ExamAttempt.objects.filter(user=cls.student, status=ExamAttempt.Status.STARTED)
-            .order_by("started_at")
+            ExamAttempt.objects.filter(
+                user=cls.student, status=ExamAttempt.Status.STARTED
+            ).order_by("started_at")
         )
         cls.start_old, cls.start_new = started_list[0], started_list[1]
 
@@ -102,8 +119,14 @@ class StudentExamViewsTests(TestCase):
         self.assertEqual(anon.get(AVAILABLE_URL).status_code, 401)
         self.assertEqual(anon.get(ACTIVE_URL).status_code, 401)
         self.assertEqual(anon.get(COMPLETED_URL).status_code, 401)
-        self.assertEqual(anon.post(START_URL_TMPL.format(exam_id=self.exam_open_1.id)).status_code, 401)
-        self.assertEqual(anon.post(SUBMIT_URL_TMPL.format(attempt_id=self.start_old.id)).status_code, 401)
+        self.assertEqual(
+            anon.post(START_URL_TMPL.format(exam_id=self.exam_open_1.id)).status_code,
+            401,
+        )
+        self.assertEqual(
+            anon.post(SUBMIT_URL_TMPL.format(attempt_id=self.start_old.id)).status_code,
+            401,
+        )
 
     # ------------- AvailableExamView --------------
 
@@ -117,7 +140,10 @@ class StudentExamViewsTests(TestCase):
         def fake_is_available_for(exam_self, user):
             return exam_self.title.startswith("Open")
 
-        with patch("elearning.final_exam.models.Exam.is_available_for", new=fake_is_available_for):
+        with patch(
+            "elearning.final_exam.models.Exam.is_available_for",
+            new=fake_is_available_for,
+        ):
             resp = self.client.get(AVAILABLE_URL)
         self.assertEqual(resp.status_code, 200)
 
@@ -151,13 +177,17 @@ class StudentExamViewsTests(TestCase):
 
     def test_start_exam_forbidden_when_not_available(self):
         self.client.force_authenticate(self.student)
-        with patch("elearning.final_exam.models.Exam.is_available_for", return_value=False):
+        with patch(
+            "elearning.final_exam.models.Exam.is_available_for", return_value=False
+        ):
             resp = self.client.post(START_URL_TMPL.format(exam_id=self.exam_locked.id))
         self.assertEqual(resp.status_code, 403)
 
     def test_start_exam_creates_attempt_and_returns_201(self):
         self.client.force_authenticate(self.student)
-        with patch("elearning.final_exam.models.Exam.is_available_for", return_value=True):
+        with patch(
+            "elearning.final_exam.models.Exam.is_available_for", return_value=True
+        ):
             resp = self.client.post(START_URL_TMPL.format(exam_id=self.exam_locked.id))
         self.assertEqual(resp.status_code, 201)
         body = resp.json()
@@ -172,9 +202,15 @@ class StudentExamViewsTests(TestCase):
 
     def test_submit_exam_404_if_attempt_not_owned(self):
         self.client.force_authenticate(self.student)
-        ExamAttempt.objects.bulk_create([
-            ExamAttempt(user=self.other, exam=self.exam_open_1, status=ExamAttempt.Status.STARTED)
-        ])
+        ExamAttempt.objects.bulk_create(
+            [
+                ExamAttempt(
+                    user=self.other,
+                    exam=self.exam_open_1,
+                    status=ExamAttempt.Status.STARTED,
+                )
+            ]
+        )
         other_attempt = ExamAttempt.objects.filter(
             user=self.other, exam=self.exam_open_1, status=ExamAttempt.Status.STARTED
         ).first()
@@ -190,12 +226,24 @@ class StudentExamViewsTests(TestCase):
 
     def test_submit_exam_success_updates_status_and_timestamp(self):
         self.client.force_authenticate(self.student)
-        ExamAttempt.objects.bulk_create([
-            ExamAttempt(user=self.student, exam=self.exam_open_1, status=ExamAttempt.Status.STARTED)
-        ])
-        fresh = ExamAttempt.objects.filter(
-            user=self.student, exam=self.exam_open_1, status=ExamAttempt.Status.STARTED
-        ).order_by('-id').first()
+        ExamAttempt.objects.bulk_create(
+            [
+                ExamAttempt(
+                    user=self.student,
+                    exam=self.exam_open_1,
+                    status=ExamAttempt.Status.STARTED,
+                )
+            ]
+        )
+        fresh = (
+            ExamAttempt.objects.filter(
+                user=self.student,
+                exam=self.exam_open_1,
+                status=ExamAttempt.Status.STARTED,
+            )
+            .order_by("-id")
+            .first()
+        )
 
         resp = self.client.post(SUBMIT_URL_TMPL.format(attempt_id=fresh.id))
         self.assertEqual(resp.status_code, 200)
