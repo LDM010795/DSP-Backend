@@ -19,8 +19,7 @@ jobs:
           git fetch origin
           git checkout origin/develop
           git checkout ${{ github.head_ref }}
-          git -c user.email="bot@datasmartpoint.com" -c user.name="runner_script"  \ 
-          merge origin/develop -m "merge for tests" --author="runner_script --allow-unrelated-histories"
+          git -c user.email="bot@datasmartpoint.com" -c user.name="runner_script" merge origin/develop -m "merge for tests" --author="runner_script --allow-unrelated-histories
       - uses: actions/cache@v4
         with:
           path: ~/.cache/pip
