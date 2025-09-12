@@ -242,6 +242,11 @@ class SetInitialPasswordSerializer(serializers.Serializer):
         help_text=_("Enter the same password for confirmation"),
     )
 
+    # der Serializer braucht den User, damit UserAttributeSimilarityValidator funktioniert
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
     def validate_password(self, value: str) -> str:
         """
         Validate password strength using Django validators.
@@ -256,7 +261,7 @@ class SetInitialPasswordSerializer(serializers.Serializer):
             ValidationError: If password doesn't meet security requirements
         """
         try:
-            validate_password(value)
+            validate_password(value, self.user)
         except DjangoValidationError as e:
             raise serializers.ValidationError(list(e.messages))
         return value
@@ -367,6 +372,34 @@ class ExternalUserRegistrationSerializer(serializers.ModelSerializer):
         """
         if User.objects.filter(email=value).exists():
             raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_password(self, value: str) -> str:
+        """
+        Validate password strength using Django validators.
+
+        Args:
+            value: Password to validate
+
+        Returns:
+            Validated password
+
+        Raises:
+            ValidationError: If password doesn't meet security requirements
+        """
+        # Because the user is not yet in the database,
+        # we need a temp user to validate the password:
+        temp_user = User(
+            username=self.initial_data.get("username", ""),
+            email=self.initial_data.get("email", ""),
+            first_name=self.initial_data.get("first_name", ""),
+            last_name=self.initial_data.get("last_name", ""),
+        )
+
+        try:
+            validate_password(value, temp_user)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
         return value
 
     def validate(self, data):
