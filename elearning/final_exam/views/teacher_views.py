@@ -2,10 +2,13 @@ from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-
-# Angepasste Importe
-from ..models import ExamAttempt, ExamCriterion, CriterionScore
-from ..serializers import TeacherSubmissionSerializer, GradeSubmissionSerializer
+from django.utils import timezone
+from ..models import ExamAttempt, ExamCriterion, CriterionScore, Exam
+from ..serializers import (
+    TeacherSubmissionSerializer,
+    TeacherGradingSerializer,
+    ExamListSerializer,
+)
 
 
 class TeacherSubmissionsListView(generics.ListAPIView):
@@ -25,15 +28,30 @@ class TeacherGradeAttemptView(APIView):
 
     def post(self, request, attempt_id):
         attempt = get_object_or_404(ExamAttempt, pk=attempt_id)
-        serializer = GradeSubmissionSerializer(data=request.data)
 
+        # ---- Backward-compat normalization (accept dict or list) ----
+        data = request.data.copy()
+        scores = data.get("scores")
+        if isinstance(scores, dict):
+            # convert {"12": 9, "13": 4} -> [{"criterion_id": 12, "achieved_points": 9}, ...]
+            data["scores"] = [
+                {"criterion_id": int(k), "achieved_points": v}
+                for k, v in scores.items()
+            ]
+
+        serializer = TeacherGradingSerializer(
+            data=data,
+            context={"request": request, "attempt": attempt},
+        )
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         scores_data = serializer.validated_data["scores"]
         feedback = serializer.validated_data.get("feedback", "")
 
-        for criterion_id, points in scores_data.items():
+        for item in scores_data:
+            criterion_id = item["criterion_id"]
+            points = item["achieved_points"]
             criterion = get_object_or_404(
                 ExamCriterion, pk=criterion_id, exam=attempt.exam
             )
@@ -46,7 +64,8 @@ class TeacherGradeAttemptView(APIView):
         attempt.feedback = feedback
         attempt.graded_by = request.user
         attempt.status = ExamAttempt.Status.GRADED
-        attempt.save()
+        attempt.graded_at = timezone.now()
+        attempt.save(update_fields=["feedback", "graded_by", "status", "graded_at"])
 
         return Response(
             {"message": "Bewertung erfolgreich gespeichert."}, status=status.HTTP_200_OK
@@ -54,11 +73,6 @@ class TeacherGradeAttemptView(APIView):
 
 
 class AllExamsListView(generics.ListAPIView):
-    from ..models import Exam
-    from ..serializers import ExamListSerializer
-
     queryset = Exam.objects.all()
     serializer_class = ExamListSerializer
-    permission_classes = [
-        permissions.IsAuthenticated
-    ]  # Alle authentifizierten User können Exams sehen
+    permission_classes = [permissions.IsAuthenticated]
