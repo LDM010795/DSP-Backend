@@ -21,28 +21,33 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-User= get_user_model()
+User = get_user_model()
 
 # urls
 BASE = "/api/elearning/modules/content/"
 
-URL_PROCESS_ONE    = BASE + "process-module/"
+URL_PROCESS_ONE = BASE + "process-module/"
 URL_VALIDATE_VIDEO = BASE + "validate-video-url/"
-URL_AVAILABLE      = BASE + "available-modules/"
-URL_STATS          = BASE + "module-statistics/"
-URL_TEST_SERVICES  = BASE + "test-services/"
-URL_PROCESS_MULTI  = BASE + "process-multiple-modules/"
-URL_CLEANUP        = BASE + "cleanup-module/"
+URL_AVAILABLE = BASE + "available-modules/"
+URL_STATS = BASE + "module-statistics/"
+URL_TEST_SERVICES = BASE + "test-services/"
+URL_PROCESS_MULTI = BASE + "process-multiple-modules/"
+URL_CLEANUP = BASE + "cleanup-module/"
 
 
 # patch where the symbols are *used* (the views module)
 PATCH_BASE = "elearning.modules.views.content_processing_views"
 
+
 class ContentProcessingViewsTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user(username='user', email='user@example.com', password='pass')
-        cls.admin = User.objects.create_user(username='admin', email='admin@example.com', password='pass')
+        cls.user = User.objects.create_user(
+            username="user", email="user@example.com", password="pass"
+        )
+        cls.admin = User.objects.create_user(
+            username="admin", email="admin@example.com", password="pass"
+        )
         cls.admin.is_staff = True
         cls.admin.is_superuser = True
         cls.admin.save()
@@ -54,22 +59,39 @@ class ContentProcessingViewsTests(TestCase):
 
     def test_requires_auth_for_all_user_endpoints(self):
         anon = APIClient()
-        self.assertEqual(anon.post(URL_PROCESS_ONE, data={}, format="json").status_code, 401)
-        self.assertEqual(anon.post(URL_VALIDATE_VIDEO, data={}, format="json").status_code, 401)
+        self.assertEqual(
+            anon.post(URL_PROCESS_ONE, data={}, format="json").status_code, 401
+        )
+        self.assertEqual(
+            anon.post(URL_VALIDATE_VIDEO, data={}, format="json").status_code, 401
+        )
         self.assertEqual(anon.get(URL_AVAILABLE).status_code, 401)
         self.assertEqual(anon.get(f"{URL_STATS}?module_name=SQL").status_code, 401)
-        self.assertEqual(anon.post(URL_PROCESS_MULTI, data={}, format="json").status_code, 401)
+        self.assertEqual(
+            anon.post(URL_PROCESS_MULTI, data={}, format="json").status_code, 401
+        )
 
     def test_admin_only_endpoints_permissions(self):
         # anon -> 401
         anon = APIClient()
-        self.assertEqual(anon.post(URL_TEST_SERVICES, data={}, format="json").status_code, 401)
-        self.assertEqual(anon.post(URL_CLEANUP, data={}, format="json").status_code, 401)
+        self.assertEqual(
+            anon.post(URL_TEST_SERVICES, data={}, format="json").status_code, 401
+        )
+        self.assertEqual(
+            anon.post(URL_CLEANUP, data={}, format="json").status_code, 401
+        )
 
         # authed non-admin -> 403
         self.client.force_authenticate(self.user)
-        self.assertEqual(self.client.post(URL_TEST_SERVICES, data={}, format="json").status_code, 403)
-        self.assertEqual(self.client.post(URL_CLEANUP, data={"module_name": "SQL"}, format="json").status_code, 403)
+        self.assertEqual(
+            self.client.post(URL_TEST_SERVICES, data={}, format="json").status_code, 403
+        )
+        self.assertEqual(
+            self.client.post(
+                URL_CLEANUP, data={"module_name": "SQL"}, format="json"
+            ).status_code,
+            403,
+        )
 
     # ----------- process_module_content -----------
 
@@ -84,13 +106,20 @@ class ContentProcessingViewsTests(TestCase):
         self.client.force_authenticate(self.user)
         # Build a fake result obj with attributes used by view
         fake_result = SimpleNamespace(
-            success=True, module_name="SQL",
-            images_processed=5, articles_processed=2,
-            images_saved=5, articles_saved=2, errors=[], warnings=[]
+            success=True,
+            module_name="SQL",
+            images_processed=5,
+            articles_processed=2,
+            images_saved=5,
+            articles_saved=2,
+            errors=[],
+            warnings=[],
         )
         MockOrch.return_value.process_module_content.return_value = fake_result
 
-        resp = self.client.post(URL_PROCESS_ONE, data={"module_name": "SQL"}, format="json")
+        resp = self.client.post(
+            URL_PROCESS_ONE, data={"module_name": "SQL"}, format="json"
+        )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertEqual(data["success"], True)
@@ -117,10 +146,11 @@ class ContentProcessingViewsTests(TestCase):
     def test_validate_video_url_400_when_not_video_extension(self):
         self.client.force_authenticate(self.user)
         bad = "https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Videos/readme.txt"
-        resp = self.client.post(URL_VALIDATE_VIDEO, data={"video_url": bad}, format="json")
+        resp = self.client.post(
+            URL_VALIDATE_VIDEO, data={"video_url": bad}, format="json"
+        )
         self.assertEqual(resp.status_code, 400)
         self.assertIn("keine gültige video-datei", resp.json().get("error", "").lower())
-
 
     @patch(f"{PATCH_BASE}.CloudStorageService")
     def test_validate_video_url_404_when_head_object_missing(self, MockCloud):
@@ -131,7 +161,9 @@ class ContentProcessingViewsTests(TestCase):
         instance = MockCloud.return_value
         instance.client.head_object.side_effect = Exception("NotFound")
 
-        resp = self.client.post(URL_VALIDATE_VIDEO, data={"video_url": good}, format="json")
+        resp = self.client.post(
+            URL_VALIDATE_VIDEO, data={"video_url": good}, format="json"
+        )
         self.assertEqual(resp.status_code, 404)
 
     @patch(f"{PATCH_BASE}.CloudStorageService")
@@ -141,21 +173,30 @@ class ContentProcessingViewsTests(TestCase):
 
         # Simulate existing object
         instance = MockCloud.return_value
-        instance.client.head_object.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
+        instance.client.head_object.return_value = {
+            "ResponseMetadata": {"HTTPStatusCode": 200}
+        }
 
-        resp = self.client.post(URL_VALIDATE_VIDEO, data={"video_url": good}, format="json")
+        resp = self.client.post(
+            URL_VALIDATE_VIDEO, data={"video_url": good}, format="json"
+        )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data["is_valid"])
         self.assertEqual(data["filename"], "1.1%20Einführung.mp4")
-        self.assertEqual(data["title"], "1.1%20Einführung")  # view uses os.path.splitext on the raw last segment
+        self.assertEqual(
+            data["title"], "1.1%20Einführung"
+        )  # view uses os.path.splitext on the raw last segment
 
     # ---------- get_available_modules ----------
 
     @patch(f"{PATCH_BASE}.ContentOrchestrationService")
     def test_available_modules_success(self, MockOrch):
         self.client.force_authenticate(self.user)
-        MockOrch.return_value.get_available_modules.return_value = ["SQL", "Python Grundlagen"]
+        MockOrch.return_value.get_available_modules.return_value = [
+            "SQL",
+            "Python Grundlagen",
+        ]
 
         resp = self.client.get(URL_AVAILABLE)
         self.assertEqual(resp.status_code, 200)
@@ -172,7 +213,9 @@ class ContentProcessingViewsTests(TestCase):
     @patch(f"{PATCH_BASE}.ContentOrchestrationService")
     def test_module_statistics_404_when_service_returns_error(self, MockOrch):
         self.client.force_authenticate(self.user)
-        MockOrch.return_value.get_module_statistics.return_value = {"error": "not found"}
+        MockOrch.return_value.get_module_statistics.return_value = {
+            "error": "not found"
+        }
         resp = self.client.get(f"{URL_STATS}?module_name=Nope")
         self.assertEqual(resp.status_code, 404)
 
@@ -236,14 +279,24 @@ class ContentProcessingViewsTests(TestCase):
 
         results = [
             SimpleNamespace(
-                success=True, module_name="SQL",
-                images_processed=5, articles_processed=2,
-                images_saved=5, articles_saved=2, errors=[], warnings=[]
+                success=True,
+                module_name="SQL",
+                images_processed=5,
+                articles_processed=2,
+                images_saved=5,
+                articles_saved=2,
+                errors=[],
+                warnings=[],
             ),
             SimpleNamespace(
-                success=True, module_name="Python Grundlagen",
-                images_processed=3, articles_processed=1,
-                images_saved=3, articles_saved=1, errors=[], warnings=[]
+                success=True,
+                module_name="Python Grundlagen",
+                images_processed=3,
+                articles_processed=1,
+                images_saved=3,
+                articles_saved=1,
+                errors=[],
+                warnings=[],
             ),
         ]
         MockOrch.return_value.process_multiple_modules.return_value = results
@@ -264,14 +317,24 @@ class ContentProcessingViewsTests(TestCase):
         self.client.force_authenticate(self.user)
         results = [
             SimpleNamespace(
-                success=True, module_name="SQL",
-                images_processed=5, articles_processed=2,
-                images_saved=5, articles_saved=2, errors=[], warnings=[]
+                success=True,
+                module_name="SQL",
+                images_processed=5,
+                articles_processed=2,
+                images_saved=5,
+                articles_saved=2,
+                errors=[],
+                warnings=[],
             ),
             SimpleNamespace(
-                success=False, module_name="DS",
-                images_processed=0, articles_processed=0,
-                images_saved=0, articles_saved=0, errors=["x"], warnings=[]
+                success=False,
+                module_name="DS",
+                images_processed=0,
+                articles_processed=0,
+                images_saved=0,
+                articles_saved=0,
+                errors=["x"],
+                warnings=[],
             ),
         ]
         MockOrch.return_value.process_multiple_modules.return_value = results
@@ -318,5 +381,3 @@ class ContentProcessingViewsTests(TestCase):
         resp = self.client.post(URL_CLEANUP, data={"module_name": "SQL"}, format="json")
         self.assertEqual(resp.status_code, 400)
         self.assertFalse(resp.json()["success"])
-
-
