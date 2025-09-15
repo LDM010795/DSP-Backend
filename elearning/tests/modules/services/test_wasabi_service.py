@@ -6,7 +6,6 @@ from elearning.modules.services.wasabi_service import WasabiService
 
 
 class WasabiServiceTests(TestCase):
-
     def setUp(self):
         self.service = WasabiService.__new__(WasabiService)
         self.service.bucket = "dsp-e-learning"
@@ -69,7 +68,9 @@ class WasabiServiceTests(TestCase):
         mock_boto_client.return_value = mock_client_instance
 
         key = "Lerninhalte/SQL/Videos/Einführung.mp4"
-        expected_url = f"https://dsp-e-learning.s3.wasabisys.com/{key}?fake-signature=123"
+        expected_url = (
+            f"https://dsp-e-learning.s3.wasabisys.com/{key}?fake-signature=123"
+        )
         mock_client_instance.generate_presigned_url.return_value = expected_url
 
         result = self.service.generate_presigned_url(key)
@@ -79,7 +80,7 @@ class WasabiServiceTests(TestCase):
             ClientMethod="get_object",
             Params={"Bucket": self.service.bucket, "Key": key},
             ExpiresIn=7200,
-        )    
+        )
 
     @patch("boto3.client")
     def test_exception_generate_presigned_url(self, mock_boto_client):
