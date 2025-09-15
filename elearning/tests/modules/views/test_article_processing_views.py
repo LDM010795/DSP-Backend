@@ -1,6 +1,8 @@
 from django.test import TestCase
 from unittest.mock import patch, MagicMock
-from ....services.content_processing.article_processing_service import ArticleProcessingService, ProcessedArticleResult
+from ....services.content_processing.article_processing_service import (
+    ArticleProcessingService,
+)
 
 
 class ArticleProcessingServiceTests(TestCase):
@@ -37,14 +39,14 @@ class ArticleProcessingServiceTests(TestCase):
         self, mock_db, mock_word, mock_cloud
     ):
         # Mock cloud download
-        mock_cloud.return_value.download_file_content.return_value = b"fake-docx-content"
+        mock_cloud.return_value.download_file_content.return_value = (
+            b"fake-docx-content"
+        )
 
         # Mock word processing result
         mock_article = MagicMock()
         mock_article.title = "Test Article"
-        mock_article.json_content = {
-            "content": [{"type": "image", "src": "img1.png"}]
-        }
+        mock_article.json_content = {"content": [{"type": "image", "src": "img1.png"}]}
         mock_word.return_value.process_word_document.return_value = mock_article
 
         # Mock DB module and save
