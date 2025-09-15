@@ -39,8 +39,6 @@ class WasabiService:
         - führende Slashes entfernen
         - optionales Bucket-Präfix im Pfad entfernen ("<bucket>/...")
         """
-        if not key:
-            return key
         # URL decode
         decoded = urllib.parse.unquote(key)
         # trim leading slashes
@@ -65,6 +63,9 @@ class WasabiService:
         print("🔧 DEBUG: generate_presigned_url aufgerufen mit:")
         print(f"  - Key: {key}")
         print(f"  - Expires: {expires_seconds} Sekunden")
+
+        if not key or not isinstance(key, str):
+            raise ValueError("Key must be a non-empty String!")
 
         try:
             print("🔧 DEBUG: Erstelle S3 Client...")

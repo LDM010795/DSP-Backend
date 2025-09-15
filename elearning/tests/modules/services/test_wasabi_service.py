@@ -15,11 +15,11 @@ class WasabiServiceTests(TestCase):
         self.service.secret_key = "fakesecret"
 
     def test_empty_key(self):
-        result = self.service.generate_presigned_url("")
-        self.assertIsNone(result)
+        with self.assertRaises(ValueError):
+            self.service.generate_presigned_url("")
 
-        result = self.service.generate_presigned_url(None)
-        self.assertIsNone(result)
+        with self.assertRaises(ValueError):
+            self.service.generate_presigned_url(None)
 
     def test_normalize_key(self):
         cases = [
