@@ -17,7 +17,8 @@ class TestExecutePythonCodeView(TestCase):
         )
         cls.task_without_testcase = Task.objects.create(title="Titel des Tasks")
         cls.task_with_testcase = Task.objects.create(
-            title="Titel des Tasks", test_file_path="tests\\modules\\views\\test-scripts\\test-case-1.py"
+            title="Titel des Tasks",
+            test_file_path="tests\\modules\\views\\test-scripts\\test-case-1.py",
         )
 
         cls.execute_python_url = reverse("elearning:modules:execute-python-code")
