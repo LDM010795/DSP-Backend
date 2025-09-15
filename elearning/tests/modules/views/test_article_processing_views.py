@@ -1,7 +1,7 @@
 from unittest import mock
 
 from django.test import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 from ....services.content_processing import article_processing_service
 
@@ -33,12 +33,7 @@ class ArticleProcessingServiceTests(TestCase):
         images = self.service._extract_images_from_json(json_content)
         self.assertEqual(images, ["image1", "image2"])
 
-
-
-
-    def test_process_article_from_cloud_url_success(
-        self
-    ):
+    def test_process_article_from_cloud_url_success(self):
         with (
             mock.patch(
                 "elearning.services.content_processing.article_processing_service.CloudStorageService"
@@ -52,21 +47,21 @@ class ArticleProcessingServiceTests(TestCase):
         ):
             self.service = article_processing_service.ArticleProcessingService()
             # Mock cloud download
-            mock_cloud.download_file_content.return_value = (
-                b"fake-docx-content"
-            )
+            mock_cloud.download_file_content.return_value = b"fake-docx-content"
 
             # Mock word processing result
             mock_article = MagicMock()
             mock_article.title = "Test Article"
-            mock_article.json_content = {"content": [{"type": "image", "src": "img1.png"}]}
+            mock_article.json_content = {
+                "content": [{"type": "image", "src": "img1.png"}]
+            }
             mock_word.return_value.process_word_document.return_value = mock_article
 
             # Mock DB module and save
             mock_module = MagicMock()
             mock_module.title = "ModuleTitle"
             mock_db.return_value.get_module_by_id.return_value = mock_module
-            fake_image = {"images":{"name": "img1", "url": "img.com"}}
+            fake_image = {"images": {"name": "img1", "url": "img.com"}}
             mock_cloud.get_module_content.return_value = fake_image
             saved_article = MagicMock()
             saved_article.id = 123
