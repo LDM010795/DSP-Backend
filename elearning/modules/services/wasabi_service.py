@@ -47,7 +47,7 @@ class WasabiService:
         trimmed = decoded.lstrip("/")
         # remove duplicate bucket prefix in path
         bucket_prefix = f"{self.bucket}/"
-        if trimmed.startswith(bucket_prefix):
+        while trimmed.startswith(bucket_prefix):
             trimmed = trimmed[len(bucket_prefix) :]
         return trimmed
 
