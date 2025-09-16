@@ -130,7 +130,9 @@ class ContentProcessingViewsTests(TestCase):
         self.assertEqual(resp.status_code, 400)
 
     def test_validate_video_url_400_when_wrong_prefix(self):
-        resp = self.api_post(URL_VALIDATE_VIDEO, data={"video_url": "https://example.com/foo.mp4"})
+        resp = self.api_post(
+            URL_VALIDATE_VIDEO, data={"video_url": "https://example.com/foo.mp4"}
+        )
         self.assertEqual(resp.status_code, 400)
         self.assertIn("ungültige", resp.json()["error"].lower())
 
@@ -139,7 +141,6 @@ class ContentProcessingViewsTests(TestCase):
         resp = self.api_post(URL_VALIDATE_VIDEO, data={"video_url": bad})
         self.assertEqual(resp.status_code, 400)
         self.assertIn("keine gültige video-datei", resp.json()["error"].lower())
-
 
     @patch(f"{PATCH_BASE}.CloudStorageService")
     def test_validate_video_url_404_when_head_object_missing(self, MockCloud):
@@ -158,20 +159,27 @@ class ContentProcessingViewsTests(TestCase):
 
         # Simulate existing object
         instance = MockCloud.return_value
-        instance.client.head_object.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
+        instance.client.head_object.return_value = {
+            "ResponseMetadata": {"HTTPStatusCode": 200}
+        }
 
         resp = self.api_post(URL_VALIDATE_VIDEO, data={"video_url": good})
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data["is_valid"])
         self.assertEqual(data["filename"], "1.1%20Einführung.mp4")
-        self.assertEqual(data["title"], "1.1%20Einführung")  # view uses os.path.splitext on the raw last segment
+        self.assertEqual(
+            data["title"], "1.1%20Einführung"
+        )  # view uses os.path.splitext on the raw last segment
 
     # ---------- get_available_modules ----------
 
     @patch(f"{PATCH_BASE}.ContentOrchestrationService")
     def test_available_modules_success(self, MockOrch):
-        MockOrch.return_value.get_available_modules.return_value = ["SQL", "Python Grundlagen"]
+        MockOrch.return_value.get_available_modules.return_value = [
+            "SQL",
+            "Python Grundlagen",
+        ]
 
         resp = self.api_get(URL_AVAILABLE)
         self.assertEqual(resp.status_code, 200)
@@ -186,7 +194,9 @@ class ContentProcessingViewsTests(TestCase):
 
     @patch(f"{PATCH_BASE}.ContentOrchestrationService")
     def test_module_statistics_404_when_service_returns_error(self, MockOrch):
-        MockOrch.return_value.get_module_statistics.return_value = {"error": "not found"}
+        MockOrch.return_value.get_module_statistics.return_value = {
+            "error": "not found"
+        }
         resp = self.api_get(f"{URL_STATS}?module_name=Nope")
         self.assertEqual(resp.status_code, 404)
         self.assertEqual(resp.json()["success"], False)
@@ -278,8 +288,7 @@ class ContentProcessingViewsTests(TestCase):
         MockOrch.return_value.process_multiple_modules.return_value = results
 
         resp = self.api_post(
-            URL_PROCESS_MULTI,
-            data={"module_names": ["SQL", "Python Grundlagen"]}
+            URL_PROCESS_MULTI, data={"module_names": ["SQL", "Python Grundlagen"]}
         )
         self.assertEqual(resp.status_code, 200)
         body = resp.json()
@@ -315,10 +324,7 @@ class ContentProcessingViewsTests(TestCase):
         ]
         MockOrch.return_value.process_multiple_modules.return_value = results
 
-        resp = self.api_post(
-            URL_PROCESS_MULTI,
-            data={"module_names": ["SQL", "DS"]}
-        )
+        resp = self.api_post(URL_PROCESS_MULTI, data={"module_names": ["SQL", "DS"]})
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertFalse(data["success"])
@@ -363,5 +369,3 @@ class ContentProcessingViewsTests(TestCase):
         body = resp.json()
         self.assertFalse(body["success"])
         self.assertEqual(body["error"], "Something went wrong")
-
-
