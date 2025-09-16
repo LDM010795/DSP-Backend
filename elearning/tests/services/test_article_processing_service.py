@@ -62,12 +62,16 @@ class ArticleProcessingServiceTests(TestCase):
             mock_module = MagicMock()
             mock_module.title = "ModuleTitle"
             mock_db.return_value.get_module_by_id.return_value = mock_module
-            fake_image = SimpleNamespace(images=[SimpleNamespace(name="img1", url="img.com"),])
+            fake_image = SimpleNamespace(
+                images=[
+                    SimpleNamespace(name="img1", url="img.com"),
+                ]
+            )
             mock_cloud.return_value.get_module_content.return_value = fake_image
             saved_article = MagicMock()
             saved_article.id = 123
             mock_db.return_value.save_processed_articles.return_value = [saved_article]
-            mock_db.return_value.save_article_images.return_value = "1" #self.logger.info(f"{len(saved_images)} Bilder für Artikel gespeichert")
+            mock_db.return_value.save_article_images.return_value = "1"  # self.logger.info(f"{len(saved_images)} Bilder für Artikel gespeichert")
 
             result = self.service.process_article_from_cloud_url(
                 module_id=1,
@@ -80,7 +84,6 @@ class ArticleProcessingServiceTests(TestCase):
             self.assertEqual(result.article_id, 123)
             self.assertEqual(result.images_found, ["img1"])
             self.assertEqual(result.images_saved, 1)
-
 
     def test_process_article_download_fail(self):
         with (
@@ -97,7 +100,6 @@ class ArticleProcessingServiceTests(TestCase):
             )
             self.assertFalse(result.success)
             self.assertIn("Konnte Word-Dokument nicht herunterladen", result.errors)
-
 
     def test_process_article_word_processing_fail(self):
         with (

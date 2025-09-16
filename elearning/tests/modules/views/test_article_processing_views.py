@@ -1,13 +1,11 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
-from rest_framework.test import APIClient
 from rest_framework import status
 from unittest import mock
 
 
 class ProcessArticleFromCloudTests(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user(
@@ -18,9 +16,12 @@ class ProcessArticleFromCloudTests(TestCase):
             last_name="Mustermann",
         )
         cls.url = reverse("elearning:modules:process-article-from-cloud")
-    def setUp(self):
-        self.client.post(reverse("elearning:token_obtain_pair"),{"username": "max.mustermann", "password": "34gf75!a"})
 
+    def setUp(self):
+        self.client.post(
+            reverse("elearning:token_obtain_pair"),
+            {"username": "max.mustermann", "password": "34gf75!a"},
+        )
 
     def test_missing_module_id(self):
         response = self.client.post(self.url, {"cloudUrl": "http://valid-url.com"})
@@ -33,15 +34,24 @@ class ProcessArticleFromCloudTests(TestCase):
         self.assertIn("cloudUrl ist erforderlich", response.data["error"])
 
     def test_invalid_cloud_url(self):
-        with mock.patch("elearning.modules.views.article_processing_views.ArticleProcessingService") as MockService:
+        with mock.patch(
+            "elearning.modules.views.article_processing_views.ArticleProcessingService"
+        ) as MockService:
             mock_service = MockService.return_value
-            mock_service.validate_cloud_url.return_value = {"valid": False, "errors": ["invalid url"]}
-            response = self.client.post(self.url, {"moduleId": 1, "cloudUrl": "bad-url"})
+            mock_service.validate_cloud_url.return_value = {
+                "valid": False,
+                "errors": ["invalid url"],
+            }
+            response = self.client.post(
+                self.url, {"moduleId": 1, "cloudUrl": "bad-url"}
+            )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Ungültige Cloud-URL", response.data["error"])
 
     def test_successful_processing(self):
-        with mock.patch("elearning.modules.views.article_processing_views.ArticleProcessingService") as MockService:
+        with mock.patch(
+            "elearning.modules.views.article_processing_views.ArticleProcessingService"
+        ) as MockService:
             mock_service = MockService.return_value
             mock_service.validate_cloud_url.return_value = {"valid": True}
             mock_result = mock.MagicMock()
@@ -54,13 +64,17 @@ class ProcessArticleFromCloudTests(TestCase):
             mock_result.warnings = []
             mock_service.process_article_from_cloud_url.return_value = mock_result
 
-            response = self.client.post(self.url, {"moduleId": 1, "cloudUrl": "http://valid-url.com"})
+            response = self.client.post(
+                self.url, {"moduleId": 1, "cloudUrl": "http://valid-url.com"}
+            )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["success"])
         self.assertEqual(response.data["article_title"], "Test Title")
 
     def test_failed_processing(self):
-        with mock.patch("elearning.modules.views.article_processing_views.ArticleProcessingService") as MockService:
+        with mock.patch(
+            "elearning.modules.views.article_processing_views.ArticleProcessingService"
+        ) as MockService:
             mock_service = MockService.return_value
             mock_service.validate_cloud_url.return_value = {"valid": True}
             mock_result = mock.MagicMock()
@@ -73,11 +87,12 @@ class ProcessArticleFromCloudTests(TestCase):
             mock_result.warnings = []
             mock_service.process_article_from_cloud_url.return_value = mock_result
 
-            response = self.client.post(self.url, {"moduleId": 1, "cloudUrl": "http://valid-url.com"})
+            response = self.client.post(
+                self.url, {"moduleId": 1, "cloudUrl": "http://valid-url.com"}
+            )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(response.data["success"])
         self.assertIn("processing error", response.data["errors"])
-
 
 
 class ValidateCloudUrlTests(TestCase):
@@ -93,8 +108,10 @@ class ValidateCloudUrlTests(TestCase):
         cls.url = reverse("elearning:modules:process-article-from-cloud")
 
     def setUp(self):
-        self.client.post(reverse("elearning:token_obtain_pair"), {"username": "max.mustermann", "password": "34gf75!a"})
-
+        self.client.post(
+            reverse("elearning:token_obtain_pair"),
+            {"username": "max.mustermann", "password": "34gf75!a"},
+        )
 
     def test_missing_cloud_url(self):
         response = self.client.post(self.url, {})
@@ -114,8 +131,11 @@ class ValidateCloudUrlTests(TestCase):
 """
 
     def test_exception_handling(self):
-        with mock.patch("elearning.modules.views.article_processing_views.ArticleProcessingService") as MockService:
+        with mock.patch(
+            "elearning.modules.views.article_processing_views.ArticleProcessingService"
+        ) as MockService:
             MockService.side_effect = Exception("unexpected error")
-            response = self.client.post(self.url, {"cloudUrl": "http://valid-url.com", "moduleId": "1"})
+            response = self.client.post(
+                self.url, {"cloudUrl": "http://valid-url.com", "moduleId": "1"}
+            )
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-
