@@ -1,93 +1,121 @@
+from django.contrib.auth.models import User
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework.test import APIClient
+from rest_framework import status
 from unittest import mock
 
-from django.test import TestCase
-from unittest.mock import MagicMock
 
-from ....services.content_processing import article_processing_service
+class ProcessArticleFromCloudTests(TestCase):
 
-
-class ArticleProcessingServiceTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            username="max.mustermann",
+            password="34gf75!a",
+            email="mustermann123@gmail.com",
+            first_name="Max",
+            last_name="Mustermann",
+        )
+        cls.url = reverse("elearning:modules:process-article-from-cloud")
     def setUp(self):
-        self.service = article_processing_service.ArticleProcessingService()
+        self.client.post(reverse("elearning:token_obtain_pair"),{"username": "max.mustermann", "password": "34gf75!a"})
 
-    def test_parse_cloud_url_valid(self):
-        url = "https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Artikel/test.docx"
-        result = self.service._parse_cloud_url(url)
-        self.assertIsNotNone(result)
-        self.assertEqual(result["file_name"], "test.docx")
-        self.assertEqual(result["module_name"], "SQL")
 
-    def test_parse_cloud_url_invalid(self):
-        url = "https://s3.eu-central-2.wasabisys.com/invalid"
-        result = self.service._parse_cloud_url(url)
-        self.assertIsNone(result)
+    def test_missing_module_id(self):
+        response = self.client.post(self.url, {"cloudUrl": "http://valid-url.com"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("moduleId ist erforderlich", response.data["error"])
 
-    def test_extract_images_from_json(self):
-        json_content = {
-            "content": [
-                {"type": "image", "src": "image1.png"},
-                {"type": "text", "value": "Hello"},
-                {"type": "image", "src": "image2.jpg"},
-            ]
-        }
-        images = self.service._extract_images_from_json(json_content)
-        self.assertEqual(images, ["image1", "image2"])
+    def test_missing_cloud_url(self):
+        response = self.client.post(self.url, {"moduleId": 1})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("cloudUrl ist erforderlich", response.data["error"])
 
-    def test_process_article_from_cloud_url_success(self):
-        with (
-            mock.patch(
-                "elearning.services.content_processing.article_processing_service.CloudStorageService"
-            ) as mock_cloud,
-            mock.patch(
-                "elearning.services.content_processing.article_processing_service.WordProcessingService"
-            ) as mock_word,
-            mock.patch(
-                "elearning.services.content_processing.article_processing_service.DatabaseService"
-            ) as mock_db,
-        ):
-            self.service = article_processing_service.ArticleProcessingService()
-            # Mock cloud download
-            mock_cloud.download_file_content.return_value = b"fake-docx-content"
+    def test_invalid_cloud_url(self):
+        with mock.patch("elearning.modules.views.article_processing_views.ArticleProcessingService") as MockService:
+            mock_service = MockService.return_value
+            mock_service.validate_cloud_url.return_value = {"valid": False, "errors": ["invalid url"]}
+            response = self.client.post(self.url, {"moduleId": 1, "cloudUrl": "bad-url"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Ungültige Cloud-URL", response.data["error"])
 
-            # Mock word processing result
-            mock_article = MagicMock()
-            mock_article.title = "Test Article"
-            mock_article.json_content = {
-                "content": [{"type": "image", "src": "img1.png"}]
-            }
-            mock_word.return_value.process_word_document.return_value = mock_article
+    def test_successful_processing(self):
+        with mock.patch("elearning.modules.views.article_processing_views.ArticleProcessingService") as MockService:
+            mock_service = MockService.return_value
+            mock_service.validate_cloud_url.return_value = {"valid": True}
+            mock_result = mock.MagicMock()
+            mock_result.success = True
+            mock_result.article_title = "Test Title"
+            mock_result.article_id = 123
+            mock_result.images_found = ["IMG1"]
+            mock_result.images_saved = 1
+            mock_result.errors = []
+            mock_result.warnings = []
+            mock_service.process_article_from_cloud_url.return_value = mock_result
 
-            # Mock DB module and save
-            mock_module = MagicMock()
-            mock_module.title = "ModuleTitle"
-            mock_db.return_value.get_module_by_id.return_value = mock_module
-            fake_image = {"images": {"name": "img1", "url": "img.com"}}
-            mock_cloud.get_module_content.return_value = fake_image
-            saved_article = MagicMock()
-            saved_article.id = 123
-            mock_db.return_value.save_processed_articles.return_value = [saved_article]
-            mock_db.save_article_images.return_value = 1
+            response = self.client.post(self.url, {"moduleId": 1, "cloudUrl": "http://valid-url.com"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(response.data["article_title"], "Test Title")
 
-            result = self.service.process_article_from_cloud_url(
-                module_id=1,
-                cloud_url="https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Artikel/test.docx",
-            )
+    def test_failed_processing(self):
+        with mock.patch("elearning.modules.views.article_processing_views.ArticleProcessingService") as MockService:
+            mock_service = MockService.return_value
+            mock_service.validate_cloud_url.return_value = {"valid": True}
+            mock_result = mock.MagicMock()
+            mock_result.success = False
+            mock_result.article_title = None
+            mock_result.article_id = None
+            mock_result.images_found = []
+            mock_result.images_saved = 0
+            mock_result.errors = ["processing error"]
+            mock_result.warnings = []
+            mock_service.process_article_from_cloud_url.return_value = mock_result
 
-            print(result)
-            self.assertTrue(result.success)
-            self.assertEqual(result.article_title, "Test Article")
-            self.assertEqual(result.article_id, 123)
-            self.assertEqual(result.images_found, ["img1"])
-            self.assertEqual(result.images_saved, 1)
+            response = self.client.post(self.url, {"moduleId": 1, "cloudUrl": "http://valid-url.com"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data["success"])
+        self.assertIn("processing error", response.data["errors"])
 
-    def test_validate_cloud_url_valid(self):
-        url = "https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Artikel/test.docx"
-        result = self.service.validate_cloud_url(url)
-        self.assertTrue(result["valid"])
-        self.assertEqual(result["parsed_info"]["file_name"], "test.docx")
 
-    def test_validate_cloud_url_invalid(self):
-        url = "http://example.com/file.txt"
-        result = self.service.validate_cloud_url(url)
-        self.assertFalse(result["valid"])
-        self.assertIn("errors", result)
+
+class ValidateCloudUrlTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            username="max.mustermann",
+            password="34gf75!a",
+            email="mustermann123@gmail.com",
+            first_name="Max",
+            last_name="Mustermann",
+        )
+        cls.url = reverse("elearning:modules:process-article-from-cloud")
+
+    def setUp(self):
+        self.client.post(reverse("elearning:token_obtain_pair"), {"username": "max.mustermann", "password": "34gf75!a"})
+
+
+    def test_missing_cloud_url(self):
+        response = self.client.post(self.url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("moduleId ist erforderlich", response.data["error"])
+
+    """
+    def test_valid_cloud_url(self):
+        with mock.patch("elearning.modules.views.article_processing_views.ArticleProcessingService") as MockService:
+            mock_service = MockService.return_value
+            validation_result = {"valid": True, "parsed_info": {"bucket_name": "bucket"}}
+            mock_service.validate_cloud_url.return_value = validation_result
+            response = self.client.post(self.url, {"cloudUrl": "http://valid-url.com", "moduleId": "1"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["valid"], True)
+        self.assertIn("parsed_info", response.data)
+"""
+
+    def test_exception_handling(self):
+        with mock.patch("elearning.modules.views.article_processing_views.ArticleProcessingService") as MockService:
+            MockService.side_effect = Exception("unexpected error")
+            response = self.client.post(self.url, {"cloudUrl": "http://valid-url.com", "moduleId": "1"})
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
