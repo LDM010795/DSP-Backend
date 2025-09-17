@@ -41,7 +41,6 @@ def set_missing_chapters(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("elearning", "0013_change_all_url_fields_to_charfield"),
     ]
