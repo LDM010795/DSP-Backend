@@ -5,6 +5,8 @@ from rest_framework.test import APIClient
 
 from elearning.modules.models import (
     Article,
+    Chapter,
+    Content,
     Module,
     ModuleAccess,
     ModuleCategory,
@@ -471,3 +473,173 @@ class TestArticleUpdateView(TestCase):
     def test_get_nonexisting_article(self):
         resp = self.get_article(pk=2)
         self.assertEqual(resp.status_code, 404)
+
+
+# --- Test Content Views ---
+
+
+class TestContentCreateView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.url = reverse("elearning:modules:content-create")
+        setup_basic_users_and_module(cls)
+        cls.chapter = Chapter.objects.create(
+            title="Kapitel 1",
+            module=cls.public_module,
+            description="Python Basics - Introduction",
+        )
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin_user)
+
+    def create_content(self, **kwargs):
+        response = self.client.post(
+            self.url,
+            kwargs,
+            format="json",
+        )
+        return response
+
+    def test_unauthenticated(self):
+        self.client.force_authenticate(user=None)
+        resp = self.create_content(module_id=1)
+        self.assertEqual(resp.status_code, 401)
+
+    def test_admin_rights_required(self):
+        self.client.force_authenticate(user=self.normal_user)
+        resp = self.create_content(module_id=1)
+        self.assertEqual(resp.status_code, 403)
+
+    def test_200_happy_path(self):
+        resp = self.create_content(
+            module=self.public_module.pk,
+            chapter=self.chapter.pk,
+            title="Intro",
+            video_url="https://example.com/artikel_1/intro.mp4",
+            supplementary_title="Was Python alles kann",
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()["chapter"], self.chapter.pk)
+        self.assertEqual(resp.json()["title"], "Intro")
+        self.assertEqual(resp.json()["supplementary_title"], "Was Python alles kann")
+        self.assertEqual(
+            resp.json()["video_url"], "https://example.com/artikel_1/intro.mp4"
+        )
+
+    def test_title_from_video_url(self):
+        resp = self.create_content(
+            module=self.public_module.pk,
+            chapter=self.chapter.pk,
+            video_url="https://example.com/artikel_1/intro.mp4",
+        )
+
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()["title"], "intro")
+        self.assertEqual(
+            resp.json()["video_url"], "https://example.com/artikel_1/intro.mp4"
+        )
+
+    def test_order_increasing(self):
+        resp = self.create_content(
+            module=self.public_module.pk, chapter=self.chapter.pk, title="Intro"
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()["order"], 1)
+
+        resp = self.create_content(
+            module=self.public_module.pk, chapter=self.chapter.pk, title="Hello World"
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()["order"], 2)
+
+        resp = self.create_content(
+            module=self.public_module.pk,
+            chapter=Chapter.objects.create(
+                title="Kapitel 2",
+                module=self.public_module,
+                description="Python Basics - Methods",
+            ).pk,
+            title="Intro 2",
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()["order"], 1)
+
+    def test_mandatory_fields(self):
+        # title and chapter missing
+        resp = self.create_content(
+            module=self.public_module.pk
+        )
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Dieses Feld ist erforderlich.", resp.json()["chapter"])
+        self.assertIn("Dieses Feld ist erforderlich.", resp.json()["title"])
+
+
+class TestContentUpdateView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.view = "elearning:modules:content-update"
+        setup_basic_users_and_module(cls)
+        cls.chapter = Chapter.objects.create(
+            title="Kapitel 1",
+            module=cls.public_module,
+            description="Python Basics - Introduction",
+        )
+        cls.content = Content.objects.create(
+            chapter=cls.chapter,
+            title="Intro",
+            video_url="https://example.com/artikel_1/intro.mp4",
+        )
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin_user)
+
+    def update_content(self, pk, **kwargs):
+        response = self.client.patch(
+            reverse_with_pk(self.view, pk),
+            kwargs,
+            format="json",
+        )
+        return response
+
+    def test_unauthenticated(self):
+        self.client.force_authenticate(user=None)
+        resp = self.update_content(pk=1)
+        self.assertEqual(resp.status_code, 401)
+
+    def test_admin_rights_required(self):
+        self.client.force_authenticate(user=self.normal_user)
+        resp = self.update_content(pk=1)
+        self.assertEqual(resp.status_code, 403)
+
+    def test_happy_path_update(self):
+        resp = self.update_content(
+            pk=self.content.pk,
+            chapter=self.chapter.pk,
+            title="What is Python good for?",
+            video_url="https://example.com/artikel_1/intro.mp4",
+            description="Python is good for...",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["chapter"], self.chapter.pk)
+        self.assertEqual(resp.json()["title"], "What is Python good for?")
+        self.assertEqual(
+            resp.json()["video_url"], "https://example.com/artikel_1/intro.mp4"
+        )
+        self.assertEqual(resp.json()["description"], "Python is good for...")
+
+    def test_title_update_conflict(self):
+        Content.objects.create(  # add a second content
+            chapter=self.chapter,
+            title="Python - Functions",
+            video_url="https://example.com/python_functions.mp4",
+            description="Python functions are...",
+        )
+
+        # Try to change the first contents's title
+        resp = self.update_content(pk=self.content.pk, title="Python - Functions")
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("title", resp.json()["non_field_errors"][0])
