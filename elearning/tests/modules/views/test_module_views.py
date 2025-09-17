@@ -922,7 +922,6 @@ class TestModuleDetailAdminView(TestCase):
             json_content={"content": "Weiter geht's mit..."},
         )
         resp = self.get_module_details(big_module.pk)
-        print(resp.json())
         self.assertEqual(resp.status_code, 200)
         module = resp.json()
 
