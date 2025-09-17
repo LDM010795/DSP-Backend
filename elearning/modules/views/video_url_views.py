@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from ..models import Content
 from ..services.wasabi_service import WasabiService
+from urllib.parse import urlparse
 
 
 @api_view(["GET"])
@@ -30,8 +31,6 @@ def get_video_presigned_url(request, content_id):
 
         # Extrahiere den Key aus der URL
         try:
-            from urllib.parse import urlparse
-
             parsed_url = urlparse(content.video_url)
             path_parts = parsed_url.path.strip("/").split("/")
 
