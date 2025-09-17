@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 from core.employees.serializers import User
-from elearning.modules.models import Content
+from elearning.modules.models import Chapter, Content, Module, ModuleCategory
 from rest_framework import status
 from unittest.mock import patch
 
@@ -30,6 +30,15 @@ class GetVideoPresignedUrlTest(TestCase):
         cls.user = User.objects.create_user(
             username="testUser", password="testPassword"
         )
+        cls.chapter = Chapter.objects.create(
+                title="Kapitel 1",
+                module=Module.objects.create(
+                    title="Python",
+                    category=ModuleCategory.objects.create(
+                        name="Programming"
+                    )
+                )
+            )
 
     def setUp(self):
         authenticate(self)
@@ -54,6 +63,7 @@ class GetVideoPresignedUrlTest(TestCase):
 
     def test_no_video_url(self):
         content = Content.objects.create(
+            chapter = self.chapter,
             title="No URL",
             video_url="",
         )
@@ -64,6 +74,7 @@ class GetVideoPresignedUrlTest(TestCase):
 
     def test_invalid_video_url(self):
         content = Content.objects.create(
+            chapter = self.chapter,
             title="Invalid URL",
             video_url="https://example.com/video.mp4",
         )
@@ -74,6 +85,7 @@ class GetVideoPresignedUrlTest(TestCase):
 
     def test_path_style_url(self):
         content = Content.objects.create(
+            chapter = self.chapter,
             title="Path Style Video",
             video_url="https://s3.wasabisys.com/bucket-name/videos/video.mp4",
         )
@@ -88,8 +100,9 @@ class GetVideoPresignedUrlTest(TestCase):
 
     def test_virtual_host_style_url(self):
         content = Content.objects.create(
+            chapter = self.chapter,
             title="Virtual Host Style Video",
-            video_url="https://s3.wasabisys.com/videos/video.mp4",
+            video_url="https://s3.wasabisys.com/videos/video.mp4",            
         )
         response = self.send_get_presigned_url_request(content.pk)
 
@@ -102,6 +115,7 @@ class GetVideoPresignedUrlTest(TestCase):
 
     def test_urlparse_exception_400(self):
         content = Content.objects.create(
+            chapter = self.chapter,
             title="Video",
             video_url="https://s3.wasabisys.com/videos/video.mp4",
         )
@@ -122,8 +136,9 @@ class GetVideoPresignedUrlTest(TestCase):
         self.mock_instance.generate_presigned_url.return_value = None
 
         content = Content.objects.create(
+            chapter = self.chapter,
             title="Video",
-            video_url="https://s3.wasabisys.com/videos/video.mp4",
+            video_url="https://s3.wasabisys.com/videos/video.mp4",            
         )
 
         response = self.send_get_presigned_url_request(content.pk)
@@ -144,6 +159,7 @@ class GetVideoPresignedUrlTest(TestCase):
             "Wasabi Service kaputt"
         )
         content = Content.objects.create(
+            chapter = self.chapter,
             title="Video",
             video_url="https://s3.wasabisys.com/videos/video.mp4",
         )
