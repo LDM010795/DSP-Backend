@@ -567,9 +567,7 @@ class TestContentCreateView(TestCase):
 
     def test_mandatory_fields(self):
         # title and chapter missing
-        resp = self.create_content(
-            module=self.public_module.pk
-        )
+        resp = self.create_content(module=self.public_module.pk)
 
         self.assertEqual(resp.status_code, 400)
         self.assertIn("Dieses Feld ist erforderlich.", resp.json()["chapter"])
@@ -643,3 +641,456 @@ class TestContentUpdateView(TestCase):
 
         self.assertEqual(resp.status_code, 400)
         self.assertIn("title", resp.json()["non_field_errors"][0])
+
+
+# --- Test Module Views ---
+
+
+class TestModuleCreateView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.url = reverse("elearning:modules:module-create")
+        setup_basic_users_and_module(cls)
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin_user)
+
+    def create_module(self, **kwargs):
+        response = self.client.post(
+            self.url,
+            kwargs,
+            format="json",
+        )
+        return response
+
+    def get_module_list(self, **kwargs):
+        response = self.client.get(
+            self.url,
+            kwargs,
+            format="json",
+        )
+        return response
+
+    def test_unauthenticated(self):
+        self.client.force_authenticate(user=None)
+        resp = self.create_module()
+        self.assertEqual(resp.status_code, 401)
+
+    def test_admin_rights_required(self):
+        self.client.force_authenticate(user=self.normal_user)
+        resp = self.create_module()
+        self.assertEqual(resp.status_code, 403)
+
+    def test_200_happy_path(self):
+        resp = self.create_module(
+            title="Dark Side of Python", category_id=self.category.pk, is_public=True
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()["category"]["id"], self.category.pk)
+        self.assertEqual(resp.json()["title"], "Dark Side of Python")
+        self.assertEqual(resp.json()["is_public"], True)
+
+    def test_default_category(self):
+        resp = self.create_module(title="Dark Side of Python", is_public=True)
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()["category"]["name"], "Sonstiges")
+        self.assertEqual(resp.json()["title"], "Dark Side of Python")
+        self.assertEqual(resp.json()["is_public"], True)
+
+    def test_get_module_list(self):
+        # private module without user access
+        resp = self.create_module(title="Dark Side of Python", is_public=False)
+        self.assertEqual(resp.status_code, 201)
+
+        # private module with user access
+        resp = self.create_module(title="Python: Forbidden Tactics", is_public=False)
+        ModuleAccess.objects.create(
+            user=self.normal_user, module=Module.objects.get(id=resp.json()["id"])
+        )
+        self.assertEqual(resp.status_code, 201)
+
+        resp = self.get_module_list()
+        titles = [m["title"] for m in resp.json()]
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(titles), 3)
+        self.assertIn("Introduction to Python", titles)
+        self.assertIn("Dark Side of Python", titles)
+        self.assertIn("Python: Forbidden Tactics", titles)
+
+    def test_title_edge_cases(self):
+        resp = self.create_module(category_id=self.category.pk, is_public=True)
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("erforderlich", resp.json()["title"][0])
+
+        resp = self.create_module(
+            title="", category_id=self.category.pk, is_public=True
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("nicht leer", resp.json()["title"][0])
+
+        resp = self.create_module(
+            title="Viiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"
+            + "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"
+            + "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"
+            + "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiel zu langer Titel",
+            category_id=self.category.pk,
+            is_public=True,
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("200 Zeichen lang", resp.json()["title"][0])
+
+    def test_invalid_category_id(self):
+        resp = self.create_module(title="Test", category_id=9999, is_public=True)
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("existiert nicht", resp.json()["category_id"][0])
+
+    def test_duplicates(self):
+        resp = self.create_module(
+            title="Dark Side of Python", category_id=self.category.pk, is_public=True
+        )
+        self.assertEqual(resp.status_code, 201)
+
+        resp = self.create_module(
+            title="Dark Side of Python", category_id=self.category.pk, is_public=True
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("existiert bereits", resp.json()["title"][0])
+
+    def test_response_structure(self):
+        resp = self.create_module(
+            title="Dark Side of Python", category_id=self.category.pk, is_public=True
+        )
+        resp_data = resp.json()
+        self.assertEqual(resp_data["chapters"], [])
+        self.assertEqual(resp_data["contents"], [])
+        self.assertEqual(resp_data["tasks"], [])
+        self.assertEqual(resp_data["articles"], [])
+
+
+class TestModuleUpdateView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.view = "elearning:modules:module-update"
+        setup_basic_users_and_module(cls)
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin_user)
+
+    def update_module(self, module_id, **kwargs):
+        url = reverse_with_pk(self.view, module_id)
+        response = self.client.patch(
+            url,
+            kwargs,
+            format="json",
+        )
+        return response
+
+    def test_unauthenticated(self):
+        self.client.force_authenticate(user=None)
+        resp = self.update_module(1)
+        self.assertEqual(resp.status_code, 401)
+
+    def test_admin_rights_required(self):
+        self.client.force_authenticate(user=self.normal_user)
+        resp = self.update_module(1)
+        self.assertEqual(resp.status_code, 403)
+
+    def test_200_happy_path(self):
+        new_category_id = ModuleCategory.objects.create(name="Unethical Python").pk
+        resp = self.update_module(
+            module_id=self.public_module.pk,
+            title="Dark Side of Python",
+            category_id=new_category_id,
+            is_public=False,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["category"]["id"], new_category_id)
+        self.assertEqual(resp.json()["title"], "Dark Side of Python")
+        self.assertEqual(resp.json()["is_public"], False)
+
+    def test_title_edge_cases(self):
+        resp = self.update_module(module_id=self.public_module.pk, title="")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("nicht leer", resp.json()["title"][0])
+
+        resp = self.update_module(
+            module_id=self.public_module.pk,
+            title="Viiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"
+            + "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"
+            + "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"
+            + "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiel zu langer Titel",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("200 Zeichen lang", resp.json()["title"][0])
+
+    def test_invalid_category_id(self):
+        resp = self.update_module(module_id=self.public_module.pk, category_id=9999)
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("existiert nicht", resp.json()["category_id"][0])
+
+    def test_duplicates(self):
+        Module.objects.create(
+            title="Dark Side of Python", category=self.category, is_public=False
+        )
+
+        resp = self.update_module(
+            module_id=self.public_module.pk, title="Dark Side of Python"
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("existiert bereits", resp.json()["title"][0])
+
+
+class TestModuleDetailAdminView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.view = "elearning:modules:module-detail-admin"
+        setup_basic_users_and_module(cls)
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin_user)
+
+    def get_module_details(self, module_id, **kwargs):
+        url = reverse_with_pk(self.view, module_id)
+        response = self.client.get(
+            url,
+            kwargs,
+            format="json",
+        )
+        return response
+
+    def test_unauthenticated(self):
+        self.client.force_authenticate(user=None)
+        resp = self.get_module_details(1)
+        self.assertEqual(resp.status_code, 401)
+
+    def test_admin_rights_required(self):
+        self.client.force_authenticate(user=self.normal_user)
+        resp = self.get_module_details(1)
+        self.assertEqual(resp.status_code, 403)
+
+    def test_200_happy_path_big_module(self):
+        big_module = Module.objects.create(
+            title="Python Komplettkurs",
+            category=ModuleCategory.objects.create(name="Python"),
+            is_public=True,
+        )
+        chapter1 = Chapter.objects.create(
+            module=big_module,
+            title="Kapitel 1 - Einführung",
+            description="Python ist...",
+        )
+        chapter2 = Chapter.objects.create(
+            module=big_module,
+            title="Kapitel 2 - Was man mit Python alles machen kann",
+            description="Folgendes kann man mit Python...",
+        )
+        content1 = (
+            Content.objects.create(
+                chapter=chapter1,
+                title="Einführung",
+                description="Die Einführung in Python...",
+                video_url="https://example.com/python/1/intro.mp4",
+                supplementary_title="Was Python alles kann",
+            ),
+        )
+        content2 = Content.objects.create(
+            chapter=chapter1,
+            title="Hinweise",
+            description="Allgemeine Hinweise",
+        )
+        content3 = Content.objects.create(
+            chapter=chapter2,
+            title="Komplettkurs",
+            description="In 100 Stunden lernst du alles, was du über Python wissen musst.",
+            video_url="https://example.com/python/2/python_course_100h.mp4",
+            supplementary_title="Python in 100 Stunden",
+        )
+        article1 = Article.objects.create(
+            module=big_module,
+            title="Python - die Grundlagen",
+            url="https://example.com/python-grundlagen",
+            json_content={"content": "Beginnen wir mit..."},
+        )
+        article2 = Article.objects.create(
+            module=big_module,
+            title="Python - Expertenwissen",
+            url="https://example.com/python-expertenwissen",
+            json_content={"content": "Weiter geht's mit..."},
+        )
+        resp = self.get_module_details(big_module.pk)
+        print(resp.json())
+        self.assertEqual(resp.status_code, 200)
+        module = resp.json()
+
+        # module
+        self.assertEqual(module["id"], 2)
+        self.assertEqual(module["title"], "Python Komplettkurs")
+        self.assertEqual(module["category"]["name"], "Python")
+        self.assertEqual(module["is_public"], True)
+
+        # chapters
+        module["chapters"].sort(key=lambda c: c["id"])
+        chapters = module["chapters"]
+        self.assertEqual(len(chapters), 2)
+
+        # Kapitel 1 prüfen
+        chapter1 = chapters[0]
+        self.assertEqual(chapter1["id"], 1)
+        self.assertEqual(chapter1["module"], 2)
+        self.assertEqual(chapter1["title"], "Kapitel 1 - Einführung")
+        self.assertEqual(chapter1["description"], "Python ist...")
+        self.assertEqual(chapter1["order"], 0)
+        self.assertTrue(chapter1["is_active"])
+
+        # Inhalte von Kapitel 1 prüfen
+        chapter1["contents"].sort(key=lambda c: c["id"])
+        contents1 = chapter1["contents"]
+        self.assertEqual(len(contents1), 2)
+
+        content1 = contents1[0]
+        self.assertEqual(content1["id"], 1)
+        self.assertEqual(content1["chapter"], 1)
+        self.assertEqual(content1["title"], "Einführung")
+        self.assertEqual(content1["description"], "Die Einführung in Python...")
+        self.assertEqual(
+            content1["video_url"], "https://example.com/python/1/intro.mp4"
+        )
+        self.assertEqual(content1["supplementary_title"], "Was Python alles kann")
+        self.assertEqual(content1["order"], 0)
+        self.assertEqual(content1["supplementary_contents"], [])
+
+        content2 = contents1[1]
+        self.assertEqual(content2["id"], 2)
+        self.assertEqual(content2["chapter"], 1)
+        self.assertEqual(content2["title"], "Hinweise")
+        self.assertEqual(content2["description"], "Allgemeine Hinweise")
+        self.assertIsNone(content2["video_url"])
+        self.assertIsNone(content2["supplementary_title"])
+        self.assertEqual(content2["order"], 0)
+        self.assertEqual(content2["supplementary_contents"], [])
+
+        # Kapitel 2 prüfen
+        chapter2 = chapters[1]  # Index 1, wenn Kapitel 1 an Index 0 ist
+        self.assertEqual(chapter2["id"], 2)
+        self.assertEqual(chapter2["module"], 2)
+        self.assertEqual(
+            chapter2["title"], "Kapitel 2 - Was man mit Python alles machen kann"
+        )
+        self.assertEqual(chapter2["description"], "Folgendes kann man mit Python...")
+        self.assertEqual(chapter2["order"], 0)
+        self.assertTrue(chapter2["is_active"])
+
+        # Inhalte von Kapitel 2 prüfen
+        contents2 = chapter2["contents"]
+        self.assertEqual(len(contents2), 1)  # nur 1 Content erwartet
+
+        content3 = contents2[0]
+        self.assertEqual(content3["id"], 3)
+        self.assertEqual(content3["chapter"], 2)
+        self.assertEqual(content3["title"], "Komplettkurs")
+        self.assertEqual(
+            content3["description"],
+            "In 100 Stunden lernst du alles, was du über Python wissen musst.",
+        )
+        self.assertEqual(
+            content3["video_url"], "https://example.com/python/2/python_course_100h.mp4"
+        )
+        self.assertEqual(content3["supplementary_title"], "Python in 100 Stunden")
+        self.assertEqual(content3["order"], 0)
+        self.assertEqual(content3["supplementary_contents"], [])
+
+        # Aggregierte Contents prüfen
+        module["contents"].sort(key=lambda c: c["id"])
+        content1 = module["contents"][0]
+        content2 = module["contents"][1]
+        content3 = module["contents"][2]
+
+        self.assertEqual(content1["id"], 1)
+        self.assertEqual(content1["chapter"], 1)
+        self.assertEqual(content1["title"], "Einführung")
+        self.assertEqual(content1["description"], "Die Einführung in Python...")
+        self.assertEqual(
+            content1["video_url"], "https://example.com/python/1/intro.mp4"
+        )
+
+        self.assertEqual(content2["id"], 2)
+        self.assertEqual(content2["chapter"], 1)
+        self.assertEqual(content2["title"], "Hinweise")
+        self.assertEqual(content2["description"], "Allgemeine Hinweise")
+        self.assertIsNone(content2["video_url"])
+
+        self.assertEqual(content3["id"], 3)
+        self.assertEqual(content3["chapter"], 2)
+        self.assertEqual(content3["title"], "Komplettkurs")
+        self.assertEqual(
+            content3["description"],
+            "In 100 Stunden lernst du alles, was du über Python wissen musst.",
+        )
+        self.assertEqual(
+            content3["video_url"], "https://example.com/python/2/python_course_100h.mp4"
+        )
+
+        # Aggregierte Articles prüfen
+        module["articles"].sort(key=lambda c: c["id"])
+        article1 = module["articles"][0]
+        article2 = module["articles"][1]
+
+        self.assertEqual(article1["id"], 1)
+        self.assertEqual(article1["module"], 2)
+        self.assertEqual(article1["title"], "Python - die Grundlagen")
+        self.assertEqual(article1["url"], "https://example.com/python-grundlagen")
+
+        self.assertEqual(article2["id"], 2)
+        self.assertEqual(article2["module"], 2)
+        self.assertEqual(article2["title"], "Python - Expertenwissen")
+        self.assertEqual(article2["url"], "https://example.com/python-expertenwissen")
+
+
+class TestModuleDeleteView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.view = "elearning:modules:module-delete"
+        setup_basic_users_and_module(cls)
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin_user)
+
+    def delete_module(self, module_id):
+        url = reverse_with_pk(self.view, module_id)
+        response = self.client.delete(url)
+        return response
+
+    def test_unauthenticated(self):
+        self.client.force_authenticate(user=None)
+        resp = self.delete_module(1)
+        self.assertEqual(resp.status_code, 401)
+
+    def test_admin_rights_required(self):
+        self.client.force_authenticate(user=self.normal_user)
+        resp = self.delete_module(1)
+        self.assertEqual(resp.status_code, 403)
+
+    def test_200_happy_path(self):
+        resp = self.delete_module(self.public_module.pk)
+        self.assertEqual(resp.status_code, 204)
+        self.assertFalse(Module.objects.filter(id=self.public_module.id).exists())
+
+    def test_delete_cascades(self):
+        chapter = Chapter.objects.create(module=self.public_module, title="Kapitel 1")
+        content = Content.objects.create(chapter=chapter, title="Einführung")
+        article = Article.objects.create(
+            module=self.public_module, title="Artikel", url="http://example.com"
+        )
+
+        resp = self.delete_module(self.public_module.pk)
+        self.assertEqual(resp.status_code, 204)
+
+        self.assertFalse(Module.objects.filter(id=self.public_module.id).exists())
+        self.assertFalse(Chapter.objects.filter(id=chapter.id).exists())
+        self.assertFalse(Content.objects.filter(id=content.id).exists())
+        self.assertFalse(Article.objects.filter(id=article.id).exists())
