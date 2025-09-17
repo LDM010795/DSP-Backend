@@ -4,6 +4,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from elearning.modules.models import (
+    Article,
     Module,
     ModuleAccess,
     ModuleCategory,
@@ -237,3 +238,236 @@ class TestUserModuleDetailView(TestCase):
         self.client.force_authenticate(user=self.user2)
         resp = self.get_user_module_detail(self.private_module_w_access.pk)
         self.assertEqual(resp.status_code, 403)
+
+
+# --- Test Article Views ---
+
+
+class TestArticleCreateView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.url = reverse("elearning:modules:article-create")
+        setup_basic_users_and_module(cls)
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin_user)
+
+    def create_article(self, **kwargs):
+        response = self.client.post(
+            self.url,
+            kwargs,
+            format="json",
+        )
+        return response
+
+    def test_unauthenticated(self):
+        self.client.force_authenticate(user=None)
+        resp = self.create_article(module_id=1)
+        self.assertEqual(resp.status_code, 401)
+
+    def test_admin_rights_required(self):
+        self.client.force_authenticate(self.normal_user)
+        resp = self.create_article(module_id=1)
+        self.assertEqual(resp.status_code, 403)
+
+    def test_module_doesnt_exist(self):
+        resp = self.create_article(module_id=999)
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("existiert nicht", resp.json()["module_id"][0])
+
+    def test_200_happy_path(self):
+        resp = self.create_article(
+            module_id=self.public_module.pk,
+            title="What is Python?",
+            url="https://example.com/artikel",
+        )
+        self.assertEqual(resp.status_code, 201)
+
+    def test_400_article_title_duplicate(self):
+        resp = self.create_article(
+            module_id=self.public_module.pk,
+            title="What is Python?",
+            url="https://example.com/artikel",
+        )
+        self.assertEqual(resp.status_code, 201)
+
+        # again, same article with same title
+        resp = self.create_article(
+            module_id=self.public_module.pk,
+            title="What is Python?",
+            url="https://example.com/artikel2",
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("title", resp.json()["non_field_errors"][0])
+
+    def test_order_increasing(self):
+        resp = self.create_article(
+            module_id=self.public_module.pk,
+            title="What is Python?",
+            url="https://example.com/artikel",
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()["order"], 1)
+
+        resp = self.create_article(
+            module_id=self.public_module.pk,
+            title="What is Python good for?",
+            url="https://example.com/artikel2",
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()["order"], 2)
+
+    def test_mandatory_fields(self):
+        resp = self.create_article(json_content={"content": "Python is..."})
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("Dieses Feld ist erforderlich.", resp.json()["title"])
+        self.assertIn("Dieses Feld ist erforderlich.", resp.json()["url"])
+        # evtl kommt noch Prüfung auf "module_id" dazu, DB-Struktur steht noch nicht ganz
+
+    def test_valid_urls(self):
+        resp = self.create_article(
+            module_id=self.public_module.pk,
+            title="What is Python?",
+            url="https://example.com/artikel",
+        )
+        self.assertEqual(resp.status_code, 201)
+
+        resp = self.create_article(
+            module_id=self.public_module.pk,
+            title="What is Python good for?",
+            url="http://example.com/artikel#Kapitel2",
+        )
+        self.assertEqual(resp.status_code, 201)
+
+        resp = self.create_article(
+            module_id=self.public_module.pk,
+            title="What is Python really good for?",
+            url="https://subdomain.example.com",
+        )
+        self.assertEqual(resp.status_code, 201)
+
+        resp = self.create_article(
+            module_id=self.public_module.pk,
+            title="What is Python exceptionally good for?",
+            url="https://example.com/articles/123/",
+        )
+        self.assertEqual(resp.status_code, 201)
+
+        resp = self.create_article(
+            module_id=self.public_module.pk,
+            title="What is Python astronomically good for?",
+            url="https://example.com/article we need spaces in the path",
+        )
+        self.assertEqual(resp.status_code, 201)
+
+    """ #TODO: Unsere Custom URL-Validierung verbessern, dass diese Fehler richtig erkannt werden
+    def test_invalid_urls(self):
+        resp = self.send_post(module_id=self.public_module.pk, url="https://example!.com/artikel")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("ValidationError", resp.json())
+
+        resp = self.send_post(module_id=self.public_module.pk, url="htps://example.com/artikel")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("ValidationError", resp.json())
+
+        resp = self.send_post(module_id=self.public_module.pk, url="https:///example.com/artikel")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("ValidationError", resp.json())
+
+        resp = self.send_post(module_id=self.public_module.pk, url="example,com/artikel")
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("ValidationError", resp.json())
+    """
+
+
+class TestArticleUpdateView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.view = "elearning:modules:article-update"
+        setup_basic_users_and_module(cls)
+        cls.article = Article.objects.create(
+            module=cls.public_module,
+            title="What is Python?",
+            url="https://example.com/artikel",
+            json_content={"content": "Python is..."},
+        )
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin_user)
+
+    def update_article(self, pk, **kwargs):
+        response = self.client.patch(
+            reverse_with_pk(self.view, pk),
+            kwargs,
+            format="json",
+        )
+        return response
+
+    def delete_article(self, pk):
+        return self.client.delete(reverse_with_pk(self.view, pk))
+
+    def get_article(self, pk):
+        return self.client.get(reverse_with_pk(self.view, pk))
+
+    def test_unauthenticated(self):
+        self.client.force_authenticate(user=None)
+        resp = self.update_article(pk=1)
+        self.assertEqual(resp.status_code, 401)
+
+    def test_admin_rights_required(self):
+        self.client.force_authenticate(user=self.normal_user)
+        resp = self.update_article(pk=1)
+        self.assertEqual(resp.status_code, 403)
+
+    def test_happy_path_update(self):
+        resp = self.update_article(
+            pk=self.article.pk,
+            url="https://example.com/article_update",
+            title="What is Python good for?",
+            json_content={"content": "Python is good for..."},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["module"], self.public_module.pk)
+        self.assertEqual(resp.json()["title"], "What is Python good for?")
+        self.assertEqual(resp.json()["url"], "https://example.com/article_update")
+        self.assertEqual(
+            resp.json()["json_content"], {"content": "Python is good for..."}
+        )
+
+    def test_title_update_conflict(self):
+        Article.objects.create(  # add a second article
+            module=self.public_module,
+            title="What is Python good for?",
+            url="https://example.com/artikel",
+            json_content={"content": "Python is..."},
+        )
+
+        # Try to change the first article's title
+        resp = self.update_article(pk=self.article.pk, title="What is Python good for?")
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("title", resp.json()["non_field_errors"][0])
+
+    def test_delete_article(self):
+        resp = self.delete_article(pk=self.article.pk)
+        self.assertEqual(resp.status_code, 204)
+
+    def test_delete_nonexisting_article(self):
+        resp = self.delete_article(pk=2)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_get_article(self):
+        resp = self.get_article(pk=self.article.pk)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(self.public_module.pk, resp.json()["module"])
+        self.assertEqual(self.article.title, resp.json()["title"])
+        self.assertEqual(self.article.url, resp.json()["url"])
+        self.assertEqual(self.article.json_content, resp.json()["json_content"])
+
+    def test_get_nonexisting_article(self):
+        resp = self.get_article(pk=2)
+        self.assertEqual(resp.status_code, 404)
