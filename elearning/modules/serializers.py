@@ -35,7 +35,6 @@ class ContentSerializer(serializers.ModelSerializer):
             "order",
             "supplementary_contents",
         ]
-        extra_kwargs = {"title": {"required": False, "allow_blank": True}}
 
     def validate(self, attrs):
         print(f"[DEBUG] ContentSerializer.validate() called with attrs: {attrs}")

@@ -40,7 +40,6 @@ class TestExecutePythonCodeView(TestCase):
             self.execute_python_url, {"code": "print('Hello World')", "task_id": 9999}
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        print(response.json())
 
     def test_no_test_case_for_task(self):
         response = self.client.post(

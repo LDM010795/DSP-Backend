@@ -358,8 +358,6 @@ class Content(models.Model):
         on_delete=models.CASCADE,
         verbose_name=_("Chapter"),
         help_text=_("Chapter this content belongs to"),
-        null=True,
-        blank=True,
     )
 
     video_url = models.CharField(

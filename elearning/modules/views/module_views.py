@@ -63,7 +63,7 @@ class UserModuleDetailView(generics.RetrieveAPIView):
 
 class ArticleCreateView(generics.CreateAPIView):
     serializer_class = ArticleSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
     def perform_create(self, serializer):
         # Automatically compute order per module
@@ -75,7 +75,7 @@ class ArticleCreateView(generics.CreateAPIView):
 class ContentUpdateView(generics.UpdateAPIView):
     queryset = Content.objects.all()
     serializer_class = ContentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
     def update(self, request, *args, **kwargs):
         print(
@@ -97,7 +97,7 @@ class ArticleUpdateView(generics.RetrieveUpdateDestroyAPIView):
 
     queryset = Article.objects.all()
     serializer_class = ArticleSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
     def update(self, request, *args, **kwargs):
         print(
@@ -142,7 +142,7 @@ class ModuleCreateView(generics.ListCreateAPIView):
 
     queryset = Module.objects.all()
     serializer_class = ModuleDetailSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
     def perform_create(self, serializer):
         category = serializer.validated_data.get("category")
@@ -158,14 +158,14 @@ class ModuleUpdateView(generics.UpdateAPIView):
 
     queryset = Module.objects.all()
     serializer_class = ModuleListSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
 
 # Admin Detail View
 class ModuleDetailAdminView(generics.RetrieveAPIView):
     queryset = Module.objects.all()
     serializer_class = ModuleDetailSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
     def get_queryset(self):
         return Module.objects.prefetch_related(
@@ -178,7 +178,7 @@ class ModuleDeleteView(generics.DestroyAPIView):
 
     queryset = Module.objects.all()
     serializer_class = ModuleDetailSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
     def destroy(self, request, *args, **kwargs):
         """
@@ -202,7 +202,7 @@ class ContentCreateView(generics.CreateAPIView):
     """Create new video/content for a module, auto-ordering inside module."""
 
     serializer_class = ContentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
     def create(self, request, *args, **kwargs):
         # Automatisch Titel aus Dateinamen extrahieren, wenn kein Titel angegeben
@@ -230,7 +230,7 @@ class SupplementaryContentCreateView(generics.CreateAPIView):
     """Create supplementary resource link for a content item with auto-order."""
 
     serializer_class = SupplementaryContentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
     def perform_create(self, serializer):
         content = serializer.validated_data["content"]
@@ -246,13 +246,13 @@ class CategoryListCreateView(generics.ListCreateAPIView):
 
     queryset = ModuleCategory.objects.all()
     serializer_class = ModuleCategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
 
 class CategoryUpdateView(generics.UpdateAPIView):
     queryset = ModuleCategory.objects.all()
     serializer_class = ModuleCategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
 
 # --- Chapter Views ---
@@ -262,7 +262,7 @@ class ChapterCreateView(generics.CreateAPIView):
     """Create new chapter for a module."""
 
     serializer_class = ChapterSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
     def perform_create(self, serializer):
         # Automatically compute order per module
@@ -276,7 +276,7 @@ class ChapterUpdateView(generics.UpdateAPIView):
 
     queryset = Chapter.objects.all()
     serializer_class = ChapterSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
 
 class ChapterDetailView(generics.RetrieveAPIView):
@@ -300,3 +300,4 @@ class ChapterDeleteView(generics.DestroyAPIView):
 
     queryset = Chapter.objects.all()
     serializer_class = ChapterSerializer
+    permission_classes = [permissions.IsAdminUser]
