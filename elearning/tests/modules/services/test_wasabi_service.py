@@ -1,3 +1,5 @@
+from pathlib import Path
+from urllib.parse import urlparse
 from botocore.exceptions import ClientError
 from unittest.mock import ANY, Mock, patch
 from django.test import TestCase
@@ -14,14 +16,9 @@ class WasabiServiceTests(TestCase):
         self.service.access_key = "fakekey"
         self.service.secret_key = "fakesecret"
 
-    def test_empty_key(self):
-        with self.assertRaises(ValueError):
-            self.service.generate_presigned_url("")
-
-        with self.assertRaises(ValueError):
-            self.service.generate_presigned_url(None)
-
-    def test_normalize_key(self):
+    @patch("elearning.modules.services.wasabi_service.boto3.client")
+    def test_normalize_key(self, mock_boto_client):
+        s3_client_mock = self.service.get_s3_client()
         cases = [
             (
                 "dsp-e-learning/Lerninhalte/SQL/Videos/Einführung.mp4",
@@ -39,17 +36,31 @@ class WasabiServiceTests(TestCase):
                 "Lerninhalte%20Modul%201/SQL/Videos/Einf%C3%BChrung.mp4",
                 "Lerninhalte Modul 1/SQL/Videos/Einführung.mp4",
             ),
-            ("", ""),
         ]
+
         for input_key, expected in cases:
-            self.assertEqual(self.service._normalize_key(input_key), expected)
+            self.service.generate_presigned_url(input_key)
+            s3_client_mock.generate_presigned_url.assert_called_with(
+                ClientMethod="get_object",
+                Params={"Bucket": self.service.bucket, "Key": expected},
+                ExpiresIn=7200,
+            )
 
-    @patch("boto3.client")
+    @patch("elearning.modules.services.wasabi_service.boto3.client")
+    def test_expires_in(self, mock_boto_client):
+        key = "Lerninhalte/SQL/Videos/Einführung.mp4"
+
+        s3_client_mock = self.service.get_s3_client()
+        self.service.generate_presigned_url(key, expires_seconds=1000)
+        s3_client_mock.generate_presigned_url.assert_called_with(
+            ClientMethod="get_object",
+            Params={"Bucket": self.service.bucket, "Key": key},
+            ExpiresIn=1000,
+        )
+
+    @patch("elearning.modules.services.wasabi_service.boto3.client")
     def test_get_s3_client(self, mock_boto_client):
-        # Methode aufrufen
         client = self.service.get_s3_client()
-
-        # Prüfen, ob boto3.client korrekt aufgerufen wurde
         mock_boto_client.assert_called_once_with(
             "s3",
             endpoint_url="https://s3.eu-central-2.wasabisys.com",
@@ -59,10 +70,9 @@ class WasabiServiceTests(TestCase):
             config=ANY,
         )
 
-        # Prüfen, dass die Methode das Mock zurückgibt
         self.assertEqual(client, mock_boto_client.return_value)
 
-    @patch("boto3.client")
+    @patch("elearning.modules.services.wasabi_service.boto3.client")
     def test_generate_presigned_url(self, mock_boto_client):
         mock_client_instance = Mock()
         mock_boto_client.return_value = mock_client_instance
@@ -82,7 +92,7 @@ class WasabiServiceTests(TestCase):
             ExpiresIn=7200,
         )
 
-    @patch("boto3.client")
+    @patch("elearning.modules.services.wasabi_service.boto3.client")
     def test_exception_generate_presigned_url(self, mock_boto_client):
         key = "Lerninhalte/SQL/Videos/Einführung.mp4"
 
@@ -95,3 +105,20 @@ class WasabiServiceTests(TestCase):
 
         result = self.service.generate_presigned_url(key)
         self.assertIsNone(result)
+
+    def test_non_string_values_error(self):
+        invalid_keys = [
+            None,
+            "",
+            2,
+            ["Lerninhalte/SQL/Videos/Einführung.mp4"],
+            {"url": "Lerninhalte/SQL/Videos/Einführung.mp4"},
+            b"Lerninhalte/SQL/Videos/Einf%C3%BChrung.mp4",
+            Path("Lerninhalte/SQL/Videos/Einführung.mp4"),
+            urlparse("Lerninhalte/SQL/Videos/Einführung.mp4"),
+        ]
+
+        for key in invalid_keys:
+            with self.assertRaises(ValueError):
+                result = self.service.generate_presigned_url(key)
+                self.assertIsNone(result)

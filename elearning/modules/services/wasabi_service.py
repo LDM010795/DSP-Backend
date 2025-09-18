@@ -65,7 +65,7 @@ class WasabiService:
         print(f"  - Expires: {expires_seconds} Sekunden")
 
         if not key or not isinstance(key, str):
-            raise ValueError("Key must be a non-empty String!")
+            raise ValueError(f"Key must be non-empty a string, got \"{key}\": {type(key).__name__}")
 
         try:
             print("🔧 DEBUG: Erstelle S3 Client...")
