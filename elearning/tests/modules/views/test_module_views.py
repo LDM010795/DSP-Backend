@@ -664,12 +664,8 @@ class TestModuleCreateView(TestCase):
         )
         return response
 
-    def get_module_list(self, **kwargs):
-        response = self.client.get(
-            self.url,
-            kwargs,
-            format="json",
-        )
+    def get_module_list(self):
+        response = self.client.get(self.url)
         return response
 
     def test_unauthenticated(self):
@@ -853,13 +849,9 @@ class TestModuleDetailAdminView(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(user=self.admin_user)
 
-    def get_module_details(self, module_id, **kwargs):
+    def get_module_details(self, module_id):
         url = reverse_with_pk(self.view, module_id)
-        response = self.client.get(
-            url,
-            kwargs,
-            format="json",
-        )
+        response = self.client.get(url)
         return response
 
     def test_unauthenticated(self):
@@ -888,14 +880,12 @@ class TestModuleDetailAdminView(TestCase):
             title="Kapitel 2 - Was man mit Python alles machen kann",
             description="Folgendes kann man mit Python...",
         )
-        content1 = (
-            Content.objects.create(
-                chapter=chapter1,
-                title="Einführung",
-                description="Die Einführung in Python...",
-                video_url="https://example.com/python/1/intro.mp4",
-                supplementary_title="Was Python alles kann",
-            ),
+        content1 = Content.objects.create(
+            chapter=chapter1,
+            title="Einführung",
+            description="Die Einführung in Python...",
+            video_url="https://example.com/python/1/intro.mp4",
+            supplementary_title="Was Python alles kann",
         )
         content2 = Content.objects.create(
             chapter=chapter1,
