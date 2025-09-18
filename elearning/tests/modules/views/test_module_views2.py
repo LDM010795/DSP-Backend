@@ -11,7 +11,7 @@ from ....modules.models import Module, ModuleCategory, Chapter, Content, Supplem
 
 class BaseAPITestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="password")
+        self.admin_user = User.objects.create_user(username="testuser", password="password", is_staff=True)
         self.client.post(
             reverse("elearning:token_obtain_pair"),
             {"username": "testuser", "password": "password"},
