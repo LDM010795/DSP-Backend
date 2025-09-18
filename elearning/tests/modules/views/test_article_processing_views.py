@@ -34,17 +34,7 @@ class ProcessArticleFromCloudTests(TestCase):
         self.assertIn("cloudUrl ist erforderlich", response.data["error"])
 
     def test_invalid_cloud_url(self):
-        with mock.patch(
-            "elearning.modules.views.article_processing_views.ArticleProcessingService"
-        ) as MockService:
-            mock_service = MockService.return_value
-            mock_service.validate_cloud_url.return_value = {
-                "valid": False,
-                "errors": ["invalid url"],
-            }
-            response = self.client.post(
-                self.url, {"moduleId": 1, "cloudUrl": "bad-url"}
-            )
+        response = self.client.post(self.url, {"moduleId": 1, "cloudUrl": "bad-url"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Ungültige Cloud-URL", response.data["error"])
 
@@ -118,17 +108,37 @@ class ValidateCloudUrlTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("moduleId ist erforderlich", response.data["error"])
 
-    """
     def test_valid_cloud_url(self):
-        with mock.patch("elearning.modules.views.article_processing_views.ArticleProcessingService") as MockService:
+        with mock.patch(
+            "elearning.modules.views.article_processing_views.ArticleProcessingService"
+        ) as MockService:
             mock_service = MockService.return_value
-            validation_result = {"valid": True, "parsed_info": {"bucket_name": "bucket"}}
+            validation_result = {
+                "valid": True,
+                "parsed_info": {"bucket_name": "bucket"},
+            }
             mock_service.validate_cloud_url.return_value = validation_result
-            response = self.client.post(self.url, {"cloudUrl": "http://valid-url.com", "moduleId": "1"})
+            mock_result = mock.MagicMock()
+            mock_result.success = True
+            mock_result.article_title = "Testartikel"
+            mock_result.article_id = 123
+            mock_result.images_found = ["img1.png", "img2.png"]
+            mock_result.images_saved = 2
+            mock_result.errors = []
+            mock_result.warnings = []
+            mock_service.process_article_from_cloud_url.return_value = mock_result
+            response = self.client.post(
+                self.url, {"cloudUrl": "http://valid-url.com", "moduleId": "1"}
+            )
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["valid"], True)
-        self.assertIn("parsed_info", response.data)
-"""
+        self.assertEqual(response.data["success"], True)
+        self.assertEqual(response.data["article_title"], "Testartikel")
+        self.assertEqual(response.data["article_id"], 123)
+        self.assertEqual(response.data["images_found"], ["img1.png", "img2.png"])
+        self.assertEqual(response.data["images_saved"], 2)
+        self.assertEqual(response.data["errors"], [])
+        self.assertEqual(response.data["warnings"], [])
 
     def test_exception_handling(self):
         with mock.patch(
