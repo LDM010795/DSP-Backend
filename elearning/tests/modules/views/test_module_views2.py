@@ -13,51 +13,96 @@ from ....modules.models import (
 
 
 class BaseAPITestCase(TestCase):
-    def setUp(self):
-        self.admin_user = User.objects.create_user(
-            username="testuser", password="password", is_staff=True
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin_user = User.objects.create_user(
+            username="admin", password="password", is_staff=True
         )
+        cls.normal_user = User.objects.create_user(
+            username="normal_user", password="password"
+        )
+        cls.category = ModuleCategory.objects.create(name="testcategory")
+        cls.module = Module.objects.create(
+            title="Module 1", category_id=cls.category.id
+        )
+        cls.chapter = Chapter.objects.create(
+            module=cls.module, order=1, title="Chapter 1"
+        )
+        cls.content = Content.objects.create(
+            chapter=cls.chapter, order=1, title="Content 1"
+        )
+
+    def setUp(self):
         self.client.post(
             reverse("elearning:token_obtain_pair"),
-            {"username": "testuser", "password": "password"},
-        )
-        self.category = ModuleCategory.objects.create(name="testcategory")
-        self.module = Module.objects.create(
-            title="Module 1", category_id=self.category.id
-        )
-        self.chapter = Chapter.objects.create(
-            module=self.module, order=1, title="Chapter 1"
-        )
-        self.content = Content.objects.create(
-            chapter=self.chapter, order=1, title="Content 1"
+            {"username": "admin", "password": "password"},
         )
 
 
 class SupplementaryContentCreateViewTest(BaseAPITestCase):
     def setUp(self):
         super().setUp()
+        self.url = reverse("elearning:modules:supplementary-create")
+
+    def test_unauthenticated(self):
+        self.client.cookies.clear()
+        response = self.client.post(self.url, content_type="application/json")
+        self.assertEqual(response.status_code, 401)
+
+    def test_admin_rights_required(self):
+        # sign in as normal user
+        self.client.post(
+            reverse("elearning:token_obtain_pair"),
+            {"username": "normal_user", "password": "password"},
+        )
+        response = self.client.post(self.url, content_type="application/json")
+        self.assertEqual(response.status_code, 403)
 
     def test_create_supplementary_content_with_auto_order(self):
-        url = reverse("elearning:modules:supplementary-create")
         data = {
             "content": self.content.id,
             "label": "descriptive text",
             "url": "http://example.com",
         }
-        response = self.client.post(url, data, content_type="application/json")
+        response = self.client.post(self.url, data, content_type="application/json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(SupplementaryContent.objects.count(), 1)
         obj = SupplementaryContent.objects.first()
         self.assertEqual(obj.order, 1)
 
         # Add another and check auto increment
-        response = self.client.post(url, data, content_type="application/json")
+        response = self.client.post(self.url, data, content_type="application/json")
         self.assertEqual(SupplementaryContent.objects.count(), 2)
         last = SupplementaryContent.objects.order_by("-id").first()
         self.assertEqual(last.order, 2)
 
 
 class CategoryViewsTest(BaseAPITestCase):
+    def test_unauthenticated(self):
+        self.client.cookies.clear()
+
+        admin_urls = {
+            reverse("elearning:modules:category-list-create"),
+            reverse("elearning:modules:category-update", kwargs={"pk": 1}),
+        }
+        for url in admin_urls:
+            response = self.client.post(url, content_type="application/json")
+            self.assertEqual(response.status_code, 401)
+
+    def test_admin_rights_required(self):
+        # sign in as normal user
+        self.client.post(
+            reverse("elearning:token_obtain_pair"),
+            {"username": "normal_user", "password": "password"},
+        )
+        admin_urls = {
+            reverse("elearning:modules:category-list-create"),
+            reverse("elearning:modules:category-update", kwargs={"pk": 1}),
+        }
+        for url in admin_urls:
+            response = self.client.post(url, content_type="application/json")
+            self.assertEqual(response.status_code, 403)
+
     def test_list_and_create_category(self):
         url = reverse("elearning:modules:category-list-create")
         response = self.client.get(url)
@@ -84,6 +129,35 @@ class CategoryViewsTest(BaseAPITestCase):
 class ChapterViewsTest(BaseAPITestCase):
     def setUp(self):
         super().setUp()
+
+    def test_unauthenticated(self):
+        self.client.cookies.clear()
+        urls = {
+            reverse("elearning:modules:chapter-create"),
+            reverse("elearning:modules:chapter-update", kwargs={"pk": 1}),
+            reverse("elearning:modules:chapter-detail", kwargs={"pk": 1}),
+            reverse("elearning:modules:chapter-list"),
+            reverse("elearning:modules:chapter-delete", kwargs={"pk": 1}),
+        }
+
+        for url in urls:
+            response = self.client.post(url, content_type="application/json")
+            self.assertEqual(response.status_code, 401)
+
+    def test_admin_rights_required(self):
+        # sign in as normal user
+        self.client.post(
+            reverse("elearning:token_obtain_pair"),
+            {"username": "normal_user", "password": "password"},
+        )
+        admin_urls = {
+            reverse("elearning:modules:chapter-create"),
+            reverse("elearning:modules:chapter-update", kwargs={"pk": 1}),
+            reverse("elearning:modules:chapter-delete", kwargs={"pk": 1}),
+        }
+        for url in admin_urls:
+            response = self.client.post(url, content_type="application/json")
+            self.assertEqual(response.status_code, 403)
 
     def test_create_chapter_auto_order(self):
         url = reverse("elearning:modules:chapter-create")
