@@ -17,7 +17,7 @@ from .models import (
 class SupplementaryContentSerializer(serializers.ModelSerializer):
     class Meta:
         model = SupplementaryContent
-        fields = ["id", "label", "url", "order"]
+        fields = ["id", "content", "label", "url", "order"]
 
 
 class ContentSerializer(serializers.ModelSerializer):
