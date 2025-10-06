@@ -31,10 +31,18 @@ from django.apps import apps
 from django.db import models, connection
 from datetime import datetime
 from typing import Dict, List, Any
+from django.conf import settings
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
+
+# Conditional permissions: AllowAny in DEBUG, IsAuthenticated in production
+PERMISSIONS_DB_OVERVIEW = [AllowAny] if settings.DEBUG else [IsAuthenticated]
 
 # --- Primary API Endpoints ---
 
 
+@api_view(["GET"])
+@permission_classes(PERMISSIONS_DB_OVERVIEW)
 def get_database_schema(request) -> JsonResponse:
     """
     Primary endpoint for comprehensive database schema analysis.
@@ -352,6 +360,8 @@ def analyze_relationships(all_models: List[Dict[str, Any]]) -> List[Dict[str, An
 # --- Data Access Endpoints ---
 
 
+@api_view(["GET"])
+@permission_classes(PERMISSIONS_DB_OVERVIEW)
 def get_table_data(request, app_label: str, model_name: str) -> JsonResponse:
     """
     Retrieve paginated table data for a specific Django model.
@@ -480,6 +490,8 @@ def get_table_data(request, app_label: str, model_name: str) -> JsonResponse:
 # --- Statistics and Performance Endpoints ---
 
 
+@api_view(["GET"])
+@permission_classes(PERMISSIONS_DB_OVERVIEW)
 def get_database_statistics(request) -> JsonResponse:
     """
     Advanced database statistics and performance insights.
