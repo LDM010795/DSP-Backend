@@ -32,7 +32,7 @@ class JWTAuthentication(original_auth):
     def authenticate(self, request: Request) -> Optional[tuple[AuthUser, Token]]:
         # Hybrid-Auth: Versuche zuerst Cookie, dann Authorization-Header
         raw_token = None
-        
+
         # 1. Versuche Cookie (E-Learning-Style)
         cookie = request.COOKIES.get("access_token")
         if cookie:
