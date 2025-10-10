@@ -82,6 +82,40 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return response
 
 
+class SessionObtainView(TokenObtainPairView):
+    """
+    View mirroring CustomTokenObtainView with no max_age value, creating a session cookie.
+    This works even when cookies are disabled.
+    """
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            data = response.data
+            refresh = data.pop("refresh", None)
+            access = data.pop("access", None)
+
+            if refresh:
+                response.set_cookie(
+                    "refresh_token",
+                    refresh,
+                    httponly=True,
+                    secure=True,
+                    samesite="None",
+                    path="/",
+                )
+            if access:
+                response.set_cookie(
+                    "access_token",
+                    access,
+                    httponly=True,
+                    secure=True,
+                    samesite="None",  # TODO: Definitely change this to Strict on Prod!
+                    path="/",
+                )
+        return response
+
+
 class CustomTokenRefreshView(TokenRefreshView):
     """
     Custom view extending SimpleJWT's TokenRefreshView to refresh JWT tokens and store them
