@@ -81,6 +81,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 )
         return response
 
+
 class SessionObtainView(TokenObtainPairView):
     """
     View mirroring CustomTokenObtainView with no max_age value, creating a session cookie.
