@@ -29,6 +29,7 @@ from core.employees.models import Employee, Tool, EmployeeToolAccess
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+
 def _ensure_unique_username(base: str, exclude_user_id: Optional[int] = None) -> str:
     """
     Return a unique username. If 'base' exists, append -1, -2- ...
@@ -190,5 +191,3 @@ class EmployeeAuthHandler(BaseAuthHandler):
             email=employee.email, defaults=defaults
         )
         return user, created
-
-
