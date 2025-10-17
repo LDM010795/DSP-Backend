@@ -15,7 +15,7 @@ Version: 2.0.0 (Refactored)
 """
 
 import logging
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 from abc import ABC, abstractmethod
 
 from django.conf import settings
@@ -28,6 +28,21 @@ from core.employees.models import Employee, Tool, EmployeeToolAccess
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
+def _ensure_unique_username(base: str, exclude_user_id: Optional[int] = None) -> str:
+    """
+    Return a unique username. If 'base' exists, append -1, -2- ...
+    """
+    base = (base or "user").strip() or "user"
+    candidate = base
+    i = 0
+    qs = User.objects.all()
+    if exclude_user_id:
+        qs = qs.exclude(id=exclude_user_id)
+    while qs.filter(username=candidate).exists():
+        i += 1
+        candidate = f"{base}-{i}"
+    return candidate
 
 
 class BaseAuthHandler(ABC):
@@ -142,14 +157,38 @@ class EmployeeAuthHandler(BaseAuthHandler):
         self, employee: Employee, user_info: Dict[str, Any]
     ) -> Tuple[User, bool]:
         """
-        Creates a new Django user or updates an existing one based on
-        the employee profile.
+        Creates or updates the Django User model based on the Employee profile.
+        Ensures unique usernames and updates user details from Microsoft profile
+        (required by Django's default User model).
         """
+        # Try to find an existing user by email (canonical identifier)
+        existing = User.objects.filter(email__iexact=employee.email).first()
+
+        if existing:
+            # Keep their current username; update names
+            defaults = {
+                "first_name": employee.first_name or "",
+                "last_name": employee.last_name or "",
+                "username": existing.username,
+            }
+            user, created = User.objects.update_or_create(
+                email=employee.email, defaults=defaults
+            )
+            return user, created
+
+        # New user: derive a base userame from the email local part and ensure uniqueness
+        local_part = (employee.email or "").split("@")[0]
+        safe_username = _ensure_unique_username(local_part)
+
         defaults = {
-            "first_name": employee.first_name,
-            "last_name": employee.last_name,
+            "first_name": employee.first_name or "",
+            "last_name": employee.last_name or "",
+            "username": safe_username,
         }
+
         user, created = User.objects.update_or_create(
             email=employee.email, defaults=defaults
         )
         return user, created
+
+
