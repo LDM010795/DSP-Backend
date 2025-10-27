@@ -1,6 +1,4 @@
 # elearning/dashboard/views.py
-from datetime import timedelta
-from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -10,21 +8,26 @@ from elearning.dashboard.serializers import DashboardSer
 
 # --------- Stubs: replace with real ORM queries when ready ---------
 
+
 def compute_week_streak_days(user) -> int:
     # TODO: use your activity table
     return 5
+
 
 def compute_weekly_learning_hours(user) -> float:
     # TODO: sum minutes this ISO week / 60.0
     return 12.5
 
+
 def compute_modules_completed(user) -> int:
     # TODO: count fully completed modules for user
     return 8
 
+
 def compute_current_goal_percent(user) -> int:
     # TODO: read from user profile/goal if you have it
     return 85
+
 
 def list_active_modules(user):
     # TODO: join your Module + user progress + activity
@@ -55,6 +58,7 @@ def list_active_modules(user):
         },
     ]
 
+
 def list_upcoming_events(user):
     # TODO: fetch upcoming assessments/deadlines for this user
     return [
@@ -80,6 +84,7 @@ def list_upcoming_events(user):
 
 
 # ----------------------------- View ------------------------------
+
 
 class DashboardView(APIView):
     permission_classes = [IsAuthenticated]
