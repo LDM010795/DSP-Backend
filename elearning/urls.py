@@ -33,7 +33,7 @@ from .modules.views import article_processing_views as article_views
 from .modules.views import content_processing_views as content_views
 from .modules.views import video_url_views as video_views
 from .final_exam import views as exam_views
-from elearning.dashboard.views.views import DashboardView
+from elearning.dashboard.views.dashboard_views import DashboardView
 from .users.views.auth_views import CustomTokenRefreshView
 
 app_name = "elearning"

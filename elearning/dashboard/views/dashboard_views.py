@@ -1,4 +1,36 @@
-# elearning/dashboard/views.py
+"""
+Dashboard API endpoint for the E-Learning platform.
+
+Purpose: Exposes a single authenticated endpoint that aggregates dashboard data for the
+         currently logged-in user. The response is validated/serialized by
+         `DashboardSer` and consumed by the frontend dashboard page.
+
+Endpoint: GET /api/elearning/dashboard/
+
+Authentication / Permissions: Requires an authenticated user (DRF `IsAuthenticated`).
+
+Implementation Notes:
+    - The current implementation uses stub functions that return placeholder data.
+      Replace these with real ORM queries/aggregations when the underlying models
+      (e.g., learning activity, progress, assessments) are available.
+    - Keep business logic in dedicated service/query helpers. The view should only
+      orchestrate data collection and return the serialized response.
+    - If the response grows, consider caching (per-user, short TTL) to reduce DB load.
+
+TODOs:
+    - Compute week streak from activity table (per user, ISO week).
+    - Sum learning time for the current ISO week.
+    - Count fully completed modules per user.
+    - Read/compute current goal progress from profile/goal settings.
+    - Join Module + user progress to produce "active_modules".
+    - Query upcoming assessments/deadlines for "upcoming_events".
+
+Author: DSP development team
+Date: 29-09-2025
+"""
+
+from datetime import timedelta
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response

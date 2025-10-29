@@ -9,7 +9,7 @@ serves as the core integration point for billing.
 Current Scope
 --------------------
 - Uses `dj-stripe` to manage Stripe Customers, PaymentMethods, and Events.
-- Provides API endpoints (see views.py) for:
+- Provides API endpoints (see dashboard_views.py) for:
   * Creating SetupIntents (save card)
   * Creating Checkout Sessions (one-off course purchases)
   * Listing and updating payment methods
@@ -41,7 +41,7 @@ Structure
 ---------
 - __init__.py (this file, documentation + default app config)
 - apps.py         → App configuration (`StripeIntegrationConfig`)
-- views.py        → API endpoints (SetupIntent, Checkout, etc.)
+- dashboard_views.py        → API endpoints (SetupIntent, Checkout, etc.)
 - signals.py      → Webhook handlers (Event post-processing)
 - urls.py         → Routes for Stripe endpoints
 
