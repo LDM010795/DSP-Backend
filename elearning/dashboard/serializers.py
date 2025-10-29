@@ -40,6 +40,7 @@ from rest_framework import serializers
 
 class DashboardModuleSer(serializers.Serializer):
     """Serializer for a single active learning module shown on the dashboard."""
+
     id = serializers.CharField()
     title = serializers.CharField()
     study_time_hours = serializers.FloatField()
@@ -50,6 +51,7 @@ class DashboardModuleSer(serializers.Serializer):
 
 class DashboardEventSer(serializers.Serializer):
     """Serializer for a single upcoming event (e.g., milestone, exam, or task)."""
+
     id = serializers.CharField()
     title = serializers.CharField()
     date_iso = serializers.DateField(format="%Y-%m-%d")
@@ -58,6 +60,7 @@ class DashboardEventSer(serializers.Serializer):
 
 class DashboardSer(serializers.Serializer):
     """Top-level dashboard serializer combining stats, modules, and events."""
+
     greeting_name = serializers.CharField()
     week_streak_days = serializers.IntegerField()
     weekly_learning_hours = serializers.FloatField()

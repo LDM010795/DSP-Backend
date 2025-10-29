@@ -13,6 +13,7 @@ from rest_framework import status
 
 User = get_user_model()
 
+
 class DashboardViewTests(APITestCase):
     def setUp(self):
         self.client = APIClient()
