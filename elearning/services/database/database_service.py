@@ -18,7 +18,7 @@ from django.db.models import Max
 from django.core.exceptions import ObjectDoesNotExist
 
 # Import der Models
-from ...modules.models import Module, Article, ArticleImage, ModuleCategory
+from ...modules.models import Module, Chapter, Article, ArticleImage, ModuleCategory
 
 logger = logging.getLogger(__name__)
 
@@ -123,13 +123,13 @@ class DatabaseService:
         return saved_images
 
     def save_processed_articles(
-        self, module: Module, articles: List[Dict[str, Any]]
+        self, chapter: Chapter, articles: List[Dict[str, Any]]
     ) -> List[Article]:
         """
         Speichert verarbeitete Artikel in der Datenbank.
 
         Args:
-            module: Das Modul, zu dem die Artikel gehören
+            chapter: Das Kapitel, zu dem die Artikel gehören
             articles: Liste der verarbeiteten Artikel
 
         Returns:
@@ -138,9 +138,9 @@ class DatabaseService:
         saved_articles = []
 
         with transaction.atomic():
-            # Starte mit aktuellem Max-Order für das Modul
+            # Starte mit aktuellem Max-Order für das Kapitel
             current_max_order = (
-                Article.objects.filter(module=module)
+                Article.objects.filter(chapter=chapter)
                 .aggregate(Max("order"))
                 .get("order__max")
                 or 0
@@ -149,7 +149,7 @@ class DatabaseService:
                 try:
                     # Prüfe ob Artikel bereits existiert
                     existing_article = Article.objects.filter(
-                        module=module, title=article_data["title"]
+                        chapter=chapter, title=article_data["title"]
                     ).first()
 
                     if existing_article:
@@ -169,7 +169,7 @@ class DatabaseService:
                         # Erstelle neuen Artikel
                         current_max_order += 1
                         article = Article.objects.create(
-                            module=module,
+                            chapter=chapter,
                             title=article_data["title"],
                             url=article_data["url"],
                             json_content=article_data["json_content"],
@@ -187,10 +187,18 @@ class DatabaseService:
                     continue
 
         self.logger.info(
-            f"{len(saved_articles)} Artikel für Modul {module.title} gespeichert"
+            f"{len(saved_articles)} Artikel für Kapitel {chapter.title} gespeichert"
         )
         return saved_articles
 
+    """
+    Diese Methode ist veraltet und funktioniert aktuell nicht. Das Problem ist,
+    dass Artikel eine ChapterId benötigen, während wir hier nur Modulbezug haben.
+    Die Endpunkte /api/modules/content/process-multiple-modules/ und
+    /api/modules/content/process-module/ rufen diese Methode auf, werden aber weder 
+    von der E-Learning-Plattform noch vom DB-Overview-Tool benutzt. Daher lassen wir
+    diese Stelle erstmal so und räumen sie später auf.
+    """
     def process_module_content(
         self,
         module_name: str,
@@ -220,6 +228,9 @@ class DatabaseService:
             # Bilder speichern
             saved_images = self.save_article_images(module, images)
 
+            #TODO: self.save_processed_articles braucht chapter, um Artikel zu speichern
+            raise NotImplementedError("save_processed_articles braucht chapterIds um Artikel zu speichern")
+        
             # Artikel speichern
             saved_articles = self.save_processed_articles(module, articles)
 
@@ -295,6 +306,27 @@ class DatabaseService:
             return None
         except Exception as e:
             self.logger.error(f"Fehler beim Abrufen des Moduls {module_id}: {e}")
+            return None
+    
+    def get_chapter_by_id(self, chapter_id: int) -> Optional[Chapter]:
+        """
+        Holt ein Kapitel anhand der ID.
+
+        Args:
+            chapter_id: ID des Kapitels
+
+        Returns:
+            Chapter Objekt oder None
+        """
+        try:
+            chapter = Chapter.objects.get(id=chapter_id)
+            self.logger.info(f"Kapitel gefunden: {chapter.title} (ID: {chapter_id})")
+            return chapter
+        except ObjectDoesNotExist:
+            self.logger.error(f"Kapitel mit ID {chapter_id} nicht gefunden")
+            return None
+        except Exception as e:
+            self.logger.error(f"Fehler beim Abrufen des Kapitels {chapter_id}: {e}")
             return None
 
     def cleanup_orphaned_images(self, module: Module) -> int:

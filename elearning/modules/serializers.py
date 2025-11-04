@@ -111,9 +111,9 @@ class TaskSerializer(serializers.ModelSerializer):
 
 
 class ArticleSerializer(serializers.ModelSerializer):
-    module_id = serializers.PrimaryKeyRelatedField(
-        queryset=Module.objects.all(),
-        source="module",
+    chapter_id = serializers.PrimaryKeyRelatedField(
+        queryset=Chapter.objects.all(),
+        source="chapter",
         write_only=True,
         required=False,
         allow_null=True,
@@ -121,8 +121,8 @@ class ArticleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Article
-        fields = ["id", "module", "module_id", "title", "url", "order", "json_content"]
-        extra_kwargs = {"module": {"read_only": True}}
+        fields = ["id", "chapter", "chapter_id", "title", "url", "order", "json_content"]
+        extra_kwargs = {"chapter": {"read_only": True}}
 
     def validate(self, attrs):
         print(f"[DEBUG] ArticleSerializer.validate() called with attrs: {attrs}")
@@ -200,7 +200,7 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
     chapters = ChapterSerializer(many=True, read_only=True)
     contents = serializers.SerializerMethodField()  # Get contents from chapters
     tasks = serializers.SerializerMethodField()  # For request context propagation
-    articles = ArticleSerializer(many=True, read_only=True)
+    articles = serializers.SerializerMethodField()
     category = ModuleCategorySerializer(read_only=True)
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=ModuleCategory.objects.all(),
@@ -261,6 +261,28 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
         else:
             # Fallback without user context
             return TaskSerializer(tasks, many=True, context={}).data
+
+    def get_articles(self, obj):
+        """
+        Get articles with user-specific completion status.
+
+        Args:
+            obj: Module instance
+
+        Returns:
+            Serialized article data with completion status
+        """
+        request = self.context.get("request")
+        # Get articles from all chapters in this module
+        articles =  Article.objects.filter(chapter__module=obj)
+
+        # Propagate request context for user-specific data
+        if request:
+            return ArticleSerializer(articles, many=True, context={"request": request}).data
+        else:
+            # Fallback without user context
+            return ArticleSerializer(articles, many=True, context={}).data
+
 
     def get_article_images(self, obj):
         # Liefert Mapping { image_name: cloud_url } für das Modul

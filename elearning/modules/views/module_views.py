@@ -67,8 +67,8 @@ class ArticleCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         # Automatically compute order per module
-        module = serializer.validated_data["module"]
-        next_order = Article.objects.filter(module=module).count() + 1
+        chapter = serializer.validated_data["chapter"]
+        next_order = Article.objects.filter(chapter=chapter).count() + 1
         serializer.save(order=next_order)
 
 
@@ -169,7 +169,7 @@ class ModuleDetailAdminView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return Module.objects.prefetch_related(
-            "chapters", "chapters__contents", "articles"
+            "chapters", "chapters__contents", "chapters__articles"
         )
 
 
