@@ -250,6 +250,11 @@ class TestArticleCreateView(TestCase):
     def setUpTestData(cls):
         cls.url = reverse("elearning:modules:article-create")
         setup_basic_users_and_module(cls)
+        cls.chapter = Chapter.objects.create(
+            title="Kapitel 1",
+            module=cls.public_module,
+            description="Python Basics - Introduction",
+        )
 
     def setUp(self):
         self.client = APIClient()
@@ -265,23 +270,23 @@ class TestArticleCreateView(TestCase):
 
     def test_unauthenticated(self):
         self.client.force_authenticate(user=None)
-        resp = self.create_article(module_id=1)
+        resp = self.create_article(chapter_id=1)
         self.assertEqual(resp.status_code, 401)
 
     def test_admin_rights_required(self):
         self.client.force_authenticate(self.normal_user)
-        resp = self.create_article(module_id=1)
+        resp = self.create_article(chapter_id=1)
         self.assertEqual(resp.status_code, 403)
 
-    def test_module_doesnt_exist(self):
-        resp = self.create_article(module_id=999)
+    def test_chapter_doesnt_exist(self):
+        resp = self.create_article(chapter_id=999)
 
         self.assertEqual(resp.status_code, 400)
-        self.assertIn("existiert nicht", resp.json()["module_id"][0])
+        self.assertIn("existiert nicht", resp.json()["chapter_id"][0])
 
     def test_200_happy_path(self):
         resp = self.create_article(
-            module_id=self.public_module.pk,
+            chapter_id=self.chapter.pk,
             title="What is Python?",
             url="https://example.com/artikel",
         )
@@ -289,7 +294,7 @@ class TestArticleCreateView(TestCase):
 
     def test_400_article_title_duplicate(self):
         resp = self.create_article(
-            module_id=self.public_module.pk,
+            chapter_id=self.chapter.pk,
             title="What is Python?",
             url="https://example.com/artikel",
         )
@@ -297,7 +302,7 @@ class TestArticleCreateView(TestCase):
 
         # again, same article with same title
         resp = self.create_article(
-            module_id=self.public_module.pk,
+            chapter_id=self.chapter.pk,
             title="What is Python?",
             url="https://example.com/artikel2",
         )
@@ -306,7 +311,7 @@ class TestArticleCreateView(TestCase):
 
     def test_order_increasing(self):
         resp = self.create_article(
-            module_id=self.public_module.pk,
+            chapter_id=self.chapter.pk,
             title="What is Python?",
             url="https://example.com/artikel",
         )
@@ -314,7 +319,7 @@ class TestArticleCreateView(TestCase):
         self.assertEqual(resp.json()["order"], 1)
 
         resp = self.create_article(
-            module_id=self.public_module.pk,
+            chapter_id=self.chapter.pk,
             title="What is Python good for?",
             url="https://example.com/artikel2",
         )
@@ -327,39 +332,39 @@ class TestArticleCreateView(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertIn("Dieses Feld ist erforderlich.", resp.json()["title"])
         self.assertIn("Dieses Feld ist erforderlich.", resp.json()["url"])
-        # evtl kommt noch Prüfung auf "module_id" dazu, DB-Struktur steht noch nicht ganz
+        self.assertIn("Dieses Feld ist erforderlich.", resp.json()["chapter_id"])
 
     def test_valid_urls(self):
         resp = self.create_article(
-            module_id=self.public_module.pk,
+            chapter_id=self.chapter.pk,
             title="What is Python?",
             url="https://example.com/artikel",
         )
         self.assertEqual(resp.status_code, 201)
 
         resp = self.create_article(
-            module_id=self.public_module.pk,
+            chapter_id=self.chapter.pk,
             title="What is Python good for?",
             url="http://example.com/artikel#Kapitel2",
         )
         self.assertEqual(resp.status_code, 201)
 
         resp = self.create_article(
-            module_id=self.public_module.pk,
+            chapter_id=self.chapter.pk,
             title="What is Python really good for?",
             url="https://subdomain.example.com",
         )
         self.assertEqual(resp.status_code, 201)
 
         resp = self.create_article(
-            module_id=self.public_module.pk,
+            chapter_id=self.chapter.pk,
             title="What is Python exceptionally good for?",
             url="https://example.com/articles/123/",
         )
         self.assertEqual(resp.status_code, 201)
 
         resp = self.create_article(
-            module_id=self.public_module.pk,
+            chapter_id=self.chapter.pk,
             title="What is Python astronomically good for?",
             url="https://example.com/article we need spaces in the path",
         )
@@ -390,8 +395,13 @@ class TestArticleUpdateView(TestCase):
     def setUpTestData(cls):
         cls.view = "elearning:modules:article-update"
         setup_basic_users_and_module(cls)
-        cls.article = Article.objects.create(
+        cls.chapter = Chapter.objects.create(
+            title="Kapitel 1",
             module=cls.public_module,
+            description="Python Basics - Introduction",
+        )
+        cls.article = Article.objects.create(
+            chapter=cls.chapter,
             title="What is Python?",
             url="https://example.com/artikel",
             json_content={"content": "Python is..."},
@@ -433,7 +443,7 @@ class TestArticleUpdateView(TestCase):
             json_content={"content": "Python is good for..."},
         )
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json()["module"], self.public_module.pk)
+        self.assertEqual(resp.json()["chapter"], self.chapter.pk)
         self.assertEqual(resp.json()["title"], "What is Python good for?")
         self.assertEqual(resp.json()["url"], "https://example.com/article_update")
         self.assertEqual(
@@ -442,7 +452,7 @@ class TestArticleUpdateView(TestCase):
 
     def test_title_update_conflict(self):
         Article.objects.create(  # add a second article
-            module=self.public_module,
+            chapter=self.chapter,
             title="What is Python good for?",
             url="https://example.com/artikel",
             json_content={"content": "Python is..."},
@@ -465,7 +475,7 @@ class TestArticleUpdateView(TestCase):
     def test_get_article(self):
         resp = self.get_article(pk=self.article.pk)
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(self.public_module.pk, resp.json()["module"])
+        self.assertEqual(self.chapter.pk, resp.json()["chapter"])
         self.assertEqual(self.article.title, resp.json()["title"])
         self.assertEqual(self.article.url, resp.json()["url"])
         self.assertEqual(self.article.json_content, resp.json()["json_content"])
@@ -900,13 +910,13 @@ class TestModuleDetailAdminView(TestCase):
             supplementary_title="Python in 100 Stunden",
         )
         article1 = Article.objects.create(
-            module=big_module,
+            chapter=chapter1,
             title="Python - die Grundlagen",
             url="https://example.com/python-grundlagen",
             json_content={"content": "Beginnen wir mit..."},
         )
         article2 = Article.objects.create(
-            module=big_module,
+            chapter=chapter2,
             title="Python - Expertenwissen",
             url="https://example.com/python-expertenwissen",
             json_content={"content": "Weiter geht's mit..."},
@@ -936,6 +946,13 @@ class TestModuleDetailAdminView(TestCase):
         self.assertTrue(chapter1["is_active"])
 
         # Inhalte von Kapitel 1 prüfen
+        print("----------dsadw")
+        print(chapter1)
+        chapter1["articles"].sort(key=lambda c: c["id"])
+        chapter1articles = chapter1["articles"]
+        self.assertEqual(len(chapter1articles), 1)
+        self.assertEqual(chapter1articles[0].title, "Python - die Grundlagen")
+
         chapter1["contents"].sort(key=lambda c: c["id"])
         contents1 = chapter1["contents"]
         self.assertEqual(len(contents1), 2)
@@ -974,6 +991,11 @@ class TestModuleDetailAdminView(TestCase):
         self.assertTrue(chapter2["is_active"])
 
         # Inhalte von Kapitel 2 prüfen
+        chapter2["articles"].sort(key=lambda c: c["id"])
+        chapter2article = chapter2["articles"]
+        self.assertEqual(len(chapter2article), 1)
+        self.assertEqual(chapter2article[0].title, "Python - die Grundlagen")
+
         contents2 = chapter2["contents"]
         self.assertEqual(len(contents2), 1)  # nur 1 Content erwartet
 
@@ -1073,7 +1095,7 @@ class TestModuleDeleteView(TestCase):
         chapter = Chapter.objects.create(module=self.public_module, title="Kapitel 1")
         content = Content.objects.create(chapter=chapter, title="Einführung")
         article = Article.objects.create(
-            module=self.public_module, title="Artikel", url="http://example.com"
+            chapter=self.chapter, title="Artikel", url="http://example.com"
         )
 
         resp = self.delete_module(self.public_module.pk)

@@ -159,6 +159,8 @@ class ChapterSerializer(serializers.ModelSerializer):
         required=True,
     )
     contents = ContentSerializer(many=True, read_only=True)
+    tasks = TaskSerializer(many=True, read_only=True)
+    articles = ArticleSerializer(many=True, read_only=True)
 
     class Meta:
         model = Chapter
@@ -171,6 +173,8 @@ class ChapterSerializer(serializers.ModelSerializer):
             "order",
             "is_active",
             "contents",
+            "tasks",
+            "articles",
         ]
         extra_kwargs = {"module": {"read_only": True}}
 
@@ -198,9 +202,6 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
     """
 
     chapters = ChapterSerializer(many=True, read_only=True)
-    contents = serializers.SerializerMethodField()  # Get contents from chapters
-    tasks = serializers.SerializerMethodField()  # For request context propagation
-    articles = serializers.SerializerMethodField()
     category = ModuleCategorySerializer(read_only=True)
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=ModuleCategory.objects.all(),
@@ -221,67 +222,8 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
             "category_id",
             "is_public",
             "chapters",
-            "contents",
-            "articles",
-            "tasks",
             "article_images",
         ]
-
-    def get_contents(self, obj):
-        """
-        Get contents from all chapters in this module.
-
-        Args:
-            obj: Module instance
-
-        Returns:
-            Serialized content data from all chapters
-        """
-        # Get contents from all chapters in this module
-        contents = Content.objects.filter(chapter__module=obj)
-        return ContentSerializer(contents, many=True).data
-
-    def get_tasks(self, obj):
-        """
-        Get tasks with user-specific completion status.
-
-        Args:
-            obj: Module instance
-
-        Returns:
-            Serialized task data with completion status
-        """
-        request = self.context.get("request")
-        # Get tasks from all chapters in this module
-        tasks = Task.objects.filter(chapter__module=obj)
-
-        # Propagate request context for user-specific data
-        if request:
-            return TaskSerializer(tasks, many=True, context={"request": request}).data
-        else:
-            # Fallback without user context
-            return TaskSerializer(tasks, many=True, context={}).data
-
-    def get_articles(self, obj):
-        """
-        Get articles with user-specific completion status.
-
-        Args:
-            obj: Module instance
-
-        Returns:
-            Serialized article data with completion status
-        """
-        request = self.context.get("request")
-        # Get articles from all chapters in this module
-        articles =  Article.objects.filter(chapter__module=obj)
-
-        # Propagate request context for user-specific data
-        if request:
-            return ArticleSerializer(articles, many=True, context={"request": request}).data
-        else:
-            # Fallback without user context
-            return ArticleSerializer(articles, many=True, context={}).data
 
 
     def get_article_images(self, obj):
