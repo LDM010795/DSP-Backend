@@ -33,6 +33,7 @@ from .modules.views import article_processing_views as article_views
 from .modules.views import content_processing_views as content_views
 from .modules.views import video_url_views as video_views
 from .final_exam import views as exam_views
+from elearning.dashboard.views.dashboard_views import DashboardView
 from .users.views.auth_views import CustomTokenRefreshView
 
 app_name = "elearning"
@@ -298,4 +299,5 @@ urlpatterns: List[URLPattern] = [
     path("users/", include((users_urlpatterns, "users"))),
     path("modules/", include((modules_urlpatterns, "modules"))),
     path("exams/", include((exams_urlpatterns, "exams"))),
+    path("dashboard/", DashboardView.as_view(), name="dashboard"),
 ]
