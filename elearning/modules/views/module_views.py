@@ -9,7 +9,7 @@ from ..models import (
     Article,
     Content,
     SupplementaryContent,
-    Chapter,
+    Chapter, Task,
 )
 from ..serializers import (
     ModuleListSerializer,
@@ -18,7 +18,7 @@ from ..serializers import (
     ContentSerializer,
     SupplementaryContentSerializer,
     ModuleCategorySerializer,
-    ChapterSerializer,
+    ChapterSerializer, TaskSerializer,
 )
 
 # --- Public Views (ohne User-Kontext) ---
@@ -301,3 +301,36 @@ class ChapterDeleteView(generics.DestroyAPIView):
     queryset = Chapter.objects.all()
     serializer_class = ChapterSerializer
     permission_classes = [permissions.IsAdminUser]
+
+    # --- Task Views ---
+
+class TaskCreateView(generics.CreateAPIView):
+    """Create new task for a module."""
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAdminUser]
+    def perform_create(self, serializer):
+        module = serializer.validated_data["module"]
+        next_order = Task.objects.filter(module=module).count() + 1
+        serializer.save(order=next_order)
+
+class TaskUpdateView(generics.UpdateAPIView):
+    queryset = Task.objects.all()
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+class TaskDetailView(generics.RetrieveAPIView):
+    queryset = Task.objects.all()
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+class TaskListView(generics.ListAPIView):
+    queryset = Task.objects.all()
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAdminUser]#
+
+class TaskDeleteView(generics.DestroyAPIView):
+    queryset = Task.objects.all()
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+

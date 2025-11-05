@@ -169,6 +169,27 @@ modules_urlpatterns: List[URLPattern] = [
         module_views.ArticleUpdateView.as_view(),
         name="article-update",
     ),
+    # Task endpoints
+    path(
+        "/tasks/",
+        module_views.TaskCreateView.as_view(),
+        name="task-create",
+    ),
+    path(
+        "tasks/<int:pk>/",
+        module_views.TaskUpdateView.as_view(),
+        name="task-update",
+    ),
+    path(
+        "tasks/<int:pk>/detail/",
+        module_views.TaskDetailView.as_view(),
+        name="task-detail",
+    ),
+    path(
+        "tasks/<int:pk>/delete/",
+        module_views.TaskDeleteView.as_view(),
+        name="task-delete",
+    ),
     # Content Processing endpoints (automatic extraction from Cloud Storage)
     path(
         "content/process-module/",
