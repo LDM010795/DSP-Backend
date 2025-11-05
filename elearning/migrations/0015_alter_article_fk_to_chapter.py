@@ -13,11 +13,24 @@ def article_set_chapter_fk(apps, schema_editor):
         chapters_by_module[module_id].append(chapter_id)
 
     for article in Article.objects.only("id", "module_id").iterator():
-        if article.module_id:
-            available_chapters = chapters_by_module.get(article.module_id) or []
-            if available_chapters:
-                first_chapter_id = available_chapters[0]
-                Article.objects.filter(pk=article.pk).update(chapter_id=first_chapter_id)
+        available_chapters = chapters_by_module.get(article.module_id) or []
+        if available_chapters:
+            first_chapter_id = available_chapters[0]
+            Article.objects.filter(pk=article.pk).update(chapter_id=first_chapter_id)
+        else:
+            # Kein Kapitel für dieses Modul vorhanden → Standardkapitel anlegen
+            default_title = f"Standardkapitel (Migration Artikel von Modul zu Kapitel)"
+
+            new_chapter = Chapter.objects.create(
+                module_id=article.module_id,
+                title=default_title,
+            )
+
+            # Mapping aktualisieren, damit weitere Artikel dasselbe Kapitel verwenden
+            chapters_by_module[article.module_id].append(new_chapter.id)
+
+            # Artikel dem neu erstellten Standardkapitel zuordnen
+            Article.objects.filter(pk=article.pk).update(chapter_id=new_chapter.id)
 
 def assert_no_null_chapter(apps, schema_editor):
     Article = apps.get_model("elearning", "Article")
