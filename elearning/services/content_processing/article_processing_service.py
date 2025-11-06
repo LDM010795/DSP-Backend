@@ -139,6 +139,7 @@ class ArticleProcessingService:
             # 6. Kapitel aus Datenbank holen
             chapter = self.db_service.get_chapter_by_id(chapter_id)
             if not chapter:
+                result.errors.append(f"Kapitel mit ID {chapter_id} nicht gefunden")
                 return result
 
             # 7. Artikel in Datenbank speichern

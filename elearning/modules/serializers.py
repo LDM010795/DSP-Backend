@@ -111,18 +111,16 @@ class TaskSerializer(serializers.ModelSerializer):
 
 
 class ArticleSerializer(serializers.ModelSerializer):
-    chapter_id = serializers.PrimaryKeyRelatedField(
-        queryset=Chapter.objects.all(),
-        source="chapter",
-        write_only=True,
-        required=False,
-        allow_null=True,
-    )
-
     class Meta:
         model = Article
-        fields = ["id", "chapter", "chapter_id", "title", "url", "order", "json_content"]
-        extra_kwargs = {"chapter": {"read_only": True}}
+        fields = [
+            "id",
+            "chapter",
+            "title",
+            "url",
+            "order",
+            "json_content",
+        ]
 
     def validate(self, attrs):
         print(f"[DEBUG] ArticleSerializer.validate() called with attrs: {attrs}")
@@ -224,7 +222,6 @@ class ModuleDetailSerializer(serializers.ModelSerializer):
             "chapters",
             "article_images",
         ]
-
 
     def get_article_images(self, obj):
         # Liefert Mapping { image_name: cloud_url } für das Modul
