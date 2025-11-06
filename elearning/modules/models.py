@@ -377,6 +377,7 @@ class Chapter(models.Model):
         """Get total number of tasks in this chapter."""
         return self.tasks.count()
 
+
 class ChapterUnlocked(models.Model):
     """
     User-specific access permissions for public chapters.
@@ -939,6 +940,5 @@ class UserTaskProgress(models.Model):
         # if function didn't return here, user must have completed all required tasks
         currentModule = self.task.chapter.module
         currentChapterOrder = self.task.chapter.order
-        nextChapter =  currentModule.chapters.get(order=currentChapterOrder+1)
+        nextChapter = currentModule.chapters.get(order=currentChapterOrder + 1)
         ChapterUnlocked.objects.create(user=self.user, chapter=nextChapter)
-
