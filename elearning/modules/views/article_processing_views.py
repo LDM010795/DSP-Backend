@@ -57,7 +57,7 @@ def process_article_from_cloud(request):
                 {"success": False, "error": "moduleId ist erforderlich"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        
+
         if not chapter_id:
             return Response(
                 {"success": False, "error": "chapterId ist erforderlich"},
@@ -86,7 +86,9 @@ def process_article_from_cloud(request):
             )
 
         # Artikel verarbeiten
-        result = article_service.process_article_from_cloud_url(module_id, chapter_id, cloud_url)
+        result = article_service.process_article_from_cloud_url(
+            module_id, chapter_id, cloud_url
+        )
 
         # Response erstellen
         response_data = {

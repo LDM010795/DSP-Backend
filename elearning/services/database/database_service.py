@@ -199,6 +199,7 @@ class DatabaseService:
     von der E-Learning-Plattform noch vom DB-Overview-Tool benutzt. Daher lassen wir
     diese Stelle erstmal so und räumen sie später auf.
     """
+
     def process_module_content(
         self,
         module_name: str,
@@ -228,9 +229,11 @@ class DatabaseService:
             # Bilder speichern
             saved_images = self.save_article_images(module, images)
 
-            #TODO: self.save_processed_articles braucht chapter, um Artikel zu speichern
-            raise NotImplementedError("save_processed_articles braucht chapterIds um Artikel zu speichern")
-        
+            # TODO: self.save_processed_articles braucht chapter, um Artikel zu speichern
+            raise NotImplementedError(
+                "save_processed_articles braucht chapterIds um Artikel zu speichern"
+            )
+
             # Artikel speichern
             saved_articles = self.save_processed_articles(module, articles)
 
@@ -307,7 +310,7 @@ class DatabaseService:
         except Exception as e:
             self.logger.error(f"Fehler beim Abrufen des Moduls {module_id}: {e}")
             return None
-    
+
     def get_chapter_by_id(self, chapter_id: int) -> Optional[Chapter]:
         """
         Holt ein Kapitel anhand der ID.

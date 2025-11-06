@@ -9,7 +9,9 @@ def article_set_chapter_fk(apps, schema_editor):
 
     # Mapping: module_id -> [chapter_id, ...] (sortiert nach id, passe Sortierung bei Bedarf an)
     chapters_by_module = defaultdict(list)
-    for chapter_id, module_id in Chapter.objects.values_list("id", "module_id").order_by("id"):
+    for chapter_id, module_id in Chapter.objects.values_list(
+        "id", "module_id"
+    ).order_by("id"):
         chapters_by_module[module_id].append(chapter_id)
 
     for article in Article.objects.only("id", "module_id").iterator():
@@ -19,7 +21,7 @@ def article_set_chapter_fk(apps, schema_editor):
             Article.objects.filter(pk=article.pk).update(chapter_id=first_chapter_id)
         else:
             # Kein Kapitel für dieses Modul vorhanden → Standardkapitel anlegen
-            default_title = f"Standardkapitel (Migration Artikel von Modul zu Kapitel)"
+            default_title = "Standardkapitel (Migration Artikel von Modul zu Kapitel)"
 
             new_chapter = Chapter.objects.create(
                 module_id=article.module_id,
@@ -31,6 +33,7 @@ def article_set_chapter_fk(apps, schema_editor):
 
             # Artikel dem neu erstellten Standardkapitel zuordnen
             Article.objects.filter(pk=article.pk).update(chapter_id=new_chapter.id)
+
 
 def assert_no_null_chapter(apps, schema_editor):
     Article = apps.get_model("elearning", "Article")
@@ -70,9 +73,7 @@ class Migration(migrations.Migration):
             ),
         ),
         # Daten migrieren; Chapter-FK befüllen
-        migrations.RunPython(
-            article_set_chapter_fk, migrations.RunPython.noop
-        ),
+        migrations.RunPython(article_set_chapter_fk, migrations.RunPython.noop),
         # Fail-fast falls noch NULLs existieren
         migrations.RunPython(assert_no_null_chapter, migrations.RunPython.noop),
         # FK-Fields non-nullable machen
