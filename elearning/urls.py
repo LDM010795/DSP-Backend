@@ -171,7 +171,7 @@ modules_urlpatterns: List[URLPattern] = [
     ),
     # Task endpoints
     path(
-        "/tasks/",
+        "tasks/",
         module_views.TaskCreateView.as_view(),
         name="task-create",
     ),

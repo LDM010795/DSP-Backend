@@ -264,6 +264,49 @@ class ModuleAccess(models.Model):
         ordering = ["user", "module"]
         db_table = "elearning_module_access"
 
+    class ModuleUnlocked(models.Model):
+        """
+        User-specific access permissions for public chapters.
+
+        This model manages user progress on working through chapters of a module.
+        Users automatically unlock the first chapter of any module and must unlock further by completing the required tasks.
+        Chapters without any required tasks automatically unlock the next one.
+
+        Attributes:
+            user: User granted access
+            chapter: Chapter being unlocked
+
+        Usage:
+            Used automatically by ???
+        """
+
+        user = models.ForeignKey(
+            settings.AUTH_USER_MODEL,
+            on_delete=models.CASCADE,
+            related_name="user_module_unlock_entries",
+            verbose_name=_("User"),
+            help_text=_("User able to see the module"),
+        )
+
+        module = models.ForeignKey(
+            Module,
+            on_delete=models.CASCADE,
+            related_name="module_module_unlock_entries",
+            verbose_name=_("Module"),
+            help_text=_("Module that user has managed to unlock"),
+        )
+
+        def __str__(self) -> str:
+            """String representation of the access permission."""
+            return f"Access for {self.user.username} to {self.module.title}"
+
+        class Meta:
+            verbose_name = _("Module Unlocked State")
+            verbose_name_plural = _("Module Unlocked States")
+            unique_together = ("user", "module")
+            ordering = ["user", "module"]
+            db_table = "elearning_module_unlocked"
+
 
 class Chapter(models.Model):
     """
@@ -333,6 +376,49 @@ class Chapter(models.Model):
     def task_count(self) -> int:
         """Get total number of tasks in this chapter."""
         return self.tasks.count()
+
+class ChapterUnlocked(models.Model):
+    """
+    User-specific access permissions for public chapters.
+
+    This model manages user progress on working through chapters of a module.
+    Users automatically unlock the first chapter of any module and must unlock further by completing the required tasks.
+    Chapters without any required tasks automatically unlock the next one.
+
+    Attributes:
+        user: User granted access
+        chapter: Chapter being unlocked
+
+    Usage:
+        Used automatically by ???
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="chapter_unlock_entries",
+        verbose_name=_("User"),
+        help_text=_("User able to see the module"),
+    )
+
+    chapter = models.ForeignKey(
+        Chapter,
+        on_delete=models.CASCADE,
+        related_name="access_permissions",
+        verbose_name=_("Chapter"),
+        help_text=_("Chapter that user has managed to unlock"),
+    )
+
+    def __str__(self) -> str:
+        """String representation of the access permission."""
+        return f"Access for {self.user.username} to {self.chapter.title}"
+
+    class Meta:
+        verbose_name = _("Chapter Unlocked State")
+        verbose_name_plural = _("Chapter Unlocked States")
+        unique_together = ("user", "chapter")
+        ordering = ["user", "chapter"]
+        db_table = "elearning_chapter_unlocked"
 
 
 class Content(models.Model):
@@ -586,6 +672,7 @@ class Task(models.Model):
         difficulty: Difficulty level (Easy/Medium/Hard)
         hint: Optional hint for students
         test_file_path: Path to automated test file
+        required_to_finish: Boolean indicating if completion is required to pass the chapter
         order: Display order within chapter
 
     Testing Integration:
@@ -672,6 +759,12 @@ class Task(models.Model):
             "Relative path from the 'elearning' app directory to the python file "
             "containing unittest cases. E.g., 'task_tests/module1/task10_tests.py'"
         ),
+    )
+
+    required_to_finish = models.BooleanField(
+        default=False,
+        verbose_name=_("Required To Finish"),
+        help_text=_("Task that is necessary to complete the chapter"),
     )
 
     order = models.PositiveIntegerField(
@@ -835,3 +928,17 @@ class UserTaskProgress(models.Model):
         self.completed = True
         self.completed_at = timezone.now()
         self.save(update_fields=["completed", "completed_at"])
+
+        tasks = self.task.chapter.tasks.all()
+        required_tasks = [task for task in tasks if task.required_to_finish]
+        for task in required_tasks:
+            completion = self.user.UserTaskProgress(task=task).completed
+            if completion is None or completion is False:
+                # early break
+                return
+        # if function didn't return here, user must have completed all required tasks
+        currentModule = self.task.chapter.module
+        currentChapterOrder = self.task.chapter.order
+        nextChapter =  currentModule.chapters.get(order=currentChapterOrder+1)
+        ChapterUnlocked.objects.create(user=self.user, chapter=nextChapter)
+
