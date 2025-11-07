@@ -230,14 +230,12 @@ modules_urlpatterns: List[URLPattern] = [
         video_views.get_video_presigned_url_by_key,
         name="get-video-presigned-url-by-key",
     ),
-
     # Downloadable resources per module
     path(
         "<int:module_id>/resources/",
         download_views.ModuleResourcesListView.as_view(),
         name="module-resources-list",
     ),
-
     # Generic storage presign alias (can be used for images and other assets as well)
     path(
         "storage/sign/",

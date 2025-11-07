@@ -37,16 +37,17 @@ Author: DSP Development Team
 Date: 11-07-2025
 """
 
-
 from rest_framework import serializers
 from .models_downloads import DownloadableResource
 from elearning.modules.services.wasabi_service import WasabiService
+
 
 class DownloadableResourceSerializer(serializers.ModelSerializer):
     """
     Serializer for DownloadableResource model.
     Adds a dynamic field 'download_url' that generates a presigned Wasabi URL.
     """
+
     download_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -75,4 +76,3 @@ class DownloadableResourceSerializer(serializers.ModelSerializer):
             return service.generate_presigned_url(obj.cloud_key)
         except Exception:
             return None
-

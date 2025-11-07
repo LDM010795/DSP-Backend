@@ -30,12 +30,11 @@ Author: DSP Development Team
 Date: 06-11-2025
 """
 
-
-
 from django.db import models
 from django.utils import timezone
 from .models import Module, Article
 from django.core.exceptions import ValidationError
+
 
 class ResourceType(models.TextChoices):
     PDF = "pdf", "PDF"
@@ -45,6 +44,7 @@ class ResourceType(models.TextChoices):
     IMAGE = "image", "Image"
     OTHER = "other", "Other"
 
+
 class DownloadableResource(models.Model):
     # What the user sees
     title = models.CharField(max_length=255)
@@ -52,10 +52,18 @@ class DownloadableResource(models.Model):
 
     # Optional association (we can attach to a module or a specific article)
     module = models.ForeignKey(
-        Module, on_delete=models.CASCADE, related_name="resources", null=True, blank=True
+        Module,
+        on_delete=models.CASCADE,
+        related_name="resources",
+        null=True,
+        blank=True,
     )
     article = models.ForeignKey(
-        Article, on_delete=models.CASCADE, related_name="resources", null=True, blank=True
+        Article,
+        on_delete=models.CASCADE,
+        related_name="resources",
+        null=True,
+        blank=True,
     )
 
     # Classification for filtering/UX
@@ -83,7 +91,9 @@ class DownloadableResource(models.Model):
     # Optional technical metadata (for UI)
     content_type = models.CharField(max_length=128, blank=True, default="")
     size_bytes = models.BigIntegerField(null=True, blank=True)
-    checksum = models.CharField(max_length=128, blank=True, help_text="Optional ETag/MD5/SHA1 for integrity")
+    checksum = models.CharField(
+        max_length=128, blank=True, help_text="Optional ETag/MD5/SHA1 for integrity"
+    )
 
     # Visibility and auditing
     is_public = models.BooleanField(default=False)
@@ -100,13 +110,19 @@ class DownloadableResource(models.Model):
         ]
 
     def __str__(self):
-        scope = self.article.title if self.article_id else (self.module.title if self.module_id else "Global")
+        scope = (
+            self.article.title
+            if self.article_id
+            else (self.module.title if self.module_id else "Global")
+        )
         return f"{self.title} ({self.resource_type}) — {scope}"
 
     def clean(self):
         # Ensure at least one scope (module or article) is set, but allow either
         if not self.module_id and not self.article_id:
-            raise ValidationError("Please set either 'module' or 'article' to scope the resource.")
+            raise ValidationError(
+                "Please set either 'module' or 'article' to scope the resource."
+            )
 
         # Prefer cloud_key as the source of truth; cloud_url is purely informational
         if not self.cloud_key:

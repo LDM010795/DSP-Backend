@@ -524,6 +524,7 @@ class CertificationPathAdmin(admin.ModelAdmin):
 
 # --- Downloadable Resources Administration ---
 
+
 @admin.register(DownloadableResource)
 class DownloadableResourceAdmin(admin.ModelAdmin):
     """
@@ -549,16 +550,28 @@ class DownloadableResourceAdmin(admin.ModelAdmin):
     ordering = ("-updated_at",)
 
     fieldsets = (
-        (_("Basic Information"), {
-            "fields": ("title", "description", "resource_type"),
-        }),
-        (_("Links"), {
-            "fields": ("cloud_key", "cloud_url"),
-        }),
-        (_("Association"), {
-            "fields": ("module", "article"),
-        }),
-        (_("Metadata"), {
-            "fields": ("content_type", "size_bytes", "checksum", "is_public"),
-        }),
+        (
+            _("Basic Information"),
+            {
+                "fields": ("title", "description", "resource_type"),
+            },
+        ),
+        (
+            _("Links"),
+            {
+                "fields": ("cloud_key", "cloud_url"),
+            },
+        ),
+        (
+            _("Association"),
+            {
+                "fields": ("module", "article"),
+            },
+        ),
+        (
+            _("Metadata"),
+            {
+                "fields": ("content_type", "size_bytes", "checksum", "is_public"),
+            },
+        ),
     )

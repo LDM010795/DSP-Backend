@@ -28,23 +28,26 @@ Author: DSP Development Team
 Date: 11-07-2025
 """
 
-
 from rest_framework import generics, permissions
 from ..models_downloads import DownloadableResource
 from ..serializers_downloads import DownloadableResourceSerializer
+
 
 class ModuleResourcesListView(generics.ListAPIView):
     """
     Returns all downloadable resources for a given module.
     Optional filter by type: ?type=pdf / ?type=code / ?type=slides
     """
+
     serializer_class = DownloadableResourceSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         module_id = self.kwargs.get("module_id")
         resource_type = self.request.query_params.get("type")
-        queryset = DownloadableResource.objects.filter(module_id=module_id, is_public=True)
+        queryset = DownloadableResource.objects.filter(
+            module_id=module_id, is_public=True
+        )
         if resource_type:
             queryset = queryset.filter(resource_type=resource_type)
         return queryset

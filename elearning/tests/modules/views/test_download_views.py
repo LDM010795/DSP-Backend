@@ -29,7 +29,9 @@ User = get_user_model()
 
 def reverse_module_resources(module_id: int) -> str:
     """Helper to reverse module resource endpoint"""
-    return reverse("elearning:modules:module-resources-list", kwargs={"module_id": module_id})
+    return reverse(
+        "elearning:modules:module-resources-list", kwargs={"module_id": module_id}
+    )
 
 
 def setup_module_and_category(cls):
@@ -90,7 +92,9 @@ class TestModuleResourcesListView(TestCase):
     def setUp(self):
         self.client = APIClient()
 
-    @patch("elearning.modules.serializers_downloads.WasabiService.generate_presigned_url")
+    @patch(
+        "elearning.modules.serializers_downloads.WasabiService.generate_presigned_url"
+    )
     def test_returns_only_public_resources_for_module(self, mock_presign):
         """Ensures only public module resources are returned and presigned URLs work."""
         mock_presign.return_value = "https://signed.example.com/file"
@@ -111,7 +115,9 @@ class TestModuleResourcesListView(TestCase):
             self.assertIn("download_url", r)
             self.assertEqual(r["download_url"], "https://signed.example.com/file")
 
-    @patch("elearning.modules.serializers_downloads.WasabiService.generate_presigned_url")
+    @patch(
+        "elearning.modules.serializers_downloads.WasabiService.generate_presigned_url"
+    )
     def test_filter_by_resource_type(self, mock_presign):
         """Supports filtering by ?type=pdf"""
         mock_presign.return_value = "https://signed.example.com/pdf"
@@ -142,7 +148,10 @@ class TestModuleResourcesListView(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json(), [])
 
-    @patch("elearning.modules.serializers_downloads.WasabiService.generate_presigned_url", side_effect=Exception("boom"))
+    @patch(
+        "elearning.modules.serializers_downloads.WasabiService.generate_presigned_url",
+        side_effect=Exception("boom"),
+    )
     def test_presigned_url_failure_returns_none(self, mock_presign):
         """If presigning fails, download_url should be None"""
         resp = self.client.get(self.url)
