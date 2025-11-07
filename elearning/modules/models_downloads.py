@@ -1,3 +1,37 @@
+"""
+Downloadable Resources Model Definitions
+=======================================
+
+This module defines the data model for downloadable learning resources
+(e.g. PDFs, code files, Jupyter notebooks, slides, or images) that are
+stored externally in Wasabi Cloud Storage.
+
+Purpose:
+--------
+- Extend the E-Learning platform with downloadable, externally hosted assets.
+- Maintain metadata and relationships (Module ↔ Article ↔ Resource)
+  without physically storing files in Django.
+- Ensure consistent access control and retrieval logic for Wasabi-stored content.
+
+Validation Logic:
+-----------------
+- Requires at least one scope (`module` or `article`).
+- Requires a valid `cloud_key` (Wasabi object path).
+- Ensures all metadata is cleanly maintained for API serialization.
+
+Example Use Case:
+-----------------
+A SQL module may include:
+  - A “SQL Cheatsheet.pdf” (ResourceType.PDF)
+  - A “SQL_Practice_Notebook.ipynb” (ResourceType.NOTEBOOK)
+  - Linked to the SQL Module or a specific Article.
+
+Author: DSP Development Team
+Date: 06-11-2025
+"""
+
+
+
 from django.db import models
 from django.utils import timezone
 from .models import Module, Article

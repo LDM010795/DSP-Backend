@@ -11,6 +11,7 @@ Features:
 - Fortschrittsverfolgung für individuelle Benutzer
 - Öffentliche und private Modul-Zugriffe
 - Ergänzende Inhalte und externe Ressourcen
+- Downloadbare Ressourcen (z. B. PDFs, Code-Dateien, Notebooks, Slides) mit Wasabi-Integration
 
 Struktur:
 - models.py: Datenmodelle für Module, Inhalte und Aufgaben
