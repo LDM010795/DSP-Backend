@@ -32,6 +32,7 @@ from .modules import views as module_views
 from .modules.views import article_processing_views as article_views
 from .modules.views import content_processing_views as content_views
 from .modules.views import video_url_views as video_views
+from .modules.views import download_views as download_views
 from .final_exam import views as exam_views
 from elearning.dashboard.views.dashboard_views import DashboardView
 from .users.views.auth_views import CustomTokenRefreshView
@@ -228,6 +229,12 @@ modules_urlpatterns: List[URLPattern] = [
         "videos/sign/",
         video_views.get_video_presigned_url_by_key,
         name="get-video-presigned-url-by-key",
+    ),
+    # Downloadable resources per module
+    path(
+        "<int:module_id>/resources/",
+        download_views.ModuleResourcesListView.as_view(),
+        name="module-resources-list",
     ),
     # Generic storage presign alias (can be used for images and other assets as well)
     path(
