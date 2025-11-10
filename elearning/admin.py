@@ -45,6 +45,7 @@ from .models import (
     CriterionScore,
     CertificationPath,
 )
+from .modules.models_downloads import DownloadableResource
 
 # --- User Management Administration ---
 
@@ -519,3 +520,58 @@ class CertificationPathAdmin(admin.ModelAdmin):
     def get_queryset(self, request: HttpRequest) -> QuerySet:
         """Optimize queryset with exam count prefetch."""
         return super().get_queryset(request).prefetch_related("exams")
+
+
+# --- Downloadable Resources Administration ---
+
+
+@admin.register(DownloadableResource)
+class DownloadableResourceAdmin(admin.ModelAdmin):
+    """
+    Administration interface for downloadable resources.
+
+    Allows linking of PDFs, code files, notebooks, and other external materials
+    stored in Wasabi cloud storage to specific modules or articles.
+    """
+
+    list_display = (
+        "title",
+        "resource_type",
+        "module",
+        "article",
+        "is_public",
+        "updated_at",
+    )
+    list_filter = ("resource_type", "is_public", "module")
+    search_fields = ("title", "description", "cloud_key", "cloud_url")
+    autocomplete_fields = ("module",)
+    # TODO: enable "article" autocomplete once ArticleAdmin is registered
+    readonly_fields = ("created_at", "updated_at")
+    ordering = ("-updated_at",)
+
+    fieldsets = (
+        (
+            _("Basic Information"),
+            {
+                "fields": ("title", "description", "resource_type"),
+            },
+        ),
+        (
+            _("Links"),
+            {
+                "fields": ("cloud_key", "cloud_url"),
+            },
+        ),
+        (
+            _("Association"),
+            {
+                "fields": ("module", "article"),
+            },
+        ),
+        (
+            _("Metadata"),
+            {
+                "fields": ("content_type", "size_bytes", "checksum", "is_public"),
+            },
+        ),
+    )
