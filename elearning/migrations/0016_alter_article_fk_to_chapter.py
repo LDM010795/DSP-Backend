@@ -47,10 +47,7 @@ def assert_no_null_chapter(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        (
-            "elearning",
-            "0014_alter_content_chapter",
-        ),
+        ("elearning", "0015_downloadableresource"),
     ]
 
     operations = [
