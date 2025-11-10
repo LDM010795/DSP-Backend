@@ -24,17 +24,28 @@ class ProcessArticleFromCloudTests(TestCase):
         )
 
     def test_missing_module_id(self):
-        response = self.client.post(self.url, {"cloudUrl": "http://valid-url.com"})
+        response = self.client.post(
+            self.url, {"cloudUrl": "http://valid-url.com", "chapterId": 1}
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("moduleId ist erforderlich", response.data["error"])
 
+    def test_missing_chapter_id(self):
+        response = self.client.post(
+            self.url, {"cloudUrl": "http://valid-url.com", "moduleId": 1}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("chapterId ist erforderlich", response.data["error"])
+
     def test_missing_cloud_url(self):
-        response = self.client.post(self.url, {"moduleId": 1})
+        response = self.client.post(self.url, {"moduleId": 1, "chapterId": 1})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("cloudUrl ist erforderlich", response.data["error"])
 
     def test_invalid_cloud_url(self):
-        response = self.client.post(self.url, {"moduleId": 1, "cloudUrl": "bad-url"})
+        response = self.client.post(
+            self.url, {"moduleId": 1, "chapterId": 1, "cloudUrl": "bad-url"}
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Ungültige Cloud-URL", response.data["error"])
 
@@ -55,7 +66,8 @@ class ProcessArticleFromCloudTests(TestCase):
             mock_service.process_article_from_cloud_url.return_value = mock_result
 
             response = self.client.post(
-                self.url, {"moduleId": 1, "cloudUrl": "http://valid-url.com"}
+                self.url,
+                {"moduleId": 1, "chapterId": 1, "cloudUrl": "http://valid-url.com"},
             )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["success"])
@@ -78,7 +90,8 @@ class ProcessArticleFromCloudTests(TestCase):
             mock_service.process_article_from_cloud_url.return_value = mock_result
 
             response = self.client.post(
-                self.url, {"moduleId": 1, "cloudUrl": "http://valid-url.com"}
+                self.url,
+                {"moduleId": 1, "chapterId": 1, "cloudUrl": "http://valid-url.com"},
             )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(response.data["success"])
@@ -128,7 +141,8 @@ class ValidateCloudUrlTests(TestCase):
             mock_result.warnings = []
             mock_service.process_article_from_cloud_url.return_value = mock_result
             response = self.client.post(
-                self.url, {"cloudUrl": "http://valid-url.com", "moduleId": "1"}
+                self.url,
+                {"cloudUrl": "http://valid-url.com", "moduleId": "1", "chapterId": "1"},
             )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -146,6 +160,7 @@ class ValidateCloudUrlTests(TestCase):
         ) as MockService:
             MockService.side_effect = Exception("unexpected error")
             response = self.client.post(
-                self.url, {"cloudUrl": "http://valid-url.com", "moduleId": "1"}
+                self.url,
+                {"cloudUrl": "http://valid-url.com", "moduleId": "1", "chapterId": "1"},
             )
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)

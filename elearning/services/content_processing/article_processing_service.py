@@ -53,13 +53,14 @@ class ArticleProcessingService:
         self.logger = logger
 
     def process_article_from_cloud_url(
-        self, module_id: int, cloud_url: str
+        self, module_id: int, chapter_id: int, cloud_url: str
     ) -> ProcessedArticleResult:
         """
         Verarbeitet einen Artikel aus einer Cloud-URL.
 
         Args:
             module_id: ID des Moduls
+            chapter_id: ID des Kapitels
             cloud_url: Cloud-URL des Word-Dokuments
 
         Returns:
@@ -135,7 +136,13 @@ class ArticleProcessingService:
 
             print(f"✅ [DEBUG] Modul gefunden: {module.title}")
 
-            # 6. Artikel in Datenbank speichern
+            # 6. Kapitel aus Datenbank holen
+            chapter = self.db_service.get_chapter_by_id(chapter_id)
+            if not chapter:
+                result.errors.append(f"Kapitel mit ID {chapter_id} nicht gefunden")
+                return result
+
+            # 7. Artikel in Datenbank speichern
             print("🔍 [DEBUG] Speichere Artikel in Datenbank")
             article_data = {
                 "title": processed_article.title,
@@ -144,13 +151,13 @@ class ArticleProcessingService:
             }
 
             saved_article = self.db_service.save_processed_articles(
-                module, [article_data]
+                chapter, [article_data]
             )
             if saved_article:
                 result.article_id = saved_article[0].id if saved_article else None
                 print(f"✅ [DEBUG] Artikel gespeichert mit ID: {result.article_id}")
 
-            # 7. Bilder aus Cloud Storage holen und speichern
+            # 8. Bilder aus Cloud Storage holen und speichern
             if images_from_json:
                 print("🔍 [DEBUG] Verarbeite Bilder für Artikel")
                 images_saved = self._process_images_for_article(

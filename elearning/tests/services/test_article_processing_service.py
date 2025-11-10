@@ -75,6 +75,7 @@ class ArticleProcessingServiceTests(TestCase):
 
             result = self.service.process_article_from_cloud_url(
                 module_id=1,
+                chapter_id=1,
                 cloud_url="https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Artikel/test.docx",
             )
 
@@ -96,6 +97,7 @@ class ArticleProcessingServiceTests(TestCase):
 
             result = self.service.process_article_from_cloud_url(
                 1,
+                1,
                 "https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Artikel/test.docx",
             )
             self.assertFalse(result.success)
@@ -115,6 +117,7 @@ class ArticleProcessingServiceTests(TestCase):
 
             mock_word.return_value.process_word_document.return_value = None
             result = self.service.process_article_from_cloud_url(
+                1,
                 1,
                 "https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Artikel/test.docx",
             )
@@ -141,13 +144,47 @@ class ArticleProcessingServiceTests(TestCase):
             mock_article.json_content = {"content": []}
             mock_word.return_value.process_word_document.return_value = mock_article
             mock_db.return_value.get_module_by_id.return_value = None
+            mock_db.return_value.get_chapter_by_id.return_value = MagicMock()
 
             result = self.service.process_article_from_cloud_url(
                 99,
+                1,
                 "https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Artikel/test.docx",
             )
             self.assertFalse(result.success)
             self.assertIn("Modul mit ID 99 nicht gefunden", result.errors)
+
+    def test_process_article_chapter_not_found(self):
+        with (
+            mock.patch(
+                "elearning.services.content_processing.article_processing_service.CloudStorageService"
+            ) as mock_cloud,
+            mock.patch(
+                "elearning.services.content_processing.article_processing_service.WordProcessingService"
+            ) as mock_word,
+            mock.patch(
+                "elearning.services.content_processing.article_processing_service.DatabaseService"
+            ) as mock_db,
+        ):
+            self.service = article_processing_service.ArticleProcessingService()
+            mock_cloud.return_value.download_file_content.return_value = b"data"
+
+            mock_article = MagicMock()
+            mock_article.title = "Title"
+            mock_article.json_content = {"content": []}
+            mock_word.return_value.process_word_document.return_value = mock_article
+            mock_module = MagicMock()
+            mock_module.title = "ModuleTitle"
+            mock_db.return_value.get_module_by_id.return_value = mock_module
+            mock_db.return_value.get_chapter_by_id.return_value = None
+
+            result = self.service.process_article_from_cloud_url(
+                1,
+                99,
+                "https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Artikel/test.docx",
+            )
+            self.assertFalse(result.success)
+            self.assertIn("Kapitel mit ID 99 nicht gefunden", result.errors)
 
     def test_validate_cloud_url_valid(self):
         url = "https://s3.eu-central-2.wasabisys.com/dsp-e-learning/Lerninhalte/SQL/Artikel/test.docx"

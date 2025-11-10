@@ -462,26 +462,26 @@ class SupplementaryContent(models.Model):
 
 class Article(models.Model):
     """
-    External article references for modules.
+    External article references for chapters.
 
     Articles represent links to external reading materials, blog posts,
     documentation, or other text-based resources that complement the
-    module's learning objectives.
+    chapters's learning objectives.
 
     Attributes:
-        module: Parent module
+        chapter: Parent chapter
         url: URL to the external article
         title: Article title
         json_content: Optional extracted JSON content from source
-        order: Display order within module
+        order: Display order within chapter
     """
 
-    module = models.ForeignKey(
-        "Module",
-        related_name="articles",
+    chapter = models.ForeignKey(
+        Chapter,
         on_delete=models.CASCADE,
-        verbose_name=_("Module"),
-        help_text=_("Module this article belongs to."),
+        related_name="articles",
+        verbose_name=_("Chapter"),
+        help_text="Chapter this article belongs to",
     )
 
     url = models.CharField(
@@ -507,18 +507,18 @@ class Article(models.Model):
     order = models.PositiveIntegerField(
         default=0,
         verbose_name=_("Display Order"),
-        help_text=_("Order of articles within the module."),
+        help_text=_("Order of articles within the chapter."),
     )
 
     def __str__(self) -> str:
         """String representation of the article."""
-        return f"{self.module.title} - Article: {self.title}"
+        return f"{self.chapter.title} - Article: {self.title}"
 
     class Meta:
         verbose_name = _("Article Reference")
         verbose_name_plural = _("Article References")
-        unique_together = ("module", "title")
-        ordering = ["module", "order", "title"]
+        unique_together = ("chapter", "title")
+        ordering = ["chapter", "order", "title"]
         db_table = "elearning_article"
 
 

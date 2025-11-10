@@ -66,9 +66,9 @@ class ArticleCreateView(generics.CreateAPIView):
     permission_classes = [permissions.IsAdminUser]
 
     def perform_create(self, serializer):
-        # Automatically compute order per module
-        module = serializer.validated_data["module"]
-        next_order = Article.objects.filter(module=module).count() + 1
+        # Automatically compute order per chapter
+        chapter = serializer.validated_data["chapter"]
+        next_order = Article.objects.filter(chapter=chapter).count() + 1
         serializer.save(order=next_order)
 
 
@@ -169,7 +169,7 @@ class ModuleDetailAdminView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return Module.objects.prefetch_related(
-            "chapters", "chapters__contents", "articles"
+            "chapters", "chapters__contents", "chapters__articles"
         )
 
 
@@ -188,7 +188,6 @@ class ModuleDeleteView(generics.DestroyAPIView):
 
         # Check if module has related content that will be deleted
         chapters_count = instance.chapters.count()
-        articles_count = instance.articles.count()
 
         # Perform the actual deletion (Django will handle cascade deletion)
         # Note: Related chapters, contents, and articles will be deleted automatically
